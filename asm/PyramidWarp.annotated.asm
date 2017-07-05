@@ -310,7 +310,7 @@ L8010:	call	SCREEN_2
 	ld	a,30h		; '0'
 	ld	de,DATA_CHARSET_4x + 0 * 64
 	call	INIT_4xCXRTBL
-	ld	a,34h		; '4'
+	ld	a,34h ; ($34 = box)
 	ld	de,DATA_CHARSET_4x + 1 * 64
 	call	INIT_4xCXRTBL
 	ld	a,38h		; '8'
@@ -403,10 +403,10 @@ L820D:	ld	c,07h
 ; Score, high score = 0
 	xor	a
 	ld	bc,0000h
-	ld	(high_score_bcd),a
-	ld	(high_score_bcd +1),bc
-	ld	(score_bcd),a
-	ld	(score_bcd +1),bc
+	ld	(game.high_score_bcd),a
+	ld	(game.high_score_bcd +1),bc
+	ld	(game.score_bcd),a
+	ld	(game.score_bcd +1),bc
 	
 ; Prints HUD
 	ld	hl,LITERAL.DASHES
@@ -488,7 +488,7 @@ L82B8:	ld	b,06h
 	call	WRTVRM_CHARS
 ; Five lives
 	ld	a,05h
-	ld	(player.lives),a
+	ld	(game.lives),a
 ; Draws lives in screen
 	ld	b,a
 	ld	de,1719h
@@ -500,8 +500,8 @@ L82B8:	ld	b,06h
 ; Score to 0 (and prints score)
 	xor	a
 	ld	bc,0000h
-	ld	(score_bcd),a
-	ld	(score_bcd +1),bc
+	ld	(game.score_bcd),a
+	ld	(game.score_bcd +1),bc
 	ld	de,0B19h
 	call	PRINT_SCORE
 ; ------VVVV----falls through--------------------------------------------------
@@ -513,7 +513,7 @@ L82B8:	ld	b,06h
 NEW_PYRAMID:
 ; Room 0
 L82E7:	xor	a
-	ld	(0C085h),a
+	ld	(pyramid.room_index),a
 	
 ; Chooses a random first floor
 	call	RANDOMIZE
@@ -526,7 +526,7 @@ L82E7:	xor	a
 	djnz	.L82F8
 ; Copies the random first floor
 	ld	b,07h ; 7 rooms
-	ld	ix,pyramid_rooms
+	ld	ix,pyramid.room_array
 .L8301:	ld	a,(hl)
 	inc	hl
 	ld	(ix+00h),a
@@ -606,9 +606,9 @@ L836A:	ld	b,05h
 	ld	de,1719h	; address or value?
 	call	WRTVRM_CHARS
 ; Decreases lives
-	ld	a,(player.lives)
+	ld	a,(game.lives)
 	dec	a
-	ld	(player.lives),a
+	ld	(game.lives),a
 ; If no lives, go to GAME OVER
 	jp	m,GAME_OVER
 ; Prints lives
@@ -640,7 +640,7 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	djnz	.L8394
 	
 ; Reads the current room index
-	ld	a,(0C085h)
+	ld	a,(pyramid.room_index)
 	ld	hl,0C087h	; address or value?
 	call	ADD_HL_A
 	ld	a,(hl)
@@ -672,7 +672,7 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 .L83C7:	add	a,e
 	ld	e,a
 ; Saves the NAMTBL pointer of the current room
-	ld	(curent_room_namtbl_ptr),de
+	ld	(pyramid.room_namtbl_ptr),de
 	
 ; Prints the room number
 	ld	a,(game.current_room)
@@ -702,57 +702,70 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	djnz	.L83F7
 ; ------VVVV----falls through--------------------------------------------------
 
-	
 ; -----------------------------------------------------------------------------
+; Prints the room
+; param hl: room data pointer
+PRINT_ROOM:
 	xor	a
 	ld	(aux.frame_counter_2),a
-	; Referenced from 8439
-L83FE:	xor	a
+; For each row
+.L83FE:	xor	a ; (for the character counter)
+; Reads first two bytes in BC
 	ld	c,(hl)
 	inc	hl
 	ld	b,(hl)
 	inc	hl
-
-	; Referenced from 842E
-L8403:	sla	b
+; For each character
+.L8403:	sla	b ; rotates BC to left (first bit to carry)
 	rl	c
+; (preserves everything)
 	push	hl
 	push	bc
 	push	af
-	jr	nc,L841C
+; carry?
+	jr	nc,.L841C ; no carry
+; yes: e = 2*a (x)
 	inc	a
 	add	a,a
 	ld	e,a
+; d = 2*aux (y)
 	ld	a,(aux.frame_counter_2)
 	add	a,a
 	inc	a
 	ld	d,a
+; Prints wall
 	ld	a,30h		; '0'
 	call	WRTVRM_2x2_CHAR
-	jr	L8428
+	jr	.L8428
 
-	; Referenced from 840A
-L841C:	inc	a
+; no carry: e = 2*a (x)
+.L841C:	inc	a
 	add	a,a
 	ld	e,a
+; d = 2*aux (y)
 	ld	a,(aux.frame_counter_2)
 	add	a,a
 	inc	a
 	ld	d,a
-	call	L8EEB
+; Prints blank space
+	call	WRTVRM_2x2_BLANK
 
-	; Referenced from 841A
-L8428:	pop	af
+; (restores everything)
+.L8428:	pop	af
 	pop	bc
 	pop	hl
+; Next character (up to 11)
 	inc	a
 	cp	0Bh
-	jr	nz,L8403
+	jr	nz,.L8403
+; Next row (up to 11)
 	ld	a,(aux.frame_counter_2)
 	inc	a
 	ld	(aux.frame_counter_2),a
 	cp	0Bh
-	jr	nz,L83FE
+	jr	nz,.L83FE
+	
+; Initializes game vars
 	xor	a
 	ld	(skull.status),a
 	ld	(scorpion1.status),a
@@ -790,53 +803,64 @@ L8428:	pop	af
 	ld	(0C04Dh),a
 	inc	a
 	ld	(0C055h),a
-	jr	L84D1
+	jr	PREPARE_ROOM
+; -----------------------------------------------------------------------------
 
 	; Referenced from 85E6, 8634, 8A47
 	; --- START PROC L849B ---
-L849B:	ld	bc,03E8h	; address or value?
-	xor	a
 
-	; Referenced from 84A2
-L849F:	sbc	hl,bc
+; -----------------------------------------------------------------------------
+; param hl: game.air_left value
+; param de: VRAM destination
+PRINT_AIR_LEFT:
+; Computes air_left_bcd (first digit)
+L849B:	ld	bc,03E8h ; 1000
+	xor	a
+.L849F:	sbc	hl,bc
 	inc	a
-	jr	nc,L849F
+	jr	nc,.L849F
 	add	hl,bc
 	dec	a
-	ld	(0C071h),a
-	ld	bc,0064h	; address or value?
+	ld	(game.air_left_bcd),a
+; (second digit)
+	ld	bc,0064h ; 100
 	xor	a
-
-	; Referenced from 84B0
-L84AD:	sbc	hl,bc
+.L84AD:	sbc	hl,bc
 	inc	a
-	jr	nc,L84AD
+	jr	nc,.L84AD
 	add	hl,bc
 	dec	a
-	ld	(0C072h),a
-	ld	bc,000Ah	; address or value?
+	ld	(game.air_left_bcd +1),a
+; (third digit)
+	ld	bc,000Ah ; 10
 	xor	a
-
-	; Referenced from 84BE
-L84BB:	sbc	hl,bc
+.L84BB:	sbc	hl,bc
 	inc	a
-	jr	nc,L84BB
+	jr	nc,.L84BB
 	add	hl,bc
 	dec	a
-	ld	(0C073h),a
+	ld	(game.air_left_bcd +2),a
+; (last digit)
 	ld	a,l
-	ld	(0C074h),a
-	ld	hl,0C071h	; address or value?
+	ld	(game.air_left_bcd +3),a
+; Prints air left (BCD)
+	ld	hl,game.air_left_bcd
 	ld	b,04h
 	jp	WRTVRM_CHARS
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8499
 	; --- START PROC L84D1 ---
+
+; -----------------------------------------------------------------------------
+PREPARE_ROOM:
+; param hl: room data pointer (after walls definition)
+; Is sphynx room?
 L84D1:	ld	a,(game.current_room)
 	cp	10h
-	jp	z,L85CC
+	jp	z,PREPARE_SPHYNX_ROOM ; yes
 	
-; Prints box1 in screen
+; no: Prints box1 in screen
 	ld	ix,box1
 	ld	e,(hl)
 	inc	hl
@@ -846,7 +870,7 @@ L84D1:	ld	a,(game.current_room)
 	xor	a
 	ld	(ix+00h),a
 	push	hl
-	ld	a,34h		; '4'
+	ld	a,34h ; ($34 = box)
 	call	WRTVRM_2x2_CHAR
 	pop	hl
 	
@@ -860,7 +884,7 @@ L84D1:	ld	a,(game.current_room)
 	xor	a
 	ld	(ix+00h),a
 	push	hl
-	ld	a,34h		; '4'
+	ld	a,34h ; ($34 = box)
 	call	WRTVRM_2x2_CHAR
 	pop	hl
 	
@@ -874,12 +898,12 @@ L84D1:	ld	a,(game.current_room)
 	xor	a
 	ld	(ix+00h),a
 	push	hl
-	ld	a,34h		; '4'
+	ld	a,34h ; ($34 = box)
 	call	WRTVRM_2x2_CHAR
 	pop	hl
 	
-; Prints ...
-	ld	ix,0C05Ch	; address or value?
+; Prints nest in screen
+	ld	ix,nest
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
@@ -896,19 +920,25 @@ L84D1:	ld	a,(game.current_room)
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	b,00h
-	ld	a,e
-	and	7Fh		; ''
+	ld	b,00h ; b = 0 = door down (v)
+; Is the upper bit set?
+	ld	a,e ; (preserves e)
+	and	7Fh
 	cp	e
-	jr	z,.L853E
-	inc	b
+	jr	z,.L853E ; no
+; yes
+	inc	b ; b = 1 = door up (^)
+; saves door type
 .L853E: ld	(ix+00h),b
 	inc	ix
+; saves door coordinates
 	ld	e,a
 	call	TO_VRAM_COORDINATES
 	inc	ix
+; saves door color
 	ld	a,03h
 	ld	(ix+00h),a
+; saves door1 pattern based on b
 	push	hl
 	ld	a,b
 	add	a,a
@@ -920,26 +950,32 @@ L84D1:	ld	a,(game.current_room)
 	ld	a,00h
 	call	PUT_SPRITE
 	pop	hl
+
+; Prints door2 in screen
 	ld	ix,door2
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	b,00h
-	ld	a,e
-	and	7Fh		; ''
+	ld	b,00h ; b = 0 = door down (v)
+; Is the upper bit set?
+	ld	a,e ; (preserves e)
+	and	7Fh
 	cp	e
-	jr	z,L8572
-	inc	b
-
-	; Referenced from 856F
+	jr	z,L8572 ; no
+; yes
+	inc	b ; b = 1 = door up (^)
+; saves door type
 L8572:	ld	(ix+00h),b
 	inc	ix
+; saves door coordinates
 	ld	e,a
 	call	TO_VRAM_COORDINATES
 	inc	ix
+; saves door color
 	ld	a,03h
 	ld	(ix+00h),a
+; saves door2 pattern based on b
 	ld	a,b
 	add	a,a
 	add	a,18h
@@ -949,6 +985,8 @@ L8572:	ld	(ix+00h),b
 	ld	de,door2.spratr_y
 	ld	a,01h
 	call	PUT_SPRITE
+	
+; Prints exit zone
 	ld	a,4Ch		; 'L'
 	ld	de,090Ah	; address or value?
 	push	af
@@ -956,6 +994,7 @@ L8572:	ld	(ix+00h),b
 	call	WRTVRM_2x2_CHAR
 	pop	de
 	pop	af
+; (+2,+0)
 	inc	e
 	inc	e
 	push	af
@@ -963,6 +1002,7 @@ L8572:	ld	(ix+00h),b
 	call	WRTVRM_2x2_CHAR
 	pop	de
 	pop	af
+; (+2,+0)
 	inc	e
 	inc	e
 	push	af
@@ -970,6 +1010,7 @@ L8572:	ld	(ix+00h),b
 	call	WRTVRM_2x2_CHAR
 	pop	de
 	pop	af
+; (+0,+4)
 	inc	d
 	inc	d
 	inc	d
@@ -979,6 +1020,7 @@ L8572:	ld	(ix+00h),b
 	call	WRTVRM_2x2_CHAR
 	pop	de
 	pop	af
+; (-2,+0)
 	dec	e
 	dec	e
 	push	af
@@ -986,36 +1028,45 @@ L8572:	ld	(ix+00h),b
 	call	WRTVRM_2x2_CHAR
 	pop	de
 	pop	af
+; (-2,+0)
 	dec	e
 	dec	e
 	call	WRTVRM_2x2_CHAR
 	jr	L8622
+; -----------------------------------------------------------------------------
 
 	; Referenced from 84D6
+	
+; -----------------------------------------------------------------------------
+PREPARE_SPHYNX_ROOM:
+; Prints single box
 L85CC:	ld	de,0B0Ch	; address or value?
-	ld	a,34h		; '4'
+	ld	a,34h ; ($34 = box)
 	call	WRTVRM_2x2_CHAR
-	ld	hl,0BB8h	; address or value?
+; Prints air value
+	ld	hl,0BB8h ; 3000
 	ld	a,(game.first_pyramid)
 	or	a
-	jr	z,L85E0
-	ld	hl,07D0h	; address or value?
-
-	; Referenced from 85DB
-L85E0:	ld	(game.air_left),hl
-	ld	de,0E19h	; address or value?
-	call	L849B
+	jr	z,.L85E0
+	ld	hl,07D0h ; 2000
+.L85E0:	ld	(game.air_left),hl
+	ld	de,0E19h
+	call	PRINT_AIR_LEFT
+; Prints...
 	ld	a,06h
 	ld	de,101Eh	; address or value?
 	call	WRTVRM_1x1_CHAR
+; Do not use doors
 	xor	a
 	ld	(door1.spratr_y),a
 	ld	(door2.spratr_y),a
+; Player initial position
 	ld	hl,player.spratr_y
 	ld	a,98h
 	ld	(hl),a
-	inc	hl
-	ld	a,60h		; '`'
+	inc	hl ; player.spratr_x
+	ld	a,60h
+; ...
 	jr	L8640
 ; -----------------------------------------------------------------------------
 
@@ -1064,51 +1115,58 @@ L8603:	ld	a,d
 
 	; Referenced from 85CA
 	; --- START PROC L8622 ---
+
+; -----------------------------------------------------------------------------
 L8622:	ld	hl,0BB8h	; address or value?
 	ld	a,(game.first_pyramid)
 	or	a
-	jr	z,L862E
+	jr	z,.L862E
 	ld	hl,07D0h	; address or value?
-
-	; Referenced from 8629
-L862E:	ld	(game.air_left),hl
+.L862E:	ld	(game.air_left),hl
 	ld	de,0E19h	; address or value?
-	call	L849B
+	call	PRINT_AIR_LEFT
 	ld	hl,player.spratr_y
 	ld	a,58h		; 'X'
 	ld	(hl),a
 	inc	hl
 	ld	a,60h		; '`'
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8601
 	; --- START PROC L8640 ---
+
+; -----------------------------------------------------------------------------
+; param hl: player.spratr_x
+; param a: value for player.spratr_x
 L8640:	ld	(hl),a
+; Sets player pattern
 	inc	hl
 	ld	a,04h
 	ld	(hl),a
+; Sets player color
 	inc	hl
 	ld	a,0Bh
 	ld	(hl),a
+; Sets player direction
 	inc	hl
 	ld	a,01h
 	ld	(hl),a
+; Put player sprite
 	ld	de,player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
-	ld	hl,8EE6h	; address or value?
+	
+; Initializes the box contents
+	ld	hl,DATA_RANDOMIZE_BOX_CONTENTS
 	call	RANDOMIZE
 	and	03h
 	dec	a
-	jr	z,L8665
+	jr	z,.L8665
 	dec	a
-	jr	z,L8664
+	jr	z,.L8664
 	inc	hl
-
-	; Referenced from 8661
-L8664:	inc	hl
-
-	; Referenced from 865E
-L8665:	ld	a,(hl)
+.L8664:	inc	hl
+.L8665:	ld	a,(hl)
 	inc	hl
 	ld	(box1.content),a
 	ld	a,(hl)
@@ -1116,8 +1174,9 @@ L8665:	ld	a,(hl)
 	ld	(box2.content),a
 	ld	a,(hl)
 	ld	(box3.content),a
-	ld	b,0Ah
 
+; ...	
+	ld	b,0Ah
 	; Referenced from 867A
 L8675:	push	bc
 	call	L8C47
@@ -1148,7 +1207,7 @@ L867C:	ld	hl,(game.air_left)
 	ld	(aux.frame_counter),a
 	call	SHORT_DELAY
 ; Each 4 frames, blinks the current room
-	ld	de,(curent_room_namtbl_ptr)
+	ld	de,(pyramid.room_namtbl_ptr)
 	ld	b,63h ; ($63 = non visited room)
 	ld	a,(aux.frame_counter)
 	and	04h
@@ -1226,7 +1285,7 @@ L8707:	add	a,(hl)
 	call	L912A
 	ld	hl,(door2.spratr_y)
 	ld	(player.spratr_y),hl
-	ld	a,(door2.data)
+	ld	a,(door2.type)
 	add	a,a
 	ld	b,a
 	ld	a,01h
@@ -1249,7 +1308,7 @@ L873B:	ld	hl,player.spratr_y
 	call	L912A
 	ld	hl,(door1.spratr_y)
 	ld	(player.spratr_y),hl
-	ld	a,(door1.data)
+	ld	a,(door1.type)
 	add	a,a
 	ld	b,a
 	ld	a,01h
@@ -1590,7 +1649,7 @@ L8969:	call	SHORT_DELAY
 	jr	L89B4
 
 	; Referenced from 89A8
-L89B1:	call	L8EEB
+L89B1:	call	WRTVRM_2x2_BLANK
 
 	; Referenced from 8996, 89AF
 L89B4:	ld	hl,player.spratr_y
@@ -1601,10 +1660,10 @@ L89B4:	ld	hl,player.spratr_y
 	ld	a,60h		; '`'
 	cp	(hl)
 	jr	nz,L89E1
-	ld	a,(0C085h)
+	ld	a,(pyramid.room_index)
 	inc	a
-	ld	(0C085h),a
-	ld	de,(curent_room_namtbl_ptr)
+	ld	(pyramid.room_index),a
+	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a,61h		; 'a'
 	call	WRTVRM_1x1_CHAR
 	call	L9070
@@ -1667,7 +1726,7 @@ L8A3A:	call	SHORT_DELAY
 	dec	hl
 	ld	(game.air_left),hl
 	ld	de,0E19h	; address or value?
-	call	L849B
+	call	PRINT_AIR_LEFT
 	ld	hl,(game.air_left)
 	ld	a,h
 	or	l
@@ -1679,12 +1738,12 @@ L8A3A:	call	SHORT_DELAY
 	ld	b,58h		; 'X'
 
 	; Referenced from 8A59
-L8A5D:	ld	a,(0C05Ch)
+L8A5D:	ld	a,(nest.spratr_y)
 	srl	a
 	srl	a
 	srl	a
 	ld	d,a
-	ld	a,(0C05Dh)
+	ld	a,(nest.spratr_x)
 	srl	a
 	srl	a
 	srl	a
@@ -1816,9 +1875,9 @@ L8AB7:	ld	hl,player.spratr_y
 	ld	b,04h
 	call	WRTVDP
 ; Extra life
-	ld	a,(player.lives)
+	ld	a,(game.lives)
 	inc	a
-	ld	(player.lives),a
+	ld	(game.lives),a
 ; Increases difficulty
 	ld	a,0FFh
 	ld	(game.first_pyramid),a
@@ -2022,7 +2081,7 @@ L8C67:	call	RANDOMIZE
 	jp	c,SHORT_DELAY
 	ld	a,20h		; ' '
 	ld	(0C069h),a
-	ld	bc,(0C05Ch)
+	ld	bc,(nest)
 	ld	(ix+00h),c
 	ld	(ix+01h),b
 	ld	a,0FFh
@@ -2373,23 +2432,29 @@ L8ECE:	srl	d
 	srl	e
 	srl	e
 	srl	e
-	call	L8EEB
+	call	WRTVRM_2x2_BLANK
 	jp	SHORT_DELAY
 
 	; Referenced from 8ECC
 L8EE0:	ld	a,0FFh
 	ld	(skull.status),a
 	ret
+; -----------------------------------------------------------------------------
 
-L8EE6:	DB	38h		; '8'
-	DB	3Ch		; '<'
-	DB	00h
-	DB	38h		; '8'
-	DB	3Ch		; '<'
-
+; -----------------------------------------------------------------------------
+DATA_RANDOMIZE_BOX_CONTENTS:
+L8EE6:	DB	38h ; gun
+	DB	3Ch ; jewel
+	DB	00h ; skull
+	DB	38h ; gun
+	DB	3Ch ; jewel
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8425, 89B1, 8EDA
 	; --- START PROC L8EEB ---
+
+; -----------------------------------------------------------------------------
+WRTVRM_2x2_BLANK:
 L8EEB:	push	de
 	ld	a,0FFh
 	call	WRTVRM_1x1_CHAR
@@ -3086,30 +3151,30 @@ L9296:	ld	hl,0C084h	; address or value?
 ; -----------------------------------------------------------------------------
 UPDATE_HIGH_SCORE:
 ; Compares score (BCD) with high score (BCD)
-L92A9:	ld	hl,score_bcd
-	ld	a,(high_score_bcd)
+L92A9:	ld	hl,game.score_bcd
+	ld	a,(game.high_score_bcd)
 	cp	(hl)
 	jr	c,.L92C3
 	ret	nz
 ; (next digit)
 	inc	hl
-	ld	a,(high_score_bcd +1)
+	ld	a,(game.high_score_bcd +1)
 	cp	(hl)
 	jr	c,.L92C3
 	ret	nz
 ; (next digit)
 	inc	hl
-	ld	a,(high_score_bcd +2)
+	ld	a,(game.high_score_bcd +2)
 	cp	(hl)
 	jr	z,.L92C3
 	ret	nc
 ; Copies score (BCD) to high_score (BCD)
-.L92C3:	ld	bc,(score_bcd)
-	ld	(high_score_bcd),bc
-	ld	a,(score_bcd +2)
-	ld	(high_score_bcd +2),a
+.L92C3:	ld	bc,(game.score_bcd)
+	ld	(game.high_score_bcd),bc
+	ld	a,(game.score_bcd +2)
+	ld	(game.high_score_bcd +2),a
 ; Prints high score
-	ld	hl,high_score_bcd
+	ld	hl,game.high_score_bcd
 	jr	WRTVRM_6x_BCD
 ; -----------------------------------------------------------------------------
 
@@ -3118,7 +3183,7 @@ L92A9:	ld	hl,score_bcd
 
 ; -----------------------------------------------------------------------------
 PRINT_SCORE:
-L92D6:	ld	hl,score_bcd
+L92D6:	ld	hl,game.score_bcd
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 92D4
@@ -3714,535 +3779,304 @@ LITERAL:
 
 ; -----------------------------------------------------------------------------
 DATA_ROOMS:
-L9CD8:	DB	0D1h
-	DB	40h 
-	DB	04h
-	DB	00h
-	DB	0B5h
-	DB	0A0h
-	DB	80h
-	DB	00h
-	DB	2Eh 
-	DB	0C0h
-	DB	60h 
-	DB	80h
-	DB	6Eh 
-	DB	0A0h
-	DB	00h
-	DB	20h 
-	DB	75h 
-	DB	0A0h
-	DB	40h 
-	DB	80h
-	DB	5Ah 
-	DB	20h 
-	DB	00h
-	DB	00h
-	DB	02h
-	DB	05h
-	DB	0Ah
-	DB	07h
-	DB	0Ah
-	DB	0Ah
-	DB	82h
-	DB	00h
-	DB	05h
-	DB	0Ah
-	DB	0AEh
-	DB	0A0h
-	DB	08h
-	DB	00h
-	DB	0BAh
-	DB	0C0h
-	DB	00h
-	DB	80h
-	DB	0EEh
-	DB	0A0h
-	DB	80h
-	DB	00h
-	DB	0AEh
-	DB	0A0h
-	DB	88h
-	DB	20h 
-	DB	0ABh
-	DB	0A0h
-	DB	80h
-	DB	00h
-	DB	0AEh
-	DB	0A0h
-	DB	05h
-	DB	00h
-	DB	00h
-	DB	07h
-	DB	0Ah
-	DB	07h
-	DB	00h
-	DB	00h
-	DB	01h
-	DB	0Ah
-	DB	89h
-	DB	00h
-	DB	0EEh
-	DB	0E0h
-	DB	0AAh
-	DB	0A0h
-	DB	00h
-	DB	00h
-	DB	0AAh
-	DB	0A0h
-	DB	0Eh
-	DB	00h
-	DB	0A0h
-	DB	0A0h
-	DB	0Eh
-	DB	00h
-	DB	0AAh
-	DB	0A0h
-	DB	80h
-	DB	20h 
-	DB	0EAh
-	DB	0E0h
-	DB	0Ah
-	DB	00h
-	DB	01h
-	DB	00h
-	DB	05h
-	DB	00h
-	DB	09h
-	DB	00h
-	DB	08h
-	DB	04h
-	DB	05h
-	DB	0Ah
-	DB	87h
-	DB	00h
-	DB	6Ah 
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	0BBh
-	DB	0A0h
-	DB	00h
-	DB	00h
-	DB	6Eh 
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	6Eh 
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	0BBh
-	DB	0A0h
-	DB	00h
-	DB	00h
-	DB	6Ah 
-	DB	0C0h
-	DB	01h
-	DB	02h
-	DB	09h
-	DB	02h
-	DB	09h
-	DB	08h
-	DB	00h
-	DB	08h
-	DB	85h
-	DB	00h
-	DB	05h
-	DB	0Ah
-	DB	8Bh
-	DB	40h 
-	DB	0A8h
-	DB	00h
-	DB	0A2h
-	DB	0C0h
-	DB	0Ah
-	DB	00h
-	DB	0DEh
-	DB	0C0h
-	DB	00h
-	DB	80h
-	DB	5Eh 
-	DB	20h 
-	DB	02h
-	DB	80h
-	DB	6Bh 
-	DB	0E0h
-	DB	08h
-	DB	80h
-	DB	62h 
-	DB	20h 
-	DB	05h
-	DB	00h
-	DB	07h
-	DB	08h
-	DB	0Ah
-	DB	08h
-	DB	00h
-	DB	01h
-	DB	00h
-	DB	0Ah
-	DB	8Ah
-	DB	00h
-	DB	85h
-	DB	00h
-	DB	0DDh
-	DB	0C0h
-	DB	84h
-	DB	00h
-	DB	0B1h
-	DB	60h 
-	DB	1Eh
-	DB	00h
-	DB	40h 
-	DB	0C0h
-	DB	0EEh
-	DB	0C0h
-	DB	24h 
-	DB	00h
-	DB	0ADh
-	DB	60h 
-	DB	04h
-	DB	00h
-	DB	0F1h
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	01h
-	DB	0Ah
-	DB	08h
-	DB	0Ah
-	DB	01h
-	DB	06h
-	DB	0Ah
-	DB	0Ah
-	DB	86h
-	DB	00h
-	DB	0AAh
-	DB	0A0h
-	DB	88h
-	DB	80h
-	DB	0AAh
-	DB	0A0h
-	DB	22h 
-	DB	20h 
-	DB	0AEh
-	DB	80h
-	DB	80h
-	DB	40h 
-	DB	0AEh
-	DB	80h
-	DB	22h 
-	DB	20h 
-	DB	0EBh
-	DB	0A0h
-	DB	88h
-	DB	80h
-	DB	0AAh
-	DB	0A0h
-	DB	00h
-	DB	0Ah
-	DB	04h
-	DB	01h
-	DB	07h
-	DB	08h
-	DB	08h
-	DB	05h
-	DB	81h
-	DB	00h
-	DB	09h
-	DB	0Ah
-	DB	0DEh
-	DB	0C0h
-	DB	42h 
-	DB	00h
-	DB	58h 
-	DB	0A0h
-	DB	02h
-	DB	0A0h
-	DB	5Eh 
-	DB	00h
-	DB	00h
-	DB	0C0h
-	DB	5Fh 
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	0ADh
-	DB	40h 
-	DB	05h
-	DB	40h 
-	DB	0D4h
-	DB	60h 
-	DB	00h
-	DB	00h
-	DB	00h
-	DB	0Ah
-	DB	09h
-	DB	09h
-	DB	05h
-	DB	00h
-	DB	8Ah
-	DB	00h
-	DB	04h
-	DB	0Ah
-	DB	0BBh
-	DB	0A0h
-	DB	08h
-	DB	00h
-	DB	63h 
-	DB	0C0h
-	DB	4Ah 
-	DB	00h
-	DB	7Eh 
-	DB	0A0h
-	DB	00h
-	DB	00h
-	DB	0AEh
-	DB	0E0h
-	DB	0EAh
-	DB	20h 
-	DB	8Ah
-	DB	0A0h
-	DB	20h 
-	DB	80h
-	DB	0EAh
-	DB	0A0h
-	DB	01h
-	DB	0Ah
-	DB	0Ah
-	DB	07h
-	DB	07h
-	DB	00h
-	DB	01h
-	DB	03h
-	DB	85h
-	DB	00h
-	DB	05h
-	DB	0Ah
-	DB	74h 
-	DB	60h 
-	DB	15h
-	DB	00h
-	DB	0D5h
-	DB	0C0h
-	DB	04h
-	DB	20h 
-	DB	7Fh 
-	DB	60h 
-	DB	00h
-	DB	00h
-	DB	0DFh
-	DB	60h 
-	DB	10h
-	DB	40h 
-	DB	7Bh 
-	DB	0C0h
-	DB	10h
-	DB	40h 
-	DB	0DFh
-	DB	00h
-	DB	02h
-	DB	00h
-	DB	03h
-	DB	09h
-	DB	0Ah
-	DB	00h
-	DB	0Ah
-	DB	05h
-	DB	0Ah
-	DB	02h
-	DB	8Ah
-	DB	07h
-	DB	15h
-	DB	00h
-	DB	44h 
-	DB	40h 
-	DB	51h 
-	DB	40h 
-	DB	44h 
-	DB	40h 
-	DB	7Fh 
-	DB	0C0h
-	DB	00h
-	DB	00h
-	DB	7Fh 
-	DB	0C0h
-	DB	51h 
-	DB	0C0h
-	DB	44h 
-	DB	40h 
-	DB	51h 
-	DB	40h 
-	DB	54h 
-	DB	00h
-	DB	01h
-	DB	02h
-	DB	01h
-	DB	09h
-	DB	09h
-	DB	02h
-	DB	05h
-	DB	03h
-	DB	04h
-	DB	0Ah
-	DB	84h
-	DB	00h
-	DB	2Ah 
-	DB	80h
-	DB	0A0h
-	DB	0C0h
-	DB	2Ah 
-	DB	80h
-	DB	7Fh 
-	DB	0A0h
-	DB	1Fh
-	DB	00h
-	DB	0C0h
-	DB	40h 
-	DB	1Fh
-	DB	00h
-	DB	44h 
-	DB	40h 
-	DB	6Fh 
-	DB	00h
-	DB	41h 
-	DB	40h 
-	DB	14h
-	DB	00h
-	DB	03h
-	DB	03h
-	DB	05h
-	DB	03h
-	DB	07h
-	DB	03h
-	DB	05h
-	DB	08h
-	DB	85h
-	DB	00h
-	DB	04h
-	DB	0Ah
-	DB	0E0h
-	DB	0E0h
-	DB	8Ah
-	DB	20h 
-	DB	2Ah 
-	DB	80h
-	DB	64h 
-	DB	0C0h
-	DB	0Eh
-	DB	00h
-	DB	0A0h
-	DB	0E0h
-	DB	0Eh
-	DB	00h
-	DB	64h 
-	DB	0C0h
-	DB	2Eh 
-	DB	80h
-	DB	8Ah
-	DB	20h 
-	DB	0E0h
-	DB	0E0h
-	DB	01h
-	DB	00h
-	DB	01h
-	DB	0Ah
-	DB	0Ah
-	DB	05h
-	DB	05h
-	DB	07h
-	DB	05h
-	DB	02h
-	DB	85h
-	DB	09h
-	DB	50h 
-	DB	0E0h
-	DB	56h 
-	DB	0C0h
-	DB	06h
-	DB	00h
-	DB	50h
-	DB	0A0h
-	DB	1Eh
-	DB	20h
-	DB	0E0h
-	DB	0A0h
-	DB	8Eh
-	DB	00h
-	DB	6Ch
-	DB	0C0h
-	DB	0Ah
-	DB	00h
-	DB	60h
-	DB	0A0h
-	DB	0Eh
-	DB	0A0h
-	DB	00h
-	DB	05h
-	DB	0Ah
-	DB	04h
-	DB	05h
-	DB	0Ah
-	DB	0Ah
-	DB	00h
-	DB	80h
-	DB	00h
-	DB	07h
-	DB	0Ah
-	DB	0FBh
-	DB	0E0h
-	DB	0A0h
-	DB	80h
-	DB	0AAh
-	DB	0A0h
-	DB	8Ah
-	DB	20h
-	DB	2Eh
-	DB	0A0h
-	DB	60h
-	DB	80h
-	DB	2Eh
-	DB	0C0h
-	DB	8Ah
-	DB	00h
-	DB	0A0h
-	DB	0A0h
-	DB	2Dh
-	DB	80h
-	DB	0A0h
-	DB	0A0h
-	DB	01h
-	DB	00h
-	DB	02h
-	DB	05h
-	DB	0Ah
-	DB	03h
-	DB	00h
-	DB	0Ah
-	DB	05h
-	DB	03h
-	DB	85h
-	DB	07h
-	DB	20h
-	DB	80h
-	DB	20h
-	DB	80h
-	DB	20h
-	DB	80h
-	DB	20h
-	DB	80h
-	DB	3Bh
-	DB	80h
-	DB	0Ah
-	DB	00h
-	DB	00h
-	DB	00h
-	DB	55h
-; -----------------------------------------------------------------------------
+; 00				; XXXXXXXXXXXXX
+L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
+	DB	004h, 000h	; X_____X_____X
+	DB	0B5h, 0A0h	; XX_XX_X_XX_XX
+	DB	080h, 000h	; XX__________X
+	DB	02Eh, 0C0h	; X__X_HHH_XX_X
+	DB	060h, 080h	; X_XB_____X__X
+	DB	06Eh, 0A0h	; X_XX_HHH_X_XX
+	DB	000h, 020h	; X__________BX
+	DB	075h, 0A0h	; X_XXX_X_XX_XX
+	DB	040h, 080h	; X_X______X_NX
+	DB	05Ah, 020h 	; X_X_XXvX___XX
+				; XXXXXXXXXXXXX
+	DB	00h, 00h	; box1
+	DB	02h, 05h	; box2
+	DB	0Ah, 07h	; box3
+	DB	0Ah, 0Ah	; nest
+	DB	82h, 00h	; door (^)
+	DB	05h, 0Ah	; door (v)
+	
+; 01
+	DB	0AEh, 0A0h	; walls
+	DB	08h, 00h
+	DB	0BAh, 0C0h
+	DB	00h, 80h
+	DB	0EEh, 0A0h
+	DB	80h, 00h
+	DB	0AEh, 0A0h
+	DB	88h, 20h 
+	DB	0ABh, 0A0h
+	DB	80h, 00h
+	DB	0AEh, 0A0h
+	DB	05h, 00h	; boxes
+	DB	00h, 07h
+	DB	0Ah, 07h
+	DB	00h, 00h	; nest
+	DB	01h, 0Ah	; doors
+	DB	89h, 00h
+	
+; 02
+	DB	0EEh, 0E0h	; walls
+	DB	0AAh, 0A0h
+	DB	00h, 00h
+	DB	0AAh, 0A0h
+	DB	0Eh, 00h
+	DB	0A0h, 0A0h
+	DB	0Eh, 00h
+	DB	0AAh, 0A0h
+	DB	80h, 20h 
+	DB	0EAh, 0E0h
+	DB	0Ah, 00h
+	DB	01h, 00h	; boxes
+	DB	05h, 00h
+	DB	09h, 00h
+	DB	08h, 04h	; nest
+	DB	05h, 0Ah	; doors
+	DB	87h, 00h
 
-; -----------------------------------------------------------------------------
-L9EE5: 	DB	40h, 00h, 00h, 00h, 00h, 00h, 00h
+; 03
+	DB	6Ah, 0C0h	; walls
+	DB	00h, 00h
+	DB	0BBh, 0A0h
+	DB	00h, 00h
+	DB	6Eh , 0C0h
+	DB	00h, 00h
+	DB	6Eh , 0C0h
+	DB	00h, 00h
+	DB	0BBh, 0A0h
+	DB	00h, 00h
+	DB	6Ah , 0C0h
+	DB	01h, 02h	; boxes
+	DB	09h, 02h
+	DB	09h, 08h
+	DB	00h, 08h	; nest
+	DB	85h, 00h	; doors
+	DB	05h, 0Ah
+
+; 04
+	DB	8Bh, 40h 	; walls
+	DB	0A8h, 00h
+	DB	0A2h, 0C0h
+	DB	0Ah, 00h
+	DB	0DEh, 0C0h
+	DB	00h, 80h
+	DB	5Eh , 20h 
+	DB	02h, 80h
+	DB	6Bh , 0E0h
+	DB	08h, 80h
+	DB	62h , 20h 
+	DB	05h, 00h	; boxes
+	DB	07h, 08h
+	DB	0Ah, 08h
+	DB	00h, 01h	; nest
+	DB	00h, 0Ah	; doors
+	DB	8Ah, 00h
+
+; 05
+	DB	85h, 00h	; walls
+	DB	0DDh, 0C0h
+	DB	84h, 00h
+	DB	0B1h, 60h 
+	DB	1Eh, 00h
+	DB	40h , 0C0h
+	DB	0EEh, 0C0h
+	DB	24h , 00h
+	DB	0ADh, 60h 
+	DB	04h, 00h
+	DB	0F1h, 0C0h
+	DB	00h, 00h	; boxes
+	DB	01h, 0Ah
+	DB	08h, 0Ah
+	DB	01h, 06h	; nest
+	DB	0Ah, 0Ah	; doors
+	DB	86h, 00h
+
+; 06
+	DB	0AAh, 0A0h	; walls
+	DB	88h, 80h
+	DB	0AAh, 0A0h
+	DB	22h , 20h 
+	DB	0AEh, 80h
+	DB	80h, 40h 
+	DB	0AEh, 80h
+	DB	22h , 20h 
+	DB	0EBh, 0A0h
+	DB	88h, 80h
+	DB	0AAh, 0A0h
+	DB	00h, 0Ah	; boxes
+	DB	04h, 01h
+	DB	07h, 08h
+	DB	08h, 05h	; nest
+	DB	81h, 00h	; doors
+	DB	09h, 0Ah
+
+; 07
+	DB	0DEh, 0C0h	; walls
+	DB	42h , 00h
+	DB	58h , 0A0h
+	DB	02h, 0A0h
+	DB	5Eh , 00h
+	DB	00h, 0C0h
+	DB	5Fh , 0C0h
+	DB	00h, 00h
+	DB	0ADh, 40h 
+	DB	05h, 40h 
+	DB	0D4h, 60h 
+	DB	00h, 00h	; boxes
+	DB	00h, 0Ah
+	DB	09h, 09h
+	DB	05h, 00h	; nest
+	DB	8Ah, 00h	; doors
+	DB	04h, 0Ah
+
+; 08
+	DB	0BBh, 0A0h	; walls
+	DB	08h, 00h
+	DB	63h , 0C0h
+	DB	4Ah , 00h
+	DB	7Eh , 0A0h
+	DB	00h, 00h
+	DB	0AEh, 0E0h
+	DB	0EAh, 20h 
+	DB	8Ah, 0A0h
+	DB	20h , 80h
+	DB	0EAh, 0A0h
+	DB	01h, 0Ah	; boxes
+	DB	0Ah, 07h
+	DB	07h, 00h
+	DB	01h, 03h	; nest
+	DB	85h, 00h	; doors
+	DB	05h, 0Ah
+
+; 09
+	DB	74h, 60h 	; walls
+	DB	15h, 00h
+	DB	0D5h, 0C0h
+	DB	04h, 20h 
+	DB	7Fh , 60h 
+	DB	00h, 00h
+	DB	0DFh, 60h 
+	DB	10h, 40h 
+	DB	7Bh , 0C0h
+	DB	10h, 40h 
+	DB	0DFh, 00h
+	DB	02h, 00h	; boxes
+	DB	03h, 09h
+	DB	0Ah, 00h
+	DB	0Ah, 05h	; nest
+	DB	0Ah, 02h	; doors
+	DB	8Ah, 07h
+
+; 0A
+	DB	15h, 00h	; walls
+	DB	44h , 40h 
+	DB	51h , 40h 
+	DB	44h , 40h 
+	DB	7Fh , 0C0h
+	DB	00h, 00h
+	DB	7Fh , 0C0h
+	DB	51h , 0C0h
+	DB	44h , 40h 
+	DB	51h , 40h 
+	DB	54h , 00h
+	DB	01h, 02h	; boxes
+	DB	01h, 09h
+	DB	09h, 02h
+	DB	05h, 03h	; nest
+	DB	04h, 0Ah	; doors
+	DB	84h, 00h
+
+; 0B
+	DB	2Ah , 80h	; walls
+	DB	0A0h, 0C0h
+	DB	2Ah , 80h
+	DB	7Fh , 0A0h
+	DB	1Fh, 00h
+	DB	0C0h, 40h 
+	DB	1Fh, 00h
+	DB	44h , 40h 
+	DB	6Fh , 00h
+	DB	41h , 40h 
+	DB	14h, 00h
+	DB	03h, 03h	; boxes
+	DB	05h, 03h
+	DB	07h, 03h
+	DB	05h, 08h	; nest
+	DB	85h, 00h	; doors
+	DB	04h, 0Ah
+
+; 0C
+	DB	0E0h, 0E0h	; walls
+	DB	8Ah, 20h 
+	DB	2Ah , 80h
+	DB	64h , 0C0h
+	DB	0Eh, 00h
+	DB	0A0h, 0E0h
+	DB	0Eh, 00h
+	DB	64h , 0C0h
+	DB	2Eh , 80h
+	DB	8Ah, 20h 
+	DB	0E0h, 0E0h
+	DB	01h, 00h	; boxes
+	DB	01h, 0Ah
+	DB	0Ah, 05h
+	DB	05h, 07h	; nest
+	DB	05h, 02h	; doors
+	DB	85h, 09h
+
+; 0D
+	DB	50h , 0E0h	; walls
+	DB	56h , 0C0h
+	DB	06h, 00h
+	DB	50h, 0A0h
+	DB	1Eh, 20h
+	DB	0E0h, 0A0h
+	DB	8Eh, 00h
+	DB	6Ch, 0C0h
+	DB	0Ah, 00h
+	DB	60h, 0A0h
+	DB	0Eh, 0A0h
+	DB	00h, 05h	; boxes
+	DB	0Ah, 04h
+	DB	05h, 0Ah
+	DB	0Ah, 00h	; nest
+	DB	80h, 00h	; doors
+	DB	07h, 0Ah
+
+; 0E
+	DB	0FBh, 0E0h	; walls
+	DB	0A0h, 80h
+	DB	0AAh, 0A0h
+	DB	8Ah, 20h
+	DB	2Eh, 0A0h
+	DB	60h, 80h
+	DB	2Eh, 0C0h
+	DB	8Ah, 00h
+	DB	0A0h, 0A0h
+	DB	2Dh, 80h
+	DB	0A0h, 0A0h
+	DB	01h, 00h	; box
+	DB	02h, 05h
+	DB	0Ah, 03h
+	DB	00h, 0Ah	; nest
+	DB	05h, 03h	; doors
+	DB	85h, 07h
+
+; 0F (sphynx room)
+	DB	20h, 80h	; walls
+	DB	20h, 80h
+	DB	20h, 80h
+	DB	20h, 80h
+	DB	3Bh, 80h
+	DB	0Ah, 00h
+	DB	00h, 00h
+	DB	55h, 40h
+	DB	00h, 00h
+	DB	00h, 00h
+	DB	00h, 00h
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4333,13 +4167,13 @@ box3:				; C00AH
 	.content:	rb 1	; C00EH
 
 door1:				; C00FH
-	.data:		rb 1	; C00FH
+	.type:		rb 1	; C00FH ; (0 = v, 1 = ^)
 	.spratr_y:	rb 1	; C010H
 	.spratr_x:	rb 1	; C011H
 	.spratr_pat:	rb 1	; C012H
 	.spratr_color:	rb 1	; C013H
 door2:				; c014H
-	.data:		rb 1	; C014H
+	.type:		rb 1	; C014H ; (0 = v, 1 = ^)
 	.spratr_y:	rb 1	; C015H
 	.spratr_x:	rb 1	; C016H
 	.spratr_pat:	rb 1	; C017H
@@ -4413,25 +4247,35 @@ bullet:				; C056H
 	.direction:	rb 1	; C05AH
 	.status:	rb 1	; C05BH
 
-aux.frame_counter:	equ	$C05F ; rb 1
+nest:				; C05CH
+	.spratr_y:	rb 1	; C05CH
+	.spratr_x:	rb 1	; C05DH
+	
+	org	$c05f
+aux.frame_counter:	rb 1	; C05FH
 
-game.short_delay:	equ	$C075 ; rb 1
-game.current_room:	equ	$C076 ; rb 1
-game.air_left:		equ	$C077 ; rb 4
-game.first_pyramid:	equ	$C07B ; rb 1
+	org	$c071
+game:
+	.air_left_bcd:	rb 4	; C071H
+	.short_delay:	rb 1	; C075H
+	.current_room:	rb 1	; C076H
+	.air_left:	rb 4	; C077H
+	.first_pyramid:	rb 1	; C07BH
+	.lives:		rb 1	; C07CH
 
-player.lives:		equ	$C07C ; rb 1
+aux.how_many_bytes:	rb 2	; C07DH
 
-aux.how_many_bytes:	equ	$C07D ; rb 2
+game.high_score_bcd:	rb 3	; C07FH (6 digits)
+game.score_bcd:		rb 3	; C082H (6 digits)
 
-high_score_bcd:		equ	$C07F ; rb 3 (6 digits)
-score_bcd:		equ	$C082 ; rb 3 (6 digits)
+pyramid:
+	.room_index:	rb 1	; C085H
+			rb 1	; (unused?)
+	.room_array:	rb 16	; C087H (7 +5 +3 +1)
+	.room_namtbl_ptr:rb 2	; C097H
 
-pyramid_rooms:		equ	$C087 ; rb ?
-
-curent_room_namtbl_ptr:	equ	$C097 ; rb 2
-
-aux.frame_counter_2:	equ	$C0D8 ; rb 1
+	org	$c0d8
+aux.frame_counter_2:	rb 1	; C0D8H
 ; -----------------------------------------------------------------------------
 
 ; EOF
