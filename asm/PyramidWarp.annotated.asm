@@ -599,7 +599,7 @@ L82E7:	xor	a
 	; --- START PROC L836A ---
 
 ; -----------------------------------------------------------------------------
-DEC_LIVES_AND_ENTER_NEW_ROOM:
+DEC_LIVES_AND_NEW_ROOM:
 ; Clear lives
 L836A:	ld	b,05h
 	ld	hl,LITERAL.BLANK_x6
@@ -613,7 +613,7 @@ L836A:	ld	b,05h
 	jp	m,GAME_OVER
 ; Prints lives
 	or	a
-	jr	z,ENTER_NEW_ROOM ; (no lives to print)
+	jr	z,NEW_ROOM ; (no lives to print)
 	ld	b,a
 	ld	de,1719h
 	ld	hl,LITERAL.LIVES_x6
@@ -624,7 +624,7 @@ L836A:	ld	b,05h
 	; --- START PROC L838C ---
 	
 ; -----------------------------------------------------------------------------
-ENTER_NEW_ROOM:
+NEW_ROOM:
 ; Print score and updates high score
 L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
@@ -700,12 +700,10 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	ld	b,a
 .L83F7:	add	hl,de
 	djnz	.L83F7
-; ------VVVV----falls through--------------------------------------------------
 
-; -----------------------------------------------------------------------------
 ; Prints the room
+
 ; param hl: room data pointer
-PRINT_ROOM:
 	xor	a
 	ld	(aux.frame_counter_2),a
 ; For each row
@@ -766,6 +764,7 @@ PRINT_ROOM:
 	jr	nz,.L83FE
 	
 ; Initializes game vars
+
 	xor	a
 	ld	(skull.status),a
 	ld	(scorpion1.status),a
@@ -776,12 +775,12 @@ PRINT_ROOM:
 	ld	(0C053h),a
 	ld	(bullet.status),a
 	ld	(aux.frame_counter),a
-	ld	(0C070h),a
-	ld	(0C06Fh),a
+	ld	(exit.is_open),a
+	ld	(exit.blink_flag),a
 	ld	(0C06Dh),a
-	ld	(0C05Eh),a
+	ld	(player_has_gun),a
 	ld	a,01h
-	ld	(0C060h),a
+	ld	(new_player_direction),a
 	ld	a,12h
 	ld	(0C02Ch),a
 	ld	(0C044h),a
@@ -803,7 +802,7 @@ PRINT_ROOM:
 	ld	(0C04Dh),a
 	inc	a
 	ld	(0C055h),a
-	jr	PREPARE_ROOM
+	jr	PRINT_ROOM_DECORATION
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 85E6, 8634, 8A47
@@ -853,12 +852,12 @@ L849B:	ld	bc,03E8h ; 1000
 	; --- START PROC L84D1 ---
 
 ; -----------------------------------------------------------------------------
-PREPARE_ROOM:
+PRINT_ROOM_DECORATION:
 ; param hl: room data pointer (after walls definition)
 ; Is sphynx room?
 L84D1:	ld	a,(game.current_room)
 	cp	10h
-	jp	z,PREPARE_SPHYNX_ROOM ; yes
+	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
 	
 ; no: Prints box1 in screen
 	ld	ix,box1
@@ -962,11 +961,11 @@ L84D1:	ld	a,(game.current_room)
 	ld	a,e ; (preserves e)
 	and	7Fh
 	cp	e
-	jr	z,L8572 ; no
+	jr	z,.L8572 ; no
 ; yes
 	inc	b ; b = 1 = door up (^)
 ; saves door type
-L8572:	ld	(ix+00h),b
+.L8572:	ld	(ix+00h),b
 	inc	ix
 ; saves door coordinates
 	ld	e,a
@@ -1032,13 +1031,13 @@ L8572:	ld	(ix+00h),b
 	dec	e
 	dec	e
 	call	WRTVRM_2x2_CHAR
-	jr	L8622
+	jr	INIT_GAME_LOOP_NO_SPHYNX
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 84D6
 	
 ; -----------------------------------------------------------------------------
-PREPARE_SPHYNX_ROOM:
+PRINT_SPHYNX_ROOM_DECORATION:
 ; Prints single box
 L85CC:	ld	de,0B0Ch	; address or value?
 	ld	a,34h ; ($34 = box)
@@ -1067,7 +1066,7 @@ L85CC:	ld	de,0B0Ch	; address or value?
 	inc	hl ; player.spratr_x
 	ld	a,60h
 ; ...
-	jr	L8640
+	jr	INIT_GAME_LOOP
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 84E1, 84F7, 850D, 8523, 8544, 8578
@@ -1117,14 +1116,17 @@ L8603:	ld	a,d
 	; --- START PROC L8622 ---
 
 ; -----------------------------------------------------------------------------
-L8622:	ld	hl,0BB8h	; address or value?
+INIT_GAME_LOOP_NO_SPHYNX:
+; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
+L8622:	ld	hl,0BB8h ; 3000
 	ld	a,(game.first_pyramid)
 	or	a
 	jr	z,.L862E
-	ld	hl,07D0h	; address or value?
+	ld	hl,07D0h ; 2000
 .L862E:	ld	(game.air_left),hl
 	ld	de,0E19h	; address or value?
 	call	PRINT_AIR_LEFT
+; Initial player coordinates	
 	ld	hl,player.spratr_y
 	ld	a,58h		; 'X'
 	ld	(hl),a
@@ -1138,6 +1140,7 @@ L8622:	ld	hl,0BB8h	; address or value?
 ; -----------------------------------------------------------------------------
 ; param hl: player.spratr_x
 ; param a: value for player.spratr_x
+INIT_GAME_LOOP:
 L8640:	ld	(hl),a
 ; Sets player pattern
 	inc	hl
@@ -1175,13 +1178,14 @@ L8640:	ld	(hl),a
 	ld	a,(hl)
 	ld	(box3.content),a
 
-; ...	
+; Initial pause
 	ld	b,0Ah
 	; Referenced from 867A
-L8675:	push	bc
-	call	L8C47
+.L8675:	push	bc
+	call	LONG_DELAY
 	pop	bc
-	djnz	L8675
+	djnz	.L8675
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8AB4
 	; --- START PROC L867C ---
@@ -1200,12 +1204,12 @@ L867C:	ld	hl,(game.air_left)
 	jr	c,.L8691 ; air left < 2000
 	add	a,60h ; speed += 60
 .L8691: ld	(game.short_delay),a
-
 ; Next frame
 	ld	a,(aux.frame_counter)
 	inc	a
 	ld	(aux.frame_counter),a
 	call	SHORT_DELAY
+	
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	b,63h ; ($63 = non visited room)
@@ -1216,182 +1220,213 @@ L867C:	ld	hl,(game.air_left)
 .L86AC:	ld	a,b
 	call	WRTVRM_1x1_CHAR
 	
-; 
+; Sets flag to check wall for player
 	ld	a,0FFh
-	ld	(0C06Ah),a
+	ld	(check_wall_for_player),a
+; Checks walls for player
 	ld	hl,player.spratr_y
 	ld	d,(hl)
-	inc	hl
+	inc	hl ; player.spratr_x
 	ld	e,(hl)
-	call	L8B69
+	call	CHECK_ALL_WALLS
+; Resets flag to check wall for player
 	xor	a
-	ld	(0C06Ah),a
+	ld	(check_wall_for_player),a
+	
+; Reads input
 	call	GTSTCK_ANY
 	or	a
-	jr	z,L86D1
-	dec	a
-	srl	a
-	inc	a
-	and	03h
-	ld	(0C060h),a
-
-	; Referenced from 86C6
-L86D1:	ld	a,(0C060h)
-	ld	hl,0C061h	; address or value?
+	jr	z,.L86D1 ; no input
+; Input: translates to direction values
+	dec	a	; 0..7
+	srl	a	; 0..3
+	inc	a	; 1..4
+	and	03h	; 0..3
+	ld	(new_player_direction),a
+; Checks if the player can walk in the new direction
+.L86D1:	ld	a,(new_player_direction)
+	ld	hl,direction_table
 	call	ADD_HL_A
 	ld	a,(hl)
 	or	a
-	jr	z,L86E4
-	ld	a,(0C060h)
+	jr	z,.L86E4 ; no
+; yes: stores the new direction
+	ld	a,(new_player_direction)
 	ld	(player.direction),a
 
-	; Referenced from 86DC
-L86E4:	ld	a,(player.direction)
-	ld	hl,0C061h	; address or value?
+; Checks if the player can walk in the current direction
+.L86E4:	ld	a,(player.direction)
+	ld	hl,direction_table
 	call	ADD_HL_A
 	ld	a,(hl)
 	or	a
-	jr	z,L86F3
-	ld	a,02h
+	jr	z,.L86F3 ; no:  a = 0
+	ld	a,02h	 ; yes: a = 2
 
-	; Referenced from 86EF
-L86F3:	ld	b,a
+; Updates player coordinates
+.L86F3:	ld	b,a
 	ld	a,(player.direction)
-	ld	c,a
-	ld	a,b
+	ld	c,a ; direction in c
+	ld	a,b ; displacement in b
 	ld	hl,player.spratr_y
 	srl	c
-	jr	c,L8701
+	jr	c,.L8701
 	inc	hl ; player.spratr_x
-
-	; Referenced from 86FE
-L8701:	srl	c
-	jr	c,L8707
+.L8701:	srl	c
+	jr	c,.L8707
 	neg
-
-	; Referenced from 8703
-L8707:	add	a,(hl)
+.L8707:	add	a,(hl)
 	ld	(hl),a
+	
+; Checks entering door conditions
 	xor	a
-	ld	(0C0DAh),a
+	ld	(player_entering_door),a ; (not entering)
+; Compares coordinates with door1
 	ld	hl,player.spratr_y
 	ld	a,(door1.spratr_y)
 	cp	(hl)
-	jr	nz,L873B
-	inc	hl
+	jr	nz,.L873B ; not the same
+	inc	hl ; player.spratr_x
 	ld	a,(door1.spratr_x)
 	cp	(hl)
-	jr	nz,L873B
-	call	L912A
+	jr	nz,.L873B ; not the same
+; yes
+	call	PLAY_SOUND_DOOR
+; Sets the door2 coordinates to the player
 	ld	hl,(door2.spratr_y)
 	ld	(player.spratr_y),hl
+; Sets the player direction
 	ld	a,(door2.type)
 	add	a,a
 	ld	b,a
 	ld	a,01h
 	add	a,b
 	ld	(player.direction),a
-	ld	(0C060h),a
+	ld	(new_player_direction),a
+; Sets the flag about the player entering a door
 	ld	a,0FFh
-	ld	(0C0DAh),a
-	jr	L8767
+	ld	(player_entering_door),a ; (entering)
+; Skips the checks with the other door
+	jr	GAME_LOOP.DOORS_OK
 
-	; Referenced from 8714, 871B
-L873B:	ld	hl,player.spratr_y
+; Compares coordinates with door2
+.L873B:	ld	hl,player.spratr_y
 	ld	a,(door2.spratr_y)
 	cp	(hl)
-	jr	nz,L8767
-	inc	hl
+	jr	nz,GAME_LOOP.DOORS_OK ; not the same
+	inc	hl ; player.spratr_x
 	ld	a,(door2.spratr_x)
 	cp	(hl)
-	jr	nz,L8767
-	call	L912A
+	jr	nz,GAME_LOOP.DOORS_OK ; not the same
+; yes
+	call	PLAY_SOUND_DOOR
+; Sets the door1 coordinates to the player
 	ld	hl,(door1.spratr_y)
 	ld	(player.spratr_y),hl
+; Sets the player direction
 	ld	a,(door1.type)
 	add	a,a
 	ld	b,a
 	ld	a,01h
 	add	a,b
 	ld	(player.direction),a
-	ld	(0C060h),a
+	ld	(new_player_direction),a
+; Sets the flag about the player entering a door
 	ld	a,0FFh
-	ld	(0C0DAh),a
+	ld	(player_entering_door),a
+; ------VVVV----falls through--------------------------------------------------
 
+; -----------------------------------------------------------------------------
+GAME_LOOP.DOORS_OK:
 	; Referenced from 8739, 8742, 8749
 L8767:	ld	a,(player.direction)
-	ld	b,a
-	ld	a,(0C05Eh)
+	ld	b,a ; b = 0..3
+	ld	a,(player_has_gun) ; b += 0/8
 	add	a,b
 	ld	b,a
+; Animates the player sprite each two frames (b += 0/4)
 	ld	a,(aux.frame_counter)
 	and	02h
-	jr	z,L877B
+	jr	z,.L877B
 	ld	a,04h
 	add	a,b
 	ld	b,a
-
-	; Referenced from 8775
-L877B:	ld	a,b
+; Computes and sets the sprite pattern (a *= 4)
+.L877B:	ld	a,b
 	add	a,a
 	add	a,a
 	ld	(player.spratr_pat),a
-	ld	b,0Bh
-	ld	a,(0C05Eh)
+; Computes and sets the sprite color
+	ld	b,0Bh ; yellow (without gun)
+	ld	a,(player_has_gun)
 	or	a
-	jr	z,L878B
-	ld	b,0Fh
-
-	; Referenced from 8787
-L878B:	ld	a,b
+	jr	z,.L878B
+	ld	b,0Fh ; white (with gun)
+.L878B:	ld	a,b
 	ld	(player.spratr_color),a
+; Prints the player sprite	
 	ld	de,player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
-	ld	a,(0C0DAh)
+	
+; If not through a door, plays ingame "music"
+	ld	a,(player_entering_door)
 	or	a
-	call	z,L910C
-	ld	a,(0C05Eh)
+	call	z,PLAY_SOUND_INGAME
+	
+; Carrying gun...
+	ld	a,(player_has_gun)
 	or	a
-	jr	z,L87E8
+	jr	z,GAME_LOOP.GUN_OK ; no gun
+; ...and bullet not already shot...
 	ld	a,(bullet.status)
 	or	a
-	jr	nz,L87E8
+	jr	nz,GAME_LOOP.GUN_OK ; bullet already shot
+; ...and trigger?
 	call	GTTRIG_ANY
 	or	a
-	jr	z,L87E8
+	jr	z,GAME_LOOP.GUN_OK ; no trigger
+; Copies player coordinates into the bullet
 	ld	ix,player
 	ld	iy,bullet
-	ld	a,(ix+00h)
+	ld	a,(ix+00h) ; (y+7 for centering the bullet)
 	add	a,07h
 	ld	(iy+00h),a
-	ld	a,(ix+01h)
+	ld	a,(ix+01h) ; (x+7 for centering the bullet)
 	add	a,07h
 	ld	(iy+01h),a
-	ld	a,70h		; 'p'
+	ld	a,70h ; bullet pattern
 	ld	(iy+02h),a
-	ld	a,0Fh
+	ld	a,0Fh; bullet color
 	ld	(iy+03h),a
-	ld	a,(ix+04h)
+	ld	a,(ix+04h) ; direction
 	ld	(iy+04h),a
-	ld	a,0FFh
+	ld	a,0FFh ; bullet status active
 	ld	(iy+05h),a
+; Put bullet sprite
 	ld	de,bullet
 	ld	a,0Ah
 	call	PUT_SPRITE
-	call	L913C
+	call	PLAY_SOUND_BULLET
+; ------VVVV----falls through--------------------------------------------------
 
-	; Referenced from 87A2, 87A8, 87AE
+; -----------------------------------------------------------------------------
+GAME_LOOP.GUN_OK:
 L87E8:	call	SHORT_DELAY
+
+; Is the skull active?
 	ld	a,(skull.status)
 	or	a
-	jp	z,L8908
-	ld	hl,0C01Eh	; address or value?
+	jp	z,GAME_LOOP.SKULL_OK ; no
+	
+; Reads skull coordinates in de
+	ld	hl,skull.spratr_y
 	ld	d,(hl)
-	inc	hl
+	inc	hl ; skull,spratr_x
 	ld	e,(hl)
-	call	L8B69
-	ld	hl,0C061h	; address or value?
+; Checks available directions
+	call	CHECK_ALL_WALLS
+	ld	hl,direction_table
 	ld	a,(hl)
 	inc	hl
 	add	a,(hl)
@@ -1399,346 +1434,388 @@ L87E8:	call	SHORT_DELAY
 	add	a,(hl)
 	inc	hl
 	add	a,(hl)
-	inc	a
-	jr	z,L8815
-	ld	hl,0C061h	; address or value?
+; Only one direction available?
+	inc	a ; $ff +1 = $00
+	jr	z,.L8815 ; yes
+; no: avoids moving back faking a wall in the incoming direction
+	ld	hl,direction_table
 	ld	a,(skull.direction)
-	xor	02h
+	xor	02h ; (reverses direction)
 	call	ADD_HL_A
 	xor	a
-	ld	(hl),a
-
-	; Referenced from 8806
-L8815:	ld	a,(player.spratr_x)
+	ld	(hl),a ; (fakes the wall)
+; Compares player and skull coordinates
+.L8815:	ld	a,(player.spratr_x)
 	ld	b,a
 	ld	a,(skull.spratr_x)
 	srl	a
 	srl	b
-	ld	c,02h
+	ld	c,02h ; c = 2
 	cp	b
-	jr	z,L8867
-	jr	nc,L8828
-	inc	c
-
-	; Referenced from 8825
-L8828:	ld	a,(player.spratr_y)
+	jr	z,.L8867 ; same X coordinate
+	jr	nc,.L8828 ; skull.x > player.x
+	inc	c ; if (skull.x < player.x) c = 3
+.L8828:	ld	a,(player.spratr_y)
 	ld	b,a
 	ld	a,(skull.spratr_y)
 	srl	a
 	srl	b
 	cp	b
-	jr	z,L8898
-	jr	nc,L883A
+	jr	z,.L8898 ; same Y coordinate
+	jr	nc,.L883A ; skull.y > player.y
+	inc	c ; c += 2
 	inc	c
-	inc	c
-
-	; Referenced from 8836
-L883A:	dec	c
+.L883A:	dec	c ; c -= 2
 	dec	c
-	jr	z,L884E
+; Determines skull behaviour
+	jr	z,.L884E ; c = 0
 	dec	c
-	jr	z,L8849
+	jr	z,.L8849 ; c = 1
 	dec	c
-	jr	z,L8853
-	ld	a,03h
-	call	L88C9
+	jr	z,.L8853 ; c = 2
+; player is down and right
+	ld	a,03h ; down
+	call	MOVE_SKULL
+; player is up and right
+.L8849:	ld	a,02h ; right
+	call	MOVE_SKULL
+; player is up and left
+.L884E:	ld	a,01h ; up
+	call	MOVE_SKULL
+; player is down and left
+.L8853:	ld	a,00h ; left
+	call	MOVE_SKULL
+	ld	a,03h ; down
+	call	MOVE_SKULL
+	ld	a,02h ; right
+	call	MOVE_SKULL
+	ld	a,01h ; up
+	call	MOVE_SKULL
+	; (control never reaches here)
 
-	; Referenced from 883F
-L8849:	ld	a,02h
-	call	L88C9
-
-	; Referenced from 883C
-L884E:	ld	a,01h
-	call	L88C9
-
-	; Referenced from 8842
-L8853:	ld	a,00h
-	call	L88C9
-	ld	a,03h
-	call	L88C9
-	ld	a,02h
-	call	L88C9
-	ld	a,01h
-	call	L88C9
-
-	; Referenced from 8823
-L8867:	ld	a,(player.spratr_y)
+; Player is at the same X
+; Compares player and skull Y coordinates
+.L8867:	ld	a,(player.spratr_y)
 	ld	b,a
 	ld	a,(skull.spratr_y)
 	srl	a
 	srl	b
 	cp	b
-	jr	nc,L8884
-	ld	a,03h
-	call	L88C9
-	ld	a,00h
-	call	L88C9
-	ld	a,02h
-	call	L88C9
+	jr	nc,.L8884 ; skull.y > player.y
+; player is down
+	ld	a,03h ; down
+	call	MOVE_SKULL
+	ld	a,00h ; left
+	call	MOVE_SKULL
+	ld	a,02h ; right
+	call	MOVE_SKULL
+; player is up
+.L8884:	ld	a,01h ; up
+	call	MOVE_SKULL
+	ld	a,00h ; left
+	call	MOVE_SKULL
+	ld	a,02h ; right
+	call	MOVE_SKULL
+	ld	a,03h ; down
+	call	MOVE_SKULL
+	; (control never reaches here)
 
-	; Referenced from 8873
-L8884:	ld	a,01h
-	call	L88C9
-	ld	a,00h
-	call	L88C9
-	ld	a,02h
-	call	L88C9
-	ld	a,03h
-	call	L88C9
-
-	; Referenced from 8834
-L8898:	ld	a,(player.spratr_x)
+; Player is at the same Y
+; Compares player and skull X coordinates
+.L8898:	ld	a,(player.spratr_x)
 	ld	b,a
 	ld	a,(skull.spratr_x)
 	srl	a
 	srl	b
 	cp	b
-	jr	c,L88B5
-	ld	a,00h
-	call	L88C9
-	ld	a,01h
-	call	L88C9
-	ld	a,03h
-	call	L88C9
-
-	; Referenced from 88A4
-L88B5:	ld	a,02h
-	call	L88C9
-	ld	a,01h
-	call	L88C9
-	ld	a,03h
-	call	L88C9
-	ld	a,00h
-	call	L88C9
+	jr	c,.L88B5 ; skull.x > player.x
+; player is to the left
+	ld	a,00h ; left
+	call	MOVE_SKULL
+	ld	a,01h ; up
+	call	MOVE_SKULL
+	ld	a,03h ; down
+	call	MOVE_SKULL
+; player is to the right
+.L88B5:	ld	a,02h ; right
+	call	MOVE_SKULL
+	ld	a,01h ; up
+	call	MOVE_SKULL
+	ld	a,03h ; down
+	call	MOVE_SKULL
+	ld	a,00h ; left
+	call	MOVE_SKULL
+	; (control never reaches here)
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8846, 884B, 8850, 8855, 885A, 885F, 8864, 8877, 887C, 8881, 8886, 888B, 8890, 8895, 88A8, 88AD, 88B2, 88B7, 88BC, 88C1, 88C6
 	; --- START PROC L88C9 ---
-L88C9:	ld	hl,0C061h	; address or value?
+	
+; -----------------------------------------------------------------------------
+; param a: direction to try (0..3 = left, up, right, down)
+; ret: if the skull could not be moved in that direction
+; continues below: if the skull was moved
+MOVE_SKULL:
+; Wall in that direction?
+L88C9:	ld	hl,direction_table
 	ld	b,a
 	call	ADD_HL_A
 	ld	a,(hl)
 	or	a
-	ret	z
+	ret	z; yes
+; no: sets the skull direction
 	ld	a,b
 	ld	(skull.direction),a
+; (no ret)
 	pop	hl
-	ld	hl,0C01Eh	; address or value?
-	ld	a,02h
+; Moves the skull
+	ld	hl,skull.spratr_y
+	ld	a,02h ; (two pixels)
 	srl	b
-	jr	c,L88E2
-	inc	hl
-
-	; Referenced from 88DF
-L88E2:	srl	b
-	jr	c,L88E8
+	jr	c,.L88E2
+	inc	hl ; skull.spratrxz
+.L88E2:	srl	b
+	jr	c,.L88E8
 	neg
-
-	; Referenced from 88E4
-L88E8:	add	a,(hl)
+.L88E8:	add	a,(hl)
 	ld	(hl),a
+; Animates the skull each two frames
 	ld	a,(aux.frame_counter)
 	and	02h
 	ld	a,10h
-	jr	z,L88F4
+	jr	z,.L88F4
 	inc	a
-
-	; Referenced from 88F1
-L88F4:	add	a,a
+; (computes skull pattern)
+.L88F4:	add	a,a
 	add	a,a
 	ld	(skull.spratr_pat),a
+; Puts the skull sprite
 	ld	a,03h
 	ld	de,skull
 	call	PUT_SPRITE
+; 
 	ld	ix,skull
 	call	L8DAC
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 87EF
 	; --- START PROC L8908 ---
+
+; -----------------------------------------------------------------------------
+GAME_LOOP.SKULL_OK:
 L8908:	call	SHORT_DELAY
+; Is bullet shot?
 	ld	a,(bullet.status)
 	or	a
-	jr	z,L8969
+	jr	z,GAME_LOOP.BULLET_OK ; no
 	inc	a
-	jr	nz,L8969
+	jr	nz,GAME_LOOP.BULLET_OK ; no (?)
+; Updates bullet coordinates
 	ld	a,(bullet.direction)
 	ld	b,a
-	ld	a,04h
-	ld	hl,0C056h	; address or value?
+	ld	a,04h ; (4 pixels)
+	ld	hl,bullet.spratr_y
 	srl	b
-	jr	c,L8922
-	inc	hl
-
-	; Referenced from 891F
-L8922:	srl	b
-	jr	c,L8928
+	jr	c,.L8922
+	inc	hl ; bullet.spratr_x
+.L8922:	srl	b
+	jr	c,.L8928
 	neg
-
-	; Referenced from 8924
-L8928:	add	a,(hl)
+.L8928:	add	a,(hl)
 	ld	(hl),a
+; Animates the bullet each eight frames
 	ld	a,(aux.frame_counter)
 	and	08h
 	ld	a,1Ch
-	jr	z,L8934
+	jr	z,.L8934
 	inc	a
-
-	; Referenced from 8931
-L8934:	add	a,a
+; (computes bullet pattern)
+.L8934:	add	a,a
 	add	a,a
 	ld	(bullet.spratr_pat),a
-	ld	hl,bullet
+; Checks if the bullet has hit a wall
+	ld	hl,bullet.spratr_y
 	ld	d,(hl)
-	inc	hl
+	inc	hl ; bullet.spratr_x
 	ld	e,(hl)
-	call	L8BE2
+	call	CHECK_WALL
 	or	a
-	jr	nz,L8961
+	jr	nz,.L8961 ; no
+; yes: uses explosion sprite
 	ld	hl,bullet.spratr_y
 	ld	a,(hl)
-	sub	07h
+	sub	07h ; (aligns the explosion sprite)
 	ld	(hl),a
-	inc	hl
+	inc	hl ; bullet.spratr_x
 	ld	a,(hl)
-	sub	07h
+	sub	07h ; (aligns the explosion sprite)
 	ld	(hl),a
-	inc	hl
-	ld	a,78h		; 'x'
+	inc	hl ; bullet.spratr_pat
+	ld	a,78h
 	ld	(hl),a
-	inc	hl
+	inc	hl ; bullet.spratr_color
 	ld	a,06h
 	ld	(hl),a
-	inc	hl
-	inc	hl
+	inc	hl ; bullet.direction
+	inc	hl ; bullet.status
 	ld	a,06h
 	ld	(hl),a
-	call	L9133
-
-	; Referenced from 8943
-L8961:	ld	de,bullet
+; Sound
+	call	PLAY_SOUND_BULLET_HIT
+; Puts the bullet sprite
+.L8961:	ld	de,bullet
 	ld	a,0Ah
 	call	PUT_SPRITE
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 890F, 8912
+	
+; -----------------------------------------------------------------------------
+GAME_LOOP.BULLET_OK:
 L8969:	call	SHORT_DELAY
+; Sphynx room?
 	ld	a,(game.current_room)
 	cp	10h
-	jp	z,CHECK_SPHYNX_ROOM_BOX
+	jp	z,CHECK_SPHYNX_ROOM_BOX ; yes
+; no: updates scorpion1, box1 and bat1
 	ld	ix,scorpion1
-	call	L8C50
+	call	UPDATE_ENEMY
 	ld	ix,box1
-	call	L8E0A
+	call	UPDATE_BOX
 	ld	ix,bat1
-	call	L8C50
-	ld	a,(0C070h)
+	call	UPDATE_ENEMY
+; Is the exit open?
+	ld	a,(exit.is_open)
 	or	a
-	jr	z,L89E1
-	ld	a,(0C06Eh)
+	jr	z,GAME_LOOP.EXIT_OK ; no
+; yes: makes the exit blink
+	ld	a,(exit.blink_counter)
 	dec	a
-	ld	(0C06Eh),a
-	jr	nz,L89B4
+	ld	(exit.blink_counter),a
+	jr	nz,.L89B4
+; (each 10 frames)
 	ld	a,0Ah
-	ld	(0C06Eh),a
-	ld	a,(0C06Fh)
+	ld	(exit.blink_counter),a
+	ld	a,(exit.blink_flag)
 	cpl
-	ld	(0C06Fh),a
-	ld	de,0B0Ch	; address or value?
+	ld	(exit.blink_flag),a
+	ld	de,0B0Ch
 	or	a
-	jr	z,L89B1
+	jr	z,.L89B1
+; (prints the exit)
 	ld	a,50h		; 'P'
 	call	WRTVRM_2x2_CHAR
-	jr	L89B4
+	jr	.L89B4
+; (clears the exit)
+.L89B1:	call	WRTVRM_2x2_BLANK
 
-	; Referenced from 89A8
-L89B1:	call	WRTVRM_2x2_BLANK
-
-	; Referenced from 8996, 89AF
-L89B4:	ld	hl,player.spratr_y
-	ld	a,58h		; 'X'
+; Compares player and exit coordinates
+.L89B4:	ld	hl,player.spratr_y
+	ld	a,58h
 	cp	(hl)
-	jr	nz,L89E1
-	inc	hl ; player.spratr_x
-	ld	a,60h		; '`'
+	jr	nz,GAME_LOOP.EXIT_OK ; no
+	inc	hl
+	ld	a,60h
 	cp	(hl)
-	jr	nz,L89E1
+	jr	nz,GAME_LOOP.EXIT_OK ; no
+; yes: increases room index
 	ld	a,(pyramid.room_index)
 	inc	a
 	ld	(pyramid.room_index),a
+; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	a,61h		; 'a'
+	ld	a,61h
 	call	WRTVRM_1x1_CHAR
-	call	L9070
-	ld	de,0500h	; address or value?
+; Plays exit sound
+	call	PLAY_SOUND_EXIT
+; Scores 500 points
+	ld	de,0500h
 	call	ADD_SCORE
 	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
-	jp	ENTER_NEW_ROOM
+; Starts next room
+	jp	NEW_ROOM
+; -----------------------------------------------------------------------------
 
 	; Referenced from 898D, 89BA, 89C0
+	
+; -----------------------------------------------------------------------------
+GAME_LOOP.EXIT_OK:
 L89E1:	call	SHORT_DELAY
+; Updates box2, scorpion2, bat2 and box3
 	ld	ix,box2
-	call	L8E0A
+	call	UPDATE_BOX
 	ld	ix,scorpion2
-	call	L8C50
+	call	UPDATE_ENEMY
 	ld	ix,bat2
-	call	L8C50
+	call	UPDATE_ENEMY
 	ld	ix,box3
-	call	L8E0A
+	call	UPDATE_BOX
+; Updates bullet explosion
 	ld	ix,bullet
-	ld	a,(ix+05h)
+	ld	a,(ix+05h) ; bullet.status
 	or	a
-	jr	z,L8A3A
+	jr	z,GAME_LOOP.EVERYTHING_OK ; $00 = no bullet
 	inc	a
-	jr	z,L8A3A
+	jr	z,GAME_LOOP.EVERYTHING_OK ; $ff = bullet flying
+; Decreases counter
 	dec	a
 	dec	a
 	ld	(ix+05h),a
-	jr	z,L8A2D
+; if 0, removes explosion
+	jr	z,.L8A2D
+; if < 4, makes explosion smaller
 	ld	b,1Eh
 	cp	04h
-	jr	c,L8A1B
+	jr	c,.L8A1B
 	inc	b
-
-	; Referenced from 8A18
-L8A1B:	cp	02h
-	jr	c,L8A20
+; if < 2, makes explosion smaller
+.L8A1B:	cp	02h
+	jr	c,.L8A20
 	inc	b
-
-	; Referenced from 8A1D
-L8A20:	ld	a,b
+; (computes pattern)
+.L8A20:	ld	a,b
 	add	a,a
 	add	a,a
-	ld	(ix+02h),a
+	ld	(ix+02h),a ; bullet.spratr_pat
 	ld	a,06h
-	ld	(ix+03h),a
-	jr	L8A32
+	ld	(ix+03h),a ; bullet.spratr_color
+	jr	.L8A32
 
-	; Referenced from 8A12
-L8A2D:	ld	a,0D1h
+; Removes bullet
+.L8A2D:	ld	a,SPAT_OB
 	ld	(ix+00h),a
 
-	; Referenced from 8A2B
-L8A32:	ld	de,bullet
+; Puts bullet sprite
+.L8A32:	ld	de,bullet
 	ld	a,0Ah
 	call	PUT_SPRITE
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8A08, 8A0B
+	
+; -----------------------------------------------------------------------------
+GAME_LOOP.EVERYTHING_OK:
 L8A3A:	call	SHORT_DELAY
+; Decreases air counter
 	ld	hl,(game.air_left)
 	dec	hl
 	ld	(game.air_left),hl
-	ld	de,0E19h	; address or value?
+; Updates HUD
+	ld	de,0E19h
 	call	PRINT_AIR_LEFT
+; If air is 0
 	ld	hl,(game.air_left)
 	ld	a,h
 	or	l
-	call	z,L8DCA
+	call	z,AIR_OVER
+; Animates the enemies nest each four frames
 	ld	a,(aux.frame_counter)
 	and	04h
-	ld	b,54h		; 'T'
-	jr	z,L8A5D
-	ld	b,58h		; 'X'
-
-	; Referenced from 8A59
-L8A5D:	ld	a,(nest.spratr_y)
+	ld	b,54h
+	jr	z,.L8A5D
+	ld	b,58h
+; Prints nest
+.L8A5D:	ld	a,(nest.spratr_y)
 	srl	a
 	srl	a
 	srl	a
@@ -1750,6 +1827,7 @@ L8A5D:	ld	a,(nest.spratr_y)
 	ld	e,a
 	ld	a,b
 	call	WRTVRM_2x2_CHAR
+	
 	ld	a,(0C06Dh)
 	or	a
 	jr	z,L8A8B
@@ -1761,7 +1839,7 @@ L8A5D:	ld	a,(nest.spratr_y)
 	dec	a
 
 	; Referenced from 8A85
-L8A88:	ld	(0C070h),a
+L8A88:	ld	(exit.is_open),a
 
 	; Referenced from 8A79
 L8A8B:	ld	a,(aux.frame_counter)
@@ -1804,7 +1882,7 @@ L8AB7:	ld	hl,player.spratr_y
 	cp	(hl)
 	jr	nz,L8AB4 ; no
 ; yes	
-	call	L9121
+	call	PLAY_SOUND_BOX
 ; screen ,3
 	ld	c,01h
 	ld	b,0E3h
@@ -1830,8 +1908,8 @@ L8AB7:	ld	hl,player.spratr_y
 	ld	b,01h
 	ld	c,07h
 	call	WRTVDP
-	
-	call	L9067
+; Sphynx sound	
+	call	PLAY_SOUND_SPHYNX
 ; Increase score
 	ld	de,2000h ; 2000 points (BCD)
 	call	ADD_SCORE
@@ -1889,127 +1967,150 @@ L8AB7:	ld	hl,player.spratr_y
 	; --- START PROC L8B69 ---
 
 ; -----------------------------------------------------------------------------
+; param de: SPRATR coordinates
+; ret: direction_table values are filled
+CHECK_ALL_WALLS:
+; up (left character)
 L8B69:	push	de
-	dec	e
-	ld	ix,0C061h	; address or value?
-	call	L8BE2
+	dec	e ; (y--)
+	ld	ix,direction_table
+	call	CHECK_WALL
 	ld	(ix+00h),a
 	pop	de
+; up (right character)
 	push	de
+	ld	a,0Fh ; (x +=15 pixels)
+	add	a,d
+	ld	d,a
+	dec	e ; (y--)
+	call	CHECK_WALL
+	and	(ix+00h) ; (cobine)
+	ld	(ix+00h),a
+	inc	ix
+	pop	de
+	
+; left (upper character)
+	push	de
+	dec	d ; (x--)
+	call	CHECK_WALL
+	ld	(ix+00h),a
+	pop	de
+; left (lower character)
+	push	de
+	dec	d ; (x--)
+	ld	a,0Fh ; (y += 15 pixels)
+	add	a,e
+	ld	e,a
+	call	CHECK_WALL
+	and	(ix+00h) ; (cobine)
+	ld	(ix+00h),a
+	inc	ix
+	pop	de
+	
+; down (left character)
+	push	de
+	ld	a,10h
+	add	a,e
+	ld	e,a
+	call	CHECK_WALL
+	ld	(ix+00h),a
+	pop	de
+; down (right character)
+	push	de
+	ld	a,10h
+	add	a,e
+	ld	e,a
 	ld	a,0Fh
 	add	a,d
 	ld	d,a
-	dec	e
-	call	L8BE2
+	call	CHECK_WALL
 	and	(ix+00h)
 	ld	(ix+00h),a
 	inc	ix
 	pop	de
-	push	de
-	dec	d
-	call	L8BE2
-	ld	(ix+00h),a
-	pop	de
-	push	de
-	dec	d
-	ld	a,0Fh
-	add	a,e
-	ld	e,a
-	call	L8BE2
-	and	(ix+00h)
-	ld	(ix+00h),a
-	inc	ix
-	pop	de
-	push	de
-	ld	a,10h
-	add	a,e
-	ld	e,a
-	call	L8BE2
-	ld	(ix+00h),a
-	pop	de
-	push	de
-	ld	a,10h
-	add	a,e
-	ld	e,a
-	ld	a,0Fh
-	add	a,d
-	ld	d,a
-	call	L8BE2
-	and	(ix+00h)
-	ld	(ix+00h),a
-	inc	ix
-	pop	de
+	
+; right (upper character)
 	push	de
 	ld	a,10h
 	add	a,d
 	ld	d,a
-	call	L8BE2
+	call	CHECK_WALL
 	ld	(ix+00h),a
 	pop	de
+; right (lower character)
 	ld	a,10h
 	add	a,d
 	ld	d,a
 	ld	a,0Fh
 	add	a,e
 	ld	e,a
-	call	L8BE2
+	call	CHECK_WALL
 	and	(ix+00h)
 	ld	(ix+00h),a
 	ret
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8B6F, 8B7C, 8B8A, 8B97, 8BA8, 8BB8, 8BC9, 8BD8, 893F
 	; --- START PROC L8BE2 ---
+
+; -----------------------------------------------------------------------------
+; param de: SPRATR coordinates
+; ret a: $00 = wall, $FF = not a wall
+CHECK_WALL:
+; (d, e) /= 8
 L8BE2:	srl	e
 	srl	e
 	srl	e
 	srl	d
 	srl	d
 	srl	d
-	ld	hl,1800h	; address or value?
-	ld	bc,0020h	; address or value?
+; Calculates NAMTBL coordinates: y
+	ld	hl,NAMTBL
+	ld	bc,SCR_WIDTH
 	inc	d
-
-	; Referenced from 8BF9
-L8BF5:	dec	d
+.L8BF5:	dec	d
 	jr	z,L8BFB
-	add	hl,bc
-	jr	L8BF5
-
-	; Referenced from 8BF6
-L8BFB:	add	hl,de
+	add	hl,bc ; y++
+	jr	.L8BF5
+L8BFB:	add	hl,de ; += x (d = 0, e = x)
+; Reads the character
 	call	RDVRM
 	ld	b,a
-	ld	a,(0C06Ah)
+; Is checking player?
+	ld	a,(check_wall_for_player)
 	or	a
-	jr	z,L8C20
-	ld	a,33h		; '3'
+	jr	z,.L8C20 ; no
+	
+; Checks for box (player only)
+	ld	a,33h ; > $33?
 	cp	b
-	jr	nc,L8C13
-	ld	a,37h		; '7'
+	jr	nc,.L8C13 ; no
+	ld	a,37h ; and <= $37?
 	cp	b
-	jr	c,L8C13
+	jr	c,.L8C13 ; no
+; yes: box, not a wall
 	ld	a,0FFh
 	ret
 
-	; Referenced from 8C09, 8C0E
-L8C13:	ld	a,4Fh		; 'O'
+; Checks for exit (player only)
+.L8C13:	ld	a,4Fh ; >$4f?
 	cp	b
-	jr	nc,L8C20
-	ld	a,53h		; 'S'
+	jr	nc,.L8C20 ; no
+	ld	a,53h ; and <= $53?
 	cp	b
-	jr	c,L8C20
+	jr	c,.L8C20 ; no
+; yes: exit, not a wall
 	ld	a,0FFh
 	ret
 
-	; Referenced from 8C04, 8C16, 8C1B
-L8C20:	ld	a,0FFh
+; Blank space?
+.L8C20:	ld	a,0FFh
 	cp	b
-	jr	z,L8C26
+	jr	z,.L8C26 ; yes: not a wall
+; no: a wall
 	xor	a
-
-	; Referenced from 8C23
-	; --- START PROC L8C26 ---
-L8C26:	ret
+.L8C26:	ret
+; -----------------------------------------------------------------------------
 
 	; Referenced from 83A5, 86D7, 86EA, 8810, 88CD, 8CC7, 8D01
 	; --- START PROC L8C27 ---
@@ -2053,18 +2154,23 @@ L8C3C:	ld	b,04h
 
 	; Referenced from 8FB0, 8676, 9088, 9109, 9064
 	; --- START PROC L8C47 ---
-L8C47:	ld	hl,3000h	; address or value?
 
-	; Referenced from 8C4D
-L8C4A:	dec	hl
+; -----------------------------------------------------------------------------
+LONG_DELAY:
+L8C47:	ld	hl,3000h	; address or value?
+.L8C4A:	dec	hl
 	ld	a,h
 	or	l
-	jr	nz,L8C4A
+	jr	nz,.L8C4A
 	ret
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8978, 8986, 89EF, 89F6
 	; --- START PROC L8C50 ---
-L8C50:	ld	(0C065h),ix
+	
+; -----------------------------------------------------------------------------
+UPDATE_ENEMY:
+L8C50:	ld	(current_enemy_ptr),ix
 	ld	a,(ix+05h)
 	or	a
 	jr	nz,L8CA5
@@ -2100,16 +2206,16 @@ L8C92:	ld	a,b
 	add	a,a
 	ld	(ix+02h),a
 	ld	a,(ix+07h)
-	ld	de,(0C065h)
+	ld	de,(current_enemy_ptr)
 	call	PUT_SPRITE
 	jp	L8D3C
 
 	; Referenced from 8C58
 L8CA5:	ld	d,(ix+00h)
 	ld	e,(ix+01h)
-	call	L8B69
-	ld	ix,(0C065h)
-	ld	hl,0C061h	; address or value?
+	call	CHECK_ALL_WALLS
+	ld	ix,(current_enemy_ptr)
+	ld	hl,direction_table
 	ld	a,(hl)
 	inc	hl
 	add	a,(hl)
@@ -2121,7 +2227,7 @@ L8CA5:	ld	d,(ix+00h)
 	jr	z,L8CCC
 	ld	a,(ix+04h)
 	xor	02h
-	ld	hl,0C061h	; address or value?
+	ld	hl,direction_table
 	call	ADD_HL_A
 	xor	a
 	ld	(hl),a
@@ -2158,14 +2264,14 @@ L8CE9:	ld	a,00h
 
 	; Referenced from 8CDC, 8CE1, 8CE6, 8CEB, 8CF0, 8CF5, 8CFA
 	; --- START PROC L8CFD ---
-L8CFD:	ld	hl,0C061h	; address or value?
+L8CFD:	ld	hl,direction_table
 	ld	b,a
 	call	ADD_HL_A
 	ld	a,(hl)
 	or	a
 	ret	z
 	pop	hl
-	ld	hl,(0C065h)
+	ld	hl,(current_enemy_ptr)
 	ld	(ix+04h),b
 	ld	a,02h
 	srl	b
@@ -2180,7 +2286,7 @@ L8D15:	srl	b
 	; Referenced from 8D17
 L8D1B:	add	a,(hl)
 	ld	(hl),a
-	ld	ix,(0C065h)
+	ld	ix,(current_enemy_ptr)
 	ld	b,(ix+06h)
 	ld	a,(aux.frame_counter)
 	and	04h
@@ -2193,7 +2299,7 @@ L8D2C:	ld	a,b
 	add	a,a
 	ld	(ix+02h),a
 	ld	a,(ix+07h)
-	ld	de,(0C065h)
+	ld	de,(current_enemy_ptr)
 	call	PUT_SPRITE
 
 	; Referenced from 8CA2
@@ -2201,7 +2307,7 @@ L8D2C:	ld	a,b
 L8D3C:	ld	a,(bullet.status)
 	or	a
 	jr	z,L8DAC
-	ld	ix,(0C065h)
+	ld	ix,(current_enemy_ptr)
 	ld	a,(ix+00h)
 	add	a,08h
 	ld	b,a
@@ -2245,15 +2351,15 @@ L8D68:	cp	05h
 	ld	de,bullet
 	ld	a,0Ah
 	call	PUT_SPRITE
-	call	L9133
+	call	PLAY_SOUND_BULLET_HIT
 	ld	de,0030h	; address or value?
 	call	ADD_SCORE
 	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	xor	a
 	ld	(ix+05h),a
-	ld	a,0D1h
+	ld	a,SPAT_OB
 	ld	(ix+00h),a
-	ld	de,(0C065h)
+	ld	de,(current_enemy_ptr)
 	ld	a,(ix+07h)
 	jp	PUT_SPRITE
 
@@ -2279,22 +2385,27 @@ L8DBC:	cp	08h
 	; Referenced from 8DC3
 L8DC7:	cp	08h
 	ret	nc
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8A4F
 	; --- START PROC L8DCA ---
-L8DCA:	pop	hl
+
+; -----------------------------------------------------------------------------
+AIR_OVER:
+L8DCA:	pop	hl ; (invoked with CALL, acts as a JP)
 	call	L8FB3
+; color ,,4
 	ld	b,04h
 	ld	c,07h
 	call	WRTVDP
-	jp	DEC_LIVES_AND_ENTER_NEW_ROOM
+	jp	DEC_LIVES_AND_NEW_ROOM
 
 	; Referenced from 837C
 	; --- START PROC L8DD8 ---
 	
 ; -----------------------------------------------------------------------------
 GAME_OVER:
-L8DD8:	call	L9145
+L8DD8:	call	RESET_SOUND
 	ld	hl,LITERAL.GAME_OVER
 	ld	de,0808h	; address or value?
 	ld	b,09h
@@ -2324,6 +2435,9 @@ L8E07:	jp	L82B8
 
 	; Referenced from 897F, 89E8, 89FD
 	; --- START PROC L8E0A ---
+	
+; -----------------------------------------------------------------------------
+UPDATE_BOX:
 L8E0A:	ld	a,(ix+02h)
 	or	a
 	jp	nz,L8EB8
@@ -2335,7 +2449,7 @@ L8E0A:	ld	a,(ix+02h)
 	ld	a,(ix+01h)
 	cp	(hl)
 	ret	nz
-	call	L9121
+	call	PLAY_SOUND_BOX
 	call	SHORT_DELAY
 	ld	a,0FFh
 	ld	(ix+02h),a
@@ -2358,7 +2472,7 @@ L8E0A:	ld	a,(ix+02h)
 	ld	(0C06Dh),a
 	ld	a,01h
 	ld	(0C06Bh),a
-	ld	(0C06Eh),a
+	ld	(exit.blink_counter),a
 	xor	a
 	ld	(0C06Ch),a
 	ld	a,3Ch		; '<'
@@ -2374,7 +2488,7 @@ L8E0A:	ld	a,(ix+02h)
 
 	; Referenced from 8E49
 L8E76:	ld	a,08h
-	ld	(0C05Eh),a
+	ld	(player_has_gun),a
 	ld	a,38h		; '8'
 	call	WRTVRM_2x2_CHAR
 	ld	de,0100h	; address or value?
@@ -2382,25 +2496,25 @@ L8E76:	ld	a,08h
 	jp	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
 	; Referenced from 8E39
-L8E89:	ld	hl,0C01Eh	; address or value?
+L8E89:	ld	hl,skull.spratr_y
 	push	de
 	ld	(hl),d
-	inc	hl
+	inc	hl ; skull.spratr_x
 	ld	(hl),e
-	inc	hl
-	ld	a,40h		; '@'
+	inc	hl ; skull.spratr_pattern
+	ld	a,40h
 	ld	(hl),a
-	inc	hl
+	inc	hl ; skull.spratr_color
 	ld	a,0Fh
 	ld	(hl),a
-	inc	hl
+	inc	hl ; skull.direction
 	xor	a
 	ld	(hl),a
-	inc	hl
-	inc	hl
+	inc	hl ; skull.status
+	inc	hl ; skull. ???
 	ld	a,10h
 	ld	(hl),a
-	inc	hl
+	inc	hl ; skull. ???
 	ld	a,03h
 	ld	(hl),a
 	ld	de,skull
@@ -2487,7 +2601,7 @@ L8F08:	ld	de,0B19h	; address or value?
 
 	; Referenced from 8367
 	; --- START PROC L8F14 ---
-L8F14:	ld	ix,0C099h	; address or value?
+L8F14:	ld	ix,sound_buffer.start
 	ld	b,03h
 
 	; Referenced from 8F30
@@ -2515,7 +2629,7 @@ L8F3C:	dec	hl
 	or	l
 	jr	nz,L8F3C
 	djnz	L8F39
-	ld	hl,9F38h	; address or value?
+	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8F1D, 8F22, 8F27, 8F2C, 8F34
@@ -2563,17 +2677,17 @@ L8F49:	ld	b,0Ah
 	inc	b
 	ld	(ix+13h),b
 	ld	(ix+14h),a
-	call	L9145
-	ld	hl,0C099h	; address or value?
+	call	RESET_SOUND
+	ld	hl,sound_buffer.start
 	call	PLAY_SOUND
-	jp	L8C47
+	jp	LONG_DELAY
 
 	; Referenced from 8DCB
 	; --- START PROC L8FB3 ---
 L8FB3:	xor	a
 	ld	(0C0DCh),a
 	ld	a,0Ah
-	ld	ix,0C0AEh	; address or value?
+	ld	ix,sound_buffer.unknown
 
 	; Referenced from 8FC6
 L8FBD:	push	af
@@ -2582,6 +2696,7 @@ L8FBD:	push	af
 	add	a,14h
 	cp	0E6h
 	jr	nz,L8FBD
+; color ,,6
 	ld	c,07h
 	ld	b,06h
 	call	WRTVDP
@@ -2596,10 +2711,12 @@ L8FD4:	dec	hl
 	or	l
 	jr	nz,L8FD4
 	djnz	L8FD1
+; color ,,4
 	ld	c,07h
 	ld	b,04h
 	call	WRTVDP
-	ld	hl,9F38h	; address or value?
+; mute
+	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8FBE
@@ -2647,8 +2764,8 @@ L8FE8:	ld	b,0Ah
 	inc	b
 	ld	(ix+13h),b
 	ld	(ix+14h),a
-	call	L9145
-	ld	hl,0C0AEh	; address or value?
+	call	RESET_SOUND
+	ld	hl,sound_buffer.unknown
 	call	PLAY_SOUND
 	ld	a,(0C0DCh)
 	cpl
@@ -2662,47 +2779,55 @@ L8FE8:	ld	b,0Ah
 L905D:	ld	b,06h
 
 	; Referenced from 905B
+; color ,,b
 L905F:	ld	c,07h
 	call	WRTVDP
-	jp	L8C47
+	jp	LONG_DELAY
 
 	; Referenced from 8AFE
 	; --- START PROC L9067 ---
-L9067:	call	L9145
-	ld	hl,9F3Bh	; address or value?
+	
+; -----------------------------------------------------------------------------
+PLAY_SOUND_SPHYNX:
+L9067:	call	RESET_SOUND
+	ld	hl,DATA_SOUND.SPHYNX
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 89D2
 	; --- START PROC L9070 ---
-L9070:	call	L9145
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_EXIT:
+L9070:	call	RESET_SOUND
+; color ,,3
 	ld	c,07h
 	ld	b,03h
 	call	WRTVDP
+; Ascending arpegio
 	ld	a,0F0h
-
-	; Referenced from 9083
-L907C:	push	af
-	call	L909B
+.L907C:	push	af
+	call	.L909B
 	pop	af
 	sub	14h
-	jr	nz,L907C
+	jr	nz,.L907C
 	ld	b,0Ch
-
-	; Referenced from 908C
-L9087:	push	bc
-	call	L8C47
+; Keeps last note a little longer
+.L9087:	push	bc
+	call	LONG_DELAY
 	pop	bc
-	djnz	L9087
-	ld	hl,9F38h	; address or value?
+	djnz	.L9087
+; mute
+	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	call	PLAY_SOUND
+; color ,,4
 	ld	c,07h
 	ld	b,04h
-	jp	0047h
+	jp	WRTVDP
 
-	; Referenced from 907D
-	; --- START PROC L909B ---
-L909B:	ld	ix,0C0C3h	; address or value?
-	ld	b,0Ah
+; Prepares one note of the arpeggio
+.L909B:	ld	ix,sound_buffer.end
+	ld	b,0Ah ; lenght
 	ld	(ix+00h),b
 	ld	b,00h
 	ld	c,a
@@ -2745,193 +2870,165 @@ L909B:	ld	ix,0C0C3h	; address or value?
 	inc	b
 	ld	(ix+13h),b
 	ld	(ix+14h),a
-	ld	hl,9F38h	; address or value?
+; mute
+	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	call	PLAY_SOUND
-	ld	hl,0C0C3h	; address or value?
+; Plays the one note of the arpeggio
+	ld	hl,sound_buffer.end
 	call	PLAY_SOUND
-	jp	L8C47
+	jp	LONG_DELAY
+; -----------------------------------------------------------------------------
 
 	; Referenced from 879B
 	; --- START PROC L910C ---
-L910C:	call	L9145
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_INGAME:
+L910C:	call	RESET_SOUND
 	ld	a,(aux.frame_counter)
 	and	04h
-	jr	nz,L911B
-	ld	hl,914Bh	; address or value?
-	jr	L911E
-
-	; Referenced from 9114
-L911B:	ld	hl,915Ah	; address or value?
-
-	; Referenced from 9119
-	; --- START PROC L911E ---
-L911E:	jp	PLAY_SOUND
+	jr	nz,.L911B
+	ld	hl,DATA_SOUND.INGAME_A
+	jr	.L911E
+.L911B:	ld	hl,DATA_SOUND.INGAME_B
+.L911E:	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8AC5, 8E1F
 	; --- START PROC L9121 ---
-L9121:	call	L9145
-	ld	hl,9169h	; address or value?
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_BOX:
+L9121:	call	RESET_SOUND
+	ld	hl,DATA_SOUND.BOX
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 871D, 874B
 	; --- START PROC L912A ---
-L912A:	call	L9145
-	ld	hl,9184h	; address or value?
+	
+; -----------------------------------------------------------------------------
+PLAY_SOUND_DOOR:
+L912A:	call	RESET_SOUND
+	ld	hl,DATA_SOUND.DOOR
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 895E, 8D8D
 	; --- START PROC L9133 ---
-L9133:	call	L9145
-	ld	hl,9193h	; address or value?
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_BULLET_HIT:
+L9133:	call	RESET_SOUND
+	ld	hl,DATA_SOUND.BULLET_HIT
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 87E5
 	; --- START PROC L913C ---
-L913C:	call	L9145
-	ld	hl,91A2h	; address or value?
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_BULLET:
+L913C:	call	RESET_SOUND
+	ld	hl,DATA_SOUND.BULLET
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8DD8, 8FA7, 912A, 910C, 913C, 9133, 9121, 9067, 9070, 9046
 	; --- START PROC L9145 ---
-L9145:	ld	hl,91B7h	; address or value?
+
+; -----------------------------------------------------------------------------
+RESET_SOUND:
+L9145:	ld	hl,DATA_SOUND.RESET
 	jp	PLAY_SOUND
+; -----------------------------------------------------------------------------
 
-L914B:	DB	07h
-	DB	00h
-	DB	0FDh
-	DB	01h
-	DB	00h
-	DB	07h
-	DB	0B8h
-	DB	08h
-	DB	08h
-	DB	0Bh
-	DB	22h		; '"'
-	DB	0Ch
-	DB	02h
-	DB	0Dh
-	DB	0Fh
-	DB	07h
-	DB	00h
-	DB	3Fh		; '?'
-	DB	01h
-	DB	01h
-	DB	07h
-	DB	0B8h
-	DB	08h
-	DB	08h
-	DB	0Bh
-	DB	22h		; '"'
-	DB	0Ch
-	DB	05h
-	DB	0Dh
-	DB	09h
-	DB	0Dh
-	DB	00h
-	DB	0FDh
-	DB	01h
-	DB	00h
-	DB	02h
-	DB	0D5h
-	DB	03h
-	DB	00h
-	DB	04h
-	DB	3Fh		; '?'
-	DB	05h
-	DB	00h
-	DB	07h
-	DB	0B8h
-	DB	08h
-	DB	10h
-	DB	09h
-	DB	10h
-	DB	0Ah
-	DB	10h
-	DB	0Bh
-	DB	9Eh
-	DB	0Ch
-	DB	0Ah
-	DB	0Dh
-	DB	09h
-	DB	07h
-	DB	00h
-	DB	0E0h
-	DB	01h
-	DB	04h
-	DB	07h
-	DB	0B8h
-	DB	08h
-	DB	0Fh
-	DB	0Bh
-	DB	92h
-	DB	0Ch
-	DB	05h
-	DB	0Dh
-	DB	05h
-	DB	07h
-	DB	06h
-	DB	1Fh
-	DB	07h
-	DB	87h
-	DB	08h
-	DB	0Fh
-	DB	09h
-	DB	0Fh
-	DB	0Bh
-	DB	0Bh
-	DB	0Ch
-	DB	02h
-	DB	0Dh
-	DB	0Fh
-	DB	0Ah
-	DB	00h
-	DB	0C0h
-	DB	01h
-	DB	09h
-	DB	06h
-	DB	1Fh
-	DB	07h
-	DB	80h
-	DB	08h
-	DB	0Ch
-	DB	09h
-	DB	0Ch
-	DB	0Ah
-	DB	10h
-	DB	0Bh
-	DB	0Bh
-	DB	0Ch
-	DB	06h
-	DB	0Dh
-	DB	00h
-	DB	0Eh
-	DB	00h
-	DB	00h
-	DB	01h
-	DB	00h
-	DB	02h
-	DB	00h
-	DB	03h
-	DB	00h
-	DB	05h
-	DB	00h
-	DB	06h
-	DB	00h
-	DB	07h
-	DB	80h
-	DB	08h
-	DB	00h
-	DB	09h
-	DB	00h
-	DB	0Ah
-	DB	00h
-	DB	0Bh
-	DB	00h
-	DB	0Ch
-	DB	00h
-	DB	0Dh
-	DB	00h
+; -----------------------------------------------------------------------------
+DATA_SOUND:
+.INGAME_A: ; 914BH
+	DB	07h ; length
+	DB	00h, 0FDh
+	DB	01h, 00h
+	DB	07h, 0B8h
+	DB	08h, 08h
+	DB	0Bh, 22h
+	DB	0Ch, 02h
+	DB	0Dh, 0Fh
+.INGAME_B: ; 915AH
+	DB	07h ; length
+	DB	00h, 3Fh
+	DB	01h, 01h
+	DB	07h, 0B8h
+	DB	08h, 08h
+	DB	0Bh, 22h
+	DB	0Ch, 05h
+	DB	0Dh, 09h
 
+.BOX: ; 9169H
+	DB	0Dh ; length
+	DB	00h, 0FDh
+	DB	01h, 00h
+	DB	02h, 0D5h
+	DB	03h, 00h
+	DB	04h, 3Fh
+	DB	05h, 00h
+	DB	07h, 0B8h
+	DB	08h, 10h
+	DB	09h, 10h
+	DB	0Ah, 10h
+	DB	0Bh, 9Eh
+	DB	0Ch, 0Ah
+	DB	0Dh, 09h
+
+.DOOR: ; 9184H	
+	DB	07h ; length
+	DB	00h, 0E0h
+	DB	01h, 04h
+	DB	07h, 0B8h
+	DB	08h, 0Fh
+	DB	0Bh, 92h
+	DB	0Ch, 05h
+	DB	0Dh, 05h
+
+.BULLET_HIT: ; 9193H
+	DB	07h ; length
+	DB	06h, 1Fh
+	DB	07h, 87h
+	DB	08h, 0Fh
+	DB	09h, 0Fh
+	DB	0Bh, 0Bh
+	DB	0Ch, 02h
+	DB	0Dh, 0Fh
+	
+.BULLET: ; 91A2H
+	DB	0Ah ; length
+	DB	00h, 0C0h
+	DB	01h, 09h
+	DB	06h, 1Fh
+	DB	07h, 80h
+	DB	08h, 0Ch
+	DB	09h, 0Ch
+	DB	0Ah, 10h
+	DB	0Bh, 0Bh
+	DB	0Ch, 06h
+	DB	0Dh, 00h
+	
+.RESET: ; 91B7H
+	DB	0Eh ; length
+	DB	00h, 00h
+	DB	01h, 00h
+	DB	02h, 00h
+	DB	03h, 00h
+	DB	05h, 00h
+	DB	06h, 00h
+	DB	07h, 80h
+	DB	08h, 00h
+	DB	09h, 00h
+	DB	0Ah, 00h
+	DB	0Bh, 00h
+	DB	0Ch, 00h
+	DB	0Dh, 00h
+; -----------------------------------------------------------------------------
 
 	; Referenced from 802D, 8035, 803D, 8045, 804D, 8055, 805D, 8065, 806D, 8075, 807D, 8085, 808D, 8095, 809D, 80A5, 80AD, 80B5, 80BD, 80C5, 80CD, 80D5, 80DD, 80E5, 80ED, 80F5, 80FD, 8105, 810D, 8115, 811D, 8125, 812D, 8135, 813D, 8145, 814D
 	; --- START PROC L91D2 ---
@@ -4108,36 +4205,25 @@ L9F28:	DB	07h, 50h, 84h, 04h
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-L9F38:	DB	01h
-	DB	07h
-	DB	0BFh
-	DB	0Dh
-	DB	00h
-	DB	01h
-	DB	01h
-	DB	01h
-	DB	02h
-	DB	05h
-	DB	03h
-	DB	02h
-	DB	04h
-	DB	0Fh
-	DB	05h
-	DB	03h
-	DB	06h
-	DB	05h
-	DB	07h
-	DB	0B0h
-	DB	08h
-	DB	10h
-	DB	09h
-	DB	10h
-	DB	0Ah
-	DB	10h
-	DB	0Ch
-	DB	0FFh
-	DB	0Dh
-	DB	00h
+DATA_SOUND.MUTE_CHANNELS:
+L9F38:	DB	01h ; length
+	DB	07h, 0BFh
+	
+DATA_SOUND.SPHYNX:
+L9F3B:	DB	0Dh ; length
+	DB	00h, 01h
+	DB	01h, 01h
+	DB	02h, 05h
+	DB	03h, 02h
+	DB	04h, 0Fh
+	DB	05h, 03h
+	DB	06h, 05h
+	DB	07h, 0B0h
+	DB	08h, 10h
+	DB	09h, 10h
+	DB	0Ah, 10h
+	DB	0Ch, 0FFh
+	DB	0Dh, 00h
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4156,126 +4242,128 @@ L9F8C:	ds	($ OR $1fff) -$ +1, $00
 ; RAM
 	org	$c000, $f380
 	
-box1:				; C000H
+box1: ; C000H
 	.data:		rb 4	; C000H
 	.content:	rb 1	; C004H
-box2:				; C005H
+box2: ; C005H
 	.data:		rb 4	; C005H
 	.content:	rb 1	; C009H
-box3:				; C00AH
+box3: ; C00AH
 	.data:		rb 4	; C00AH
 	.content:	rb 1	; C00EH
-
-door1:				; C00FH
+door1: ; C00FH
 	.type:		rb 1	; C00FH ; (0 = v, 1 = ^)
 	.spratr_y:	rb 1	; C010H
 	.spratr_x:	rb 1	; C011H
 	.spratr_pat:	rb 1	; C012H
 	.spratr_color:	rb 1	; C013H
-door2:				; c014H
+door2: ; c014H
 	.type:		rb 1	; C014H ; (0 = v, 1 = ^)
 	.spratr_y:	rb 1	; C015H
 	.spratr_x:	rb 1	; C016H
 	.spratr_pat:	rb 1	; C017H
 	.spratr_color:	rb 1	; C018H
-	
-player:				; C019H
+player: ; C019H
 	.spratr_y:	rb 1	; C019H
 	.spratr_x:	rb 1	; C01AH
 	.spratr_pat:	rb 1	; C01BH
 	.spratr_color:	rb 1	; C01CH
 	.direction:	rb 1	; C01DH
-	
-skull:				; C01EH
+skull: ; C01EH
 	.spratr_y:	rb 1	; C01EH
 	.spratr_x:	rb 1	; C01FH
 	.spratr_pat:	rb 1	; C020H
 	.spratr_color:	rb 1	; C021H
 	.direction:	rb 1	; C022H
 	.status:	rb 1	; C023H
-	
-			rb 1	; C024H (unused?)
-			rb 1	; C025H (unused?)
-	
-scorpion1:			; C026H
+			rb 1	; C024H (skull related)
+			rb 1	; C025H (skull related)
+scorpion1: ; C026H
 	.spratr_y:	rb 3	; C026H
 	.spratr_color:	rb 1	; C029H
-			rb 1	; (unused?)
+			rb 1	; C02AH (unused?)
 	.status:	rb 1	; C02BH
-	
-LabelC02C:		rb 1	; C02CH
-LabelC02D:		rb 1	; C02DH
-
-bat1:				; C02EH
+			rb 1	; C02CH ($12, never read)
+			rb 1	; C02DH ($04, never read)
+bat1: ; C02EH
 	.spratr_y:	rb 3	; C02EH
 	.spratr_color:	rb 1	; C031H
-			rb 1	; (unused?)
+			rb 1	; C032H (unused?)
 	.status:	rb 1	; C033H
-
-LabelC034:		rb 1	; C034H
-LabelC035:		rb 6	; C035H
-LabelC03B:		rb 1	; C03BH
-LabelC03C:		rb 1	; C03CH
-LabelC03D:		rb 1	; C03DH
-
-scorpion2:			; C03EH
+			rb 1	; C034H ($14, never read)
+			rb 1	; C035H ($05, never read)
+			rb 5	; C036H (unused?)
+			rb 1	; C03BH ($00, never read)
+			rb 1	; C03CH ($16, never read)
+			rb 1	; C03DH ($06, never read)
+scorpion2: ; C03EH
 	.spratr_y:	rb 3	; C03EH
 	.spratr_color:	rb 1	; C041H
-			rb 1	; (unused?)
+			rb 1	; C042H (unused?)
 	.status:	rb 1	; C043H
-	
-LabelC044:		rb 1	; C044H
-LabelC045:		rb 1	; C045H
-	
-bat2:				; C046H
+			rb 1	; C044H ($12, never read)
+			rb 1	; C045H ($07, never read)
+bat2: ; C046H
 	.spratr_y:	rb 3	; C046H
 	.spratr_color:	rb 1	; C049H
-			rb 1	; (unused?)
+			rb 1	; C04AH (unused?)
 	.status:	rb 1	; C04BH
-
-LabelC04C:		rb 1	; C04CH
-LabelC04D:		rb 6	; C04DH
-LabelC053:		rb 1	; C053H
-LabelC054:		rb 1	; C054H
-LabelC055:		rb 1	; C055H
-
-bullet:				; C056H
+			rb 1	; C04CH ($14, never read)
+			rb 1	; C04DH ($08, never read)
+			rb 5	; C04EH (unused?)
+			rb 1	; C053H ($00, never read)
+			rb 1	; C054H ($16, never read)
+			rb 1	; C055H ($09, never read)
+bullet: ; C056H
 	.spratr_y:	rb 1	; C056H
 	.spratr_x:	rb 1	; C057H
 	.spratr_pat:	rb 1	; C058H
 	.spratr_color:	rb 1	; C059H
 	.direction:	rb 1	; C05AH
 	.status:	rb 1	; C05BH
-
-nest:				; C05CH
+nest: ; C05CH
 	.spratr_y:	rb 1	; C05CH
 	.spratr_x:	rb 1	; C05DH
-	
-	org	$c05f
+player_has_gun:		rb 1	; C05EH	
 aux.frame_counter:	rb 1	; C05FH
-
-	org	$c071
-game:
+new_player_direction:	rb 1	; C060H
+direction_table:	rb 4	; C061H
+current_enemy_ptr:	rb 2	; C065H
+			rb 1	; C067H (unused?)
+			rb 1	; C068H (unused?)
+			rb 1	; C069H (???)
+check_wall_for_player:	rb 1	; C06AH
+			rb 1	; C06BH ($01, never read)
+			rb 1	; C06CH ($00, never read)
+			rb 1	; C06DH (???)
+exit:
+	.blink_counter:	rb 1	; C06EH
+	.blink_flag:	rb 1	; C06FH
+	.is_open:	rb 1	; C070H
+game: ; C071H
 	.air_left_bcd:	rb 4	; C071H
 	.short_delay:	rb 1	; C075H
 	.current_room:	rb 1	; C076H
 	.air_left:	rb 4	; C077H
 	.first_pyramid:	rb 1	; C07BH
 	.lives:		rb 1	; C07CH
-
 aux.how_many_bytes:	rb 2	; C07DH
-
 game.high_score_bcd:	rb 3	; C07FH (6 digits)
 game.score_bcd:		rb 3	; C082H (6 digits)
-
-pyramid:
+pyramid: ; C085H
 	.room_index:	rb 1	; C085H
-			rb 1	; (unused?)
-	.room_array:	rb 16	; C087H (7 +5 +3 +1)
+			rb 1	; C086H (unused?)
+	.room_array:	rb 16	; C087H (7+5+3+1 rooms)
 	.room_namtbl_ptr:rb 2	; C097H
-
-	org	$c0d8
+sound_buffer: ; C099H
+	.start:		rb 1+20	; C099H
+	.unknown:	rb 1+20	; C0AEH
+	.end:		rb 1+20	; C0C3H
 aux.frame_counter_2:	rb 1	; C0D8H
+			rb 1	; C0D9H (unused?)
+player_entering_door:	rb 1	; C0DAH
+			rb 1	; C0DBH (unused?)
+			rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
 
 ; EOF
