@@ -25,6 +25,7 @@
 	.BANK_2:	equ CHRTBL + 2 * CHRTBL.BANK_SIZE
 	.SIZE:		equ 3 * .BANK_SIZE
 	NAMTBL:		equ $1800 ; Name table
+	.SIZE:		equ $300
 	CLRTBL:		equ $2000 ; Color table
 	.BANK_SIZE:	equ 256 * 8
 	.BANK_0:	equ CLRTBL + 0 * CLRTBL.BANK_SIZE
@@ -41,7 +42,7 @@
 	
 ; -----------------------------------------------------------------------------
 ; ROM header and entry point
-	org	$8000, $bfff
+	org	$8000, $9fff ; 8KB ROM
 ROM_START:
 	db	"AB"		; ID ("AB")
 	dw	.INIT		; INIT
@@ -67,170 +68,64 @@ ROM_START:
 	call	INIT_FONT
 	
 ; init sprites
-	ld	a,00h
-	ld	de,DATA_SPRTBL + 0 * 32
-	call	INIT_SPRTBL
-	ld	a,01h
-	ld	de,DATA_SPRTBL + 1 * 32
-	call	INIT_SPRTBL
-	ld	a,02h
-	ld	de,DATA_SPRTBL + 2 * 32
-	call	INIT_SPRTBL
-	ld	a,03h
-	ld	de,DATA_SPRTBL + 3 * 32
-	call	INIT_SPRTBL
-	ld	a,04h
-	ld	de,DATA_SPRTBL + 4 * 32
-	call	INIT_SPRTBL
-	ld	a,05h
-	ld	de,DATA_SPRTBL + 5 * 32
-	call	INIT_SPRTBL
-	ld	a,06h
-	ld	de,DATA_SPRTBL + 6 * 32
-	call	INIT_SPRTBL
-	ld	a,07h
-	ld	de,DATA_SPRTBL + 7 * 32
-	call	INIT_SPRTBL
-	ld	a,08h
-	ld	de,DATA_SPRTBL + 8 * 32
-	call	INIT_SPRTBL
-	ld	a,09h
-	ld	de,DATA_SPRTBL + 9 * 32
-	call	INIT_SPRTBL
-	ld	a,0Ah
-	ld	de,DATA_SPRTBL + 10 * 32
-	call	INIT_SPRTBL
-	ld	a,0Bh
-	ld	de,DATA_SPRTBL + 11 * 32
-	call	INIT_SPRTBL
-	ld	a,0Ch
-	ld	de,DATA_SPRTBL + 12 * 32
-	call	INIT_SPRTBL
-	ld	a,0Dh
-	ld	de,DATA_SPRTBL + 13 * 32
-	call	INIT_SPRTBL
-	ld	a,0Eh
-	ld	de,DATA_SPRTBL + 14 * 32
-	call	INIT_SPRTBL
-	ld	a,0Fh
-	ld	de,DATA_SPRTBL + 15 * 32
-	call	INIT_SPRTBL
-	ld	a,10h
-	ld	de,DATA_SPRTBL + 16 * 32
-	call	INIT_SPRTBL
-	ld	a,11h
-	ld	de,DATA_SPRTBL + 17 * 32
-	call	INIT_SPRTBL
-	ld	a,12h
-	ld	de,DATA_SPRTBL + 19 * 32 ; !!!
-	call	INIT_SPRTBL
-	ld	a,13h
-	ld	de,DATA_SPRTBL + 20 * 32
-	call	INIT_SPRTBL
-	ld	a,14h
-	ld	de,DATA_SPRTBL + 21 * 32
-	call	INIT_SPRTBL
-	ld	a,15h
-	ld	de,DATA_SPRTBL + 22 * 32
-	call	INIT_SPRTBL
-	ld	a,16h
-	ld	de,DATA_SPRTBL + 23 * 32
-	call	INIT_SPRTBL
-	ld	a,17h
-	ld	de,DATA_SPRTBL + 24 * 32
-	call	INIT_SPRTBL
-	ld	a,18h
-	ld	de,DATA_SPRTBL + 25 * 32
-	call	INIT_SPRTBL
-	ld	a,19h
-	ld	de,DATA_SPRTBL + 26 * 32
-	call	INIT_SPRTBL
-	ld	a,1Ah
-	ld	de,DATA_SPRTBL + 27 * 32
-	call	INIT_SPRTBL
-	ld	a,1Bh
-	ld	de,DATA_SPRTBL + 28 * 32
-	call	INIT_SPRTBL
-	ld	a,1Ch
-	ld	de,DATA_SPRTBL + 29 * 32
-	call	INIT_SPRTBL
-	ld	a,1Dh
-	ld	de,DATA_SPRTBL + 30 * 32
-	call	INIT_SPRTBL
-	ld	a,1Eh
-	ld	de,DATA_SPRTBL + 31 * 32
-	call	INIT_SPRTBL
-	ld	a,1Fh
-	ld	de,DATA_SPRTBL + 32 * 32
-	call	INIT_SPRTBL
-	ld	a,20h
-	ld	de,DATA_SPRTBL + 33 * 32
-	call	INIT_SPRTBL
-	ld	a,21h
-	ld	de,DATA_SPRTBL + 34 * 32
-	call	INIT_SPRTBL
-	ld	a,22h
-	ld	de,DATA_SPRTBL + 35 * 32
-	call	INIT_SPRTBL
-	ld	a,23h
-	ld	de,DATA_SPRTBL + 36 * 32
-	call	INIT_SPRTBL
-	ld	a,24h
-	ld	de,DATA_SPRTBL + 37 * 32
-	call	INIT_SPRTBL
+	ld	hl,DATA_SPRTBL
+	ld	de,SPRTBL
+	ld	bc,$22 * $20
+	call	LDIRVM
 	
 ; Init 2x2 blocks CHRTBL/CLRTBL
-	ld	a,30h		; '0'
+	ld	a,$30 ; 30h
 	ld	de,DATA_CHARSET_4x + 0 * 64
 	call	INIT_4xCXRTBL
-	ld	a,34h ; ($34 = box)
+	ld	a,$34 ; 34h ; ($34 = box)
 	ld	de,DATA_CHARSET_4x + 1 * 64
 	call	INIT_4xCXRTBL
-	ld	a,38h		; '8'
+	ld	a,$38 ; 38h		; '8'
 	ld	de,DATA_CHARSET_4x + 2 * 64
 	call	INIT_4xCXRTBL
-	ld	a,3Ch		; '<'
+	ld	a,$3c ; 3Ch		; '<'
 	ld	de,DATA_CHARSET_4x + 3 * 64
 	call	INIT_4xCXRTBL
-	ld	a,4Ch		; 'L'
+	ld	a,$40 ; 4Ch
 	ld	de,DATA_CHARSET_4x + 4 * 64
 	call	INIT_4xCXRTBL
-	ld	a,50h		; 'P'
+	ld	a,$44 ; 50h
 	ld	de,DATA_CHARSET_4x + 5 * 64
 	call	INIT_4xCXRTBL
-	ld	a,54h		; 'T'
+	ld	a,$48 ; 54h		; 'T'
 	ld	de,DATA_CHARSET_4x + 6 * 64
 	call	INIT_4xCXRTBL
-	ld	a,58h		; 'X'
+	ld	a,$4c ; 58h		; 'X'
 	ld	de,DATA_CHARSET_4x + 7 * 64
 	call	INIT_4xCXRTBL
 	
 ; Init other CHRTBL/CLRTBL
-	ld	a,60h		; '`'
+	ld	a,$50 ; 60h
 	ld	de,DATA_CHARSET_1x + 0 * 16
 	call	INIT_1xCXRTBL
-	ld	a,61h		; 'a'
-	ld	de,DATA_CHARSET_1x + 2 * 16 ; !!!
+	ld	a,$51 ; 61h
+	ld	de,DATA_CHARSET_1x + 1 * 16
 	call	INIT_1xCXRTBL
-	ld	a,62h ; ($62 = sphynx room)
+	ld	a,$52 ; 62h
+	ld	de,DATA_CHARSET_1x + 2 * 16
+	call	INIT_1xCXRTBL
+	ld	a,$53 ; 63h
 	ld	de,DATA_CHARSET_1x + 3 * 16
 	call	INIT_1xCXRTBL
-	ld	a,63h ; ($63 = non visited room)
+	ld	a,$54 ; 64h
 	ld	de,DATA_CHARSET_1x + 4 * 16
 	call	INIT_1xCXRTBL
-	ld	a,64h ; ($64 = current room)
+	
+	ld	a,0FFh
 	ld	de,DATA_CHARSET_1x + 5 * 16
 	call	INIT_1xCXRTBL
-	ld	a,0FFh
-	ld	de,DATA_CHARSET_1x + 1 * 16 ; !!!
-	call	INIT_1xCXRTBL
 	
+; Init on-screen texts
 	ld	hl,LITERAL.MSX
 	ld	de,080Dh
 	ld	b,03h
 	call	WRTVRM_CHARS
 	
-; Init on-screen texts
 	ld	hl,LITERAL.PYRAMID_WARP
 	ld	de,0A09h
 	ld	b,0Ch
@@ -257,7 +152,7 @@ ROM_START:
 	ld	hl,LITERAL.HIT_SPACE_KEY
 	and	80h
 	jr	z,.L8203
-	ld	hl,LITERAL.BLANK_x21
+	ld	hl,LITERAL.BLANK_x13
 .L8203: ld	de,1008h
 	ld	b,0Dh
 	call	WRTVRM_CHARS
@@ -461,7 +356,7 @@ NEW_PYRAMID:
 	jr	nz,.L834D
 ; Prints the sphynx room
 	ld	de,121Ch	; address or value?
-	ld	a,62h ; ($62 = sphynx room)
+	ld	a,$52 ; ($52 = sphynx room)
 	call	WRTVRM_1x1_CHAR
 	
 ; Plays "Start game" music
@@ -782,7 +677,7 @@ PRINT_ROOM_DECORATION:
 	inc	hl
 	call	TO_VRAM_COORDINATES
 	push	hl
-	ld	a,54h		; 'T'
+	ld	a,$48 ; 54h
 	call	WRTVRM_2x2_CHAR
 	pop	hl
 	
@@ -813,7 +708,7 @@ PRINT_ROOM_DECORATION:
 ; saves door1 pattern based on b
 	push	hl
 	ld	a,b
-	add	a,a
+	; add	a,a
 	add	a,18h
 	add	a,a
 	add	a,a
@@ -849,7 +744,7 @@ PRINT_ROOM_DECORATION:
 	ld	(ix+00h),a
 ; saves door2 pattern based on b
 	ld	a,b
-	add	a,a
+	; add	a,a
 	add	a,18h
 	add	a,a
 	add	a,a
@@ -859,7 +754,7 @@ PRINT_ROOM_DECORATION:
 	call	PUT_SPRITE
 	
 ; Prints exit zone
-	ld	a,4Ch		; 'L'
+	ld	a,$40 ; 4Ch
 	ld	de,090Ah	; address or value?
 	push	af
 	push	de
@@ -1085,7 +980,7 @@ GAME_LOOP:
 	
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	b,63h ; ($63 = non visited room)
+	ld	b,$53 ; ($63 = non visited room)
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L86AC
@@ -1500,7 +1395,7 @@ GAME_LOOP.SKULL_OK:
 ; Animates the bullet each eight frames
 	ld	a,(aux.frame_counter)
 	and	08h
-	ld	a,1Ch
+	ld	a,1Ah
 	jr	z,.L8934
 	inc	a
 ; (computes bullet pattern)
@@ -1577,7 +1472,7 @@ GAME_LOOP.BULLET_OK:
 	or	a
 	jr	z,.L89B1
 ; (prints the exit)
-	ld	a,50h		; 'P'
+	ld	a,$44 ; 50h
 	call	WRTVRM_2x2_CHAR
 	jr	.L89B4
 ; (clears the exit)
@@ -1598,7 +1493,7 @@ GAME_LOOP.BULLET_OK:
 	ld	(pyramid.room_index),a
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	a,61h
+	ld	a,$51
 	call	WRTVRM_1x1_CHAR
 ; Plays exit sound
 	call	PLAY_SOUND_EXIT
@@ -1638,7 +1533,7 @@ GAME_LOOP.EXIT_OK:
 ; if 0, removes explosion
 	jr	z,.L8A2D
 ; if < 4, makes explosion smaller
-	ld	b,1Eh
+	ld	b,$1c
 	cp	04h
 	jr	c,.L8A1B
 	inc	b
@@ -1685,9 +1580,9 @@ GAME_LOOP.EVERYTHING_OK:
 ; Animates the enemies nest each four frames
 	ld	a,(aux.frame_counter)
 	and	04h
-	ld	b,54h
+	ld	b,$48 ; 54h
 	jr	z,.L8A5D
-	ld	b,58h
+	ld	b,$4c ; 58h
 ; Prints nest
 .L8A5D:	ld	a,(nest.spratr_y)
 	srl	a
@@ -1777,7 +1672,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	a,03h
 	call	PUT_SPRITE
 ; Prints the sphynx room in the map
-	ld	a,62h ; ($62 = sphynx room)
+	ld	a,$52 ; ($62 = sphynx room)
 	ld	de,121Ch	; address or value?
 	call	WRTVRM_1x1_CHAR
 ; color ,,1
@@ -1814,7 +1709,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	hl,LITERAL.HIT_SPACE_KEY
 	and	80h
 	jr	z,.L8B42
-	ld	hl,LITERAL.BLANK_x21
+	ld	hl,LITERAL.BLANK_x13
 .L8B42:	ld	de,1606h	; address or value?
 	ld	b,0Dh
 	call	WRTVRM_CHARS
@@ -1958,10 +1853,10 @@ CHECK_WALL:
 	jr	z,.L8C20 ; no
 	
 ; Checks for box (player only)
-	ld	a,33h ; > $33?
+	ld	a,$34 -1 ; >= $34?
 	cp	b
 	jr	nc,.L8C13 ; no
-	ld	a,37h ; and <= $37?
+	ld	a,$38 -1 ; and <= $37?
 	cp	b
 	jr	c,.L8C13 ; no
 ; yes: box, not a wall
@@ -1969,10 +1864,10 @@ CHECK_WALL:
 	ret
 
 ; Checks for exit (player only)
-.L8C13:	ld	a,4Fh ; >$4f?
+.L8C13:	ld	a,$44 -1 ; >= $44?
 	cp	b
 	jr	nc,.L8C20 ; no
-	ld	a,53h ; and <= $53?
+	ld	a,$48 -1 ; and <= $48?
 	cp	b
 	jr	c,.L8C20 ; no
 ; yes: exit, not a wall
@@ -2335,7 +2230,7 @@ GAME_OVER:
 	ld	hl,LITERAL.HIT_SPACE_KEY
 	and	80h
 	jr	z,.L8DFD
-	ld	hl,LITERAL.BLANK_x21
+	ld	hl,LITERAL.BLANK_x13
 .L8DFD:	ld	de,0C06h
 	ld	b,0Dh
 	call	WRTVRM_CHARS
@@ -2659,7 +2554,7 @@ PLAY_DEAD_MUSIC:
 	ld	(aux.dying_flashes),a
 ; (descending notes)
 	ld	a,0Ah ; initial tone
-	ld	ix,sound_buffer.unknown
+	ld	ix,sound_buffer.dead
 .L8FBD:	push	af
 	call	PLAY_DEAD_MUSIC.NOTE
 	pop	af
@@ -2736,7 +2631,7 @@ PLAY_DEAD_MUSIC.NOTE:
 	ld	(ix+14h),a
 ; Plays the note
 	call	RESET_SOUND
-	ld	hl,sound_buffer.unknown
+	ld	hl,sound_buffer.dead
 	call	PLAY_SOUND
 ; Flashes the background color
 	ld	a,(aux.dying_flashes)
@@ -2758,7 +2653,7 @@ PLAY_DEAD_MUSIC.NOTE:
 	
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_SPHYNX:
-L9067:	call	RESET_SOUND
+.L9067:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.SPHYNX
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2768,7 +2663,7 @@ L9067:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_EXIT:
-L9070:	call	RESET_SOUND
+.L9070:	call	RESET_SOUND
 ; color ,,3
 	ld	c,07h
 	ld	b,03h
@@ -2853,7 +2748,7 @@ L9070:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_INGAME:
-L910C:	call	RESET_SOUND
+.L910C:	call	RESET_SOUND
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	nz,.L911B
@@ -2868,7 +2763,7 @@ L910C:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BOX:
-L9121:	call	RESET_SOUND
+.L9121:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BOX
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2878,7 +2773,7 @@ L9121:	call	RESET_SOUND
 	
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_DOOR:
-L912A:	call	RESET_SOUND
+.L912A:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.DOOR
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2888,7 +2783,7 @@ L912A:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET_HIT:
-L9133:	call	RESET_SOUND
+.L9133:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BULLET_HIT
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2898,7 +2793,7 @@ L9133:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET:
-L913C:	call	RESET_SOUND
+.L913C:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BULLET
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2908,7 +2803,7 @@ L913C:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 RESET_SOUND:
-L9145:	ld	hl,DATA_SOUND.RESET
+.L9145:	ld	hl,DATA_SOUND.RESET
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
@@ -3002,20 +2897,20 @@ DATA_SOUND:
 	; Referenced from 802D, 8035, 803D, 8045, 804D, 8055, 805D, 8065, 806D, 8075, 807D, 8085, 808D, 8095, 809D, 80A5, 80AD, 80B5, 80BD, 80C5, 80CD, 80D5, 80DD, 80E5, 80ED, 80F5, 80FD, 8105, 810D, 8115, 811D, 8125, 812D, 8135, 813D, 8145, 814D
 	; --- START PROC L91D2 ---
 	
-; -----------------------------------------------------------------------------
-; param a: sprite index
-; param de: ROM/RAM source SPRTBL data
-INIT_SPRTBL:
-L91D2:	ld	hl,SPRTBL
-	ld	bc,0020h	; address or value?
-	inc	a
-.L91D9: dec	a
-	jr	z,.L91DF
-	add	hl,bc
-	jr	.L91D9
-.L91DF: ex	de,hl
-	jp	LDIRVM
-; -----------------------------------------------------------------------------
+; ; -----------------------------------------------------------------------------
+; ; param a: sprite index
+; ; param de: ROM/RAM source SPRTBL data
+; INIT_SPRTBL:
+; .L91D2:	ld	hl,SPRTBL
+	; ld	bc,0020h	; address or value?
+	; inc	a
+; .L91D9: dec	a
+	; jr	z,.L91DF
+	; add	hl,bc
+	; jr	.L91D9
+; .L91DF: ex	de,hl
+	; jp	LDIRVM
+; ; -----------------------------------------------------------------------------
 
 	; Referenced from 855D, 8590, 8652, 8794, 87E2, 88FE, 8966, 8AD4, 8ADC, 8AE4, 8AEC, 8D39, 8D8A, 8DA9, 8C9F, 8EA9, 8A37, 8AA9, 8AB1
 	; --- START PROC L91E3 ---
@@ -3024,7 +2919,7 @@ L91D2:	ld	hl,SPRTBL
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
 PUT_SPRITE:
-L91E3:	ld	hl,SPRATR
+.L91E3:	ld	hl,SPRATR
 	ld	bc,4 ; 4b per sprite
 	inc	a
 .L91EA: dec	a
@@ -3043,15 +2938,14 @@ L91E3:	ld	hl,SPRATR
 	
 ; -----------------------------------------------------------------------------
 INIT_4xCXRTBL:
-L91F5:	ld	hl,0020h	; address or value?
-	jr	L91FD
+.L91F5:	ld	hl,0020h	; address or value?
+	jr	INIT_NxCXRTBL
 
 INIT_1xCXRTBL:
-L91FA:	ld	hl,0008h	; address or value?
+.L91FA:	ld	hl,0008h	; address or value?
 
-	; Referenced from 91F8
-	; --- START PROC L91FD ---
-L91FD:	ld	(aux.how_many_bytes),hl
+INIT_NxCXRTBL:
+.L91FD:	ld	(aux.how_many_bytes),hl
 	ld	hl,0000h	; address or value?
 	ld	bc,0008h	; address or value?
 	inc	a
@@ -3091,17 +2985,16 @@ L91FD:	ld	(aux.how_many_bytes),hl
 	
 ; -----------------------------------------------------------------------------
 WRTVRM_2x2_CHAR:
-L9231:	ex	af,af'
+.L9231:	ex	af,af'
 	ld	a,04h
-	jr	L9239
+	jr	WRTVRM_NxN_CHAR
 
 WRTVRM_1x1_CHAR:
-L9236:	ex	af,af'
+.L9236:	ex	af,af'
 	ld	a,01h
 
-	; Referenced from 9234
-	; --- START PROC L9239 ---
-L9239:	ld	(aux.how_many_bytes),a
+WRTVRM_NxN_CHAR:
+.L9239:	ld	(aux.how_many_bytes),a
 	ex	af,af'
 	ld	hl,1800h	; address or value?
 	ld	bc,0020h	; address or value?
@@ -3134,7 +3027,7 @@ L9239:	ld	(aux.how_many_bytes),a
 ; -----------------------------------------------------------------------------
 ; param hl: sound data pointer
 PLAY_SOUND:
-L9264:	ld	b,(hl)
+.L9264:	ld	b,(hl)
 .L9265:	inc	hl
 	ld	a,(hl)
 	inc	hl
@@ -3149,7 +3042,7 @@ L9264:	ld	b,(hl)
 
 ; -----------------------------------------------------------------------------
 GTSTCK_ANY:
-L926F:	xor	a
+.L926F:	xor	a
 	call	GTSTCK
 	or	a
 	ret	nz
@@ -3166,7 +3059,7 @@ L926F:	xor	a
 
 ; -----------------------------------------------------------------------------
 GTTRIG_ANY:
-L9280:	xor	a
+.L9280:	xor	a
 	call	GTTRIG
 	or	a
 	ret	nz
@@ -3183,7 +3076,7 @@ L9280:	xor	a
 
 ; -----------------------------------------------------------------------------
 SCREEN_2:
-L9291:	ld	a,02h
+.L9291:	ld	a,02h
 	jp	CHGMOD
 ; -----------------------------------------------------------------------------
 
@@ -3193,7 +3086,7 @@ L9291:	ld	a,02h
 ; -----------------------------------------------------------------------------
 ; param de: score to add (BCD)
 ADD_SCORE:
-L9296:	ld	hl,game.score_bcd + 2
+.L9296:	ld	hl,game.score_bcd + 2
 	ld	a,e
 	add	a,(hl)
 	daa
@@ -3217,7 +3110,7 @@ L9296:	ld	hl,game.score_bcd + 2
 ; -----------------------------------------------------------------------------
 UPDATE_HIGH_SCORE:
 ; Compares score (BCD) with high score (BCD)
-L92A9:	ld	hl,game.score_bcd
+.L92A9:	ld	hl,game.score_bcd
 	ld	a,(game.high_score_bcd)
 	cp	(hl)
 	jr	c,.L92C3
@@ -3249,7 +3142,7 @@ L92A9:	ld	hl,game.score_bcd
 
 ; -----------------------------------------------------------------------------
 PRINT_SCORE:
-L92D6:	ld	hl,game.score_bcd
+.L92D6:	ld	hl,game.score_bcd
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 92D4
@@ -3261,7 +3154,7 @@ L92D6:	ld	hl,game.score_bcd
 ; param de: yx
 WRTVRM_6x_BCD:
 ; 3 times 2 characters
-L92D9:	call	.L92DF
+.L92D9:	call	.L92DF
 	call	.L92DF
 ; First digit
 .L92DF: push	hl
@@ -3299,7 +3192,7 @@ L92D9:	call	.L92DF
 ; param b: number of chars
 WRTVRM_CHARS:
 ; Writes (hl)
-L92FC:	push	bc
+.L92FC:	push	bc
 	push	de
 	push	hl
 	ld	a,(hl)
@@ -3320,9 +3213,9 @@ L92FC:	push	bc
 ; -----------------------------------------------------------------------------
 INIT_FONT:
 ; FILVRM with '/' character
-L930B:	ld	a,2Fh		; '/'
-	ld	hl,1800h	; address or value?
-	ld	bc,0300h	; address or value?
+.L930B:	ld	a,2Fh		; '/'
+	ld	hl,NAMTBL
+	ld	bc,NAMTBL.SIZE
 	call	FILVRM
 ; Blits to CHRTBL three times
 	ld	hl,DATA_FONT
@@ -3345,7 +3238,7 @@ L930B:	ld	a,2Fh		; '/'
 ; -----------------------------------------------------------------------------
 COLOR_A_B_C:
 ; color a,b,c
-L933A:	ld	(FORCLR),a
+.L933A:	ld	(FORCLR),a
 	ld	a,b
 	ld	(BAKCLR),a
 	ld	a,c
@@ -3370,7 +3263,7 @@ L933A:	ld	(FORCLR),a
 
 ; -----------------------------------------------------------------------------
 DATA_FONT:
-L9364:	DB	3Ch, 42h, 46h, 5Ah, 62h, 42h, 3Ch, 00h ; 00
+.L9364:	DB	3Ch, 42h, 46h, 5Ah, 62h, 42h, 3Ch, 00h ; 00
 	DB	08h, 18h, 28h, 08h, 08h, 08h, 3Eh, 00h ; 01
 	DB	3Ch, 42h, 02h, 1Ch, 20h, 40h, 7Eh, 00h ; 02
 	DB	3Ch, 42h, 02h, 0Ch, 02h, 42h, 3Ch, 00h ; 03
@@ -3423,230 +3316,179 @@ DATA_FONT.SIZE:	equ $ - DATA_FONT
 
 ; -----------------------------------------------------------------------------
 DATA_SPRTBL:
-; 00
-L94E4:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
+._00:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
 	DB	7Dh, 07h, 18h, 1Fh, 1Ch, 1Ch, 0FCh, 0FCh
 	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 0Eh
 	DB	0FAh, 0FAh, 0Ah, 0F8h, 30h, 3Fh, 3Fh, 00h
 
-; 01
-	DB	0Fh, 0Fh, 1Eh, 0Fh, 3Fh, 0Fh, 0Fh, 08h
+._01:	DB	0Fh, 0Fh, 1Eh, 0Fh, 3Fh, 0Fh, 0Fh, 08h
 	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
 	DB	0F0h, 0F8h, 78h, 0F8h, 0FCh, 0FBh, 0F3h, 09h
 	DB	0FCh, 0FEh, 0FAh, 06h, 0FEh, 0FCh, 00h, 00h
 
-; 02
-	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 70h 
+._02:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 70h 
 	DB	5Fh, 5Fh, 50h, 1Fh, 0Fh, 0FCh, 0FCh, 00h
 	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 02h
 	DB	0BEh, 0E0h, 18h, 0F8h, 0F8h, 38h, 3Fh, 3Fh 
 
-; 03
-	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
+._03:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
 	DB	18h, 3Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
 	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D6h, 0E6h
 	DB	1Ah, 0FCh, 0FAh, 06h, 0FEh, 0FCh, 00h, 00h
 
-; 04
-	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
+._04:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
 	DB	1Bh, 1Fh, 10h, 1Fh, 1Fh, 0FCh, 0FCh, 00h
 	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 08h
 	DB	0F8h, 0F8h, 48h, 0F8h, 0F8h, 78h, 3Fh, 3Fh
 
-; 05
-	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
+._05:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
 	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
 	DB	0F0h, 0F8h, 78h, 0F8h, 0FCh, 0F8h, 0F0h, 08h
 	DB	0FCh, 0FEh, 0FAh, 06h, 0FEh, 0C4h, 38h, 38h 
 
-; 06
-	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 10h
+._06:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 10h
 	DB	1Fh, 1Fh, 11h, 1Fh, 1Fh, 0Eh, 0FCh, 0FCh
 	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
 	DB	0D8h, 0F8h, 08h, 0F8h, 0F8h, 3Fh, 3Fh, 00h
 
-; 07
-	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
+._07:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
 	DB	58h, 3Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
 	DB	0F8h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D0h, 0E0h
 	DB	18h, 0FCh, 0FAh, 06h, 0FEh, 0C4h, 38h, 38h 
 
-; 08
-	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
+._08:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
 	DB	7Fh, 02h, 1Fh, 1Fh, 1Fh, 0FCh, 0FCh, 00h
 	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 04h
 	DB	0FEh, 0EFh, 5Eh, 0BCh, 0F8h, 78h, 3Fh, 3Fh 
 
-; 09
-	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
+._09:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
 	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
 	DB	0F0h, 0F8h, 7Ah, 0FAh, 0FEh, 0FAh, 0F2h, 0Ah
 	DB	0FCh, 0FEh, 0FBh, 06h, 0FEh, 0C4h, 38h, 38h 
 
-; 0A
-	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 2Fh, 70h 
+._0A:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 2Fh, 70h 
 	DB	0FDh, 77h, 3Ah, 1Dh, 0Fh, 0FCh, 0FCh, 00h
 	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
 	DB	0FEh, 40h, 0F8h, 0F8h, 0F8h, 38h, 3Fh, 3Fh 
 
-; 0B
-	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
+._0B:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
 	DB	38h, 7Fh, 0CFh, 4Ch, 2Bh, 2Fh, 1Ch, 1Ch
 	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D6h, 0E6h
 	DB	1Ah, 0FCh, 3Eh, 0FEh, 0FEh, 0FCh, 00h, 00h
 
-; 0C
-	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
+._0C:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
 	DB	7Fh, 02h, 1Fh, 1Fh, 1Fh, 1Ch, 0FCh, 0FCh
 	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F4h, 0Eh
 	DB	0BFh, 0EEh, 5Ch, 0B8h, 0F0h, 3Fh, 3Fh, 00h
 
-; 0D
-	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 1Fh, 0Fh, 10h
+._0D:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 1Fh, 0Fh, 10h
 	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
 	DB	0F0h, 0F8h, 7Ah, 0FAh, 0FEh, 0FBh, 0F3h, 09h
 	DB	0FCh, 0FEh, 0FBh, 06h, 0FEh, 0FCh, 00h, 00h
 
-; 0E
-	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 20h 
+._0E:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 20h 
 	DB	7Fh, 0F7h, 7Ah, 3Dh, 1Fh, 1Eh, 0FCh, 0FCh
 	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
 	DB	0FEh, 40h, 0F8h, 0F8h, 0F8h, 3Fh, 3Fh, 00h
 
-; 0F
-	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
+._0F:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
 	DB	58h, 3Fh, 4Fh, 0CCh, 6Bh, 2Fh, 00h, 00h
 	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D0h, 0E0h
 	DB	18h, 0FCh, 3Eh, 0FEh, 0FEh, 0C4h, 38h, 38h 
 
-; 10
-	DB	0Fh, 1Fh, 3Dh, 39h, 31h, 31h, 33h, 1Fh
+._10:	DB	0Fh, 1Fh, 3Dh, 39h, 31h, 31h, 33h, 1Fh
 	DB	0CFh, 33h, 0Ch, 03h, 00h, 0Fh, 30h, 0C0h
 	DB	0F0h, 0F8h, 0BCh, 9Ch, 8Ch, 8Ch, 9Ch, 0F8h
 	DB	0F0h, 0C0h, 0C7h, 38h, 0C0h, 00h, 0C7h, 38h 
 
-; 11
-	DB	0Fh, 1Fh, 3Eh, 3Ch, 38h, 38h, 3Ch, 1Fh
+._11:	DB	0Fh, 1Fh, 3Eh, 3Ch, 38h, 38h, 3Ch, 1Fh
 	DB	0Fh, 03h, 0E3h, 1Ch, 00h, 03h, 0E3h, 1Ch
 	DB	0F0h, 0F8h, 0BCh, 9Ch, 8Ch, 8Ch, 0CCh, 0F8h
 	DB	0F3h, 0CCh, 30h, 0C0h, 00h, 0F0h, 0Ch, 03h
 
-; unused
-	DB	2Ch, 18h, 0ACh, 46h, 5Eh, 0C1h, 2Ah, 0C2h
-	DB	0C2h, 0C1h, 8Ah, 0CCh, 60h, 00h, 02h, 0ACh
-	DB	2Ch, 2Ch, 19h, 22h, 46h, 4Fh, 0C1h, 2Ah 
-	DB	0C2h, 0C2h, 0C1h, 92h, 64h, 60h, 00h, 02h
-
-; 12
-	DB	30h, 30h , 78h , 0FCh, 0FCh, 0FEh, 0FDh, 79h 
+._13:	DB	30h, 30h , 78h , 0FCh, 0FCh, 0FEh, 0FDh, 79h 
 	DB	33h , 32h , 0Fh, 00h, 01h, 02h, 01h, 00h
 	DB	0Ch, 0Ch, 1Eh, 3Fh , 3Fh , 7Fh , 0BFh, 9Eh
 	DB	0CCh, 4Ch , 0B0h, 40h , 84h, 4Eh , 9Ah, 0E1h
 
-; 13
-	DB	84h, 84h, 84h, 0CCh, 0CCh, 0CEh, 79h, 79h
+._14:	DB	84h, 84h, 84h, 0CCh, 0CCh, 0CEh, 79h, 79h
 	DB	33h, 32h, 0Dh, 02h, 21h, 72h, 59h, 87h
 	DB	21h, 21h, 21h, 33h, 33h, 73h, 9Eh, 9Eh
 	DB	0CCh, 0CCh, 0B0h, 40h, 80h, 40h, 80h, 00h
 
-; 14
-	DB	0Ch, 19h, 13h, 3Ah, 79h, 7Fh, 0FEh, 0FDh
+._15:	DB	0Ch, 19h, 13h, 3Ah, 79h, 7Fh, 0FEh, 0FDh
 	DB	0FBh, 0F7h, 0B5h, 0D5h, 0C8h, 0C4h, 40h, 20h
 	DB	30h, 98h, 0C8h, 5Ch, 9Eh, 0FEh, 7Fh, 0BFh
 	DB	0DFh, 0EFh, 0AFh, 0ABh, 13h, 23h, 02h, 04h
 
-; 15
-	DB	06h, 1Dh, 13h, 3Ah, 39h, 3Fh, 3Fh, 3Eh
+._16:	DB	06h, 1Dh, 13h, 3Ah, 39h, 3Fh, 3Fh, 3Eh
 	DB	37h, 35h, 35h, 15h, 1Ah, 0Ah, 0Dh, 05h
 	DB	60h, 0B8h, 0C8h, 5Ch, 9Ch, 0FCh, 0FCh, 7Ch
 	DB	0ECh, 0ACh, 0ACh, 0A8h, 58h, 50h, 0B0h, 0A0h
 
-; 16
+._17: ; (currently unused)
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 
-; 17
+._18: ; (currently unused)
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 
-; 18
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+._19:	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	0B0h, 0B0h, 98h, 0DCh, 0DEh, 0CFh, 0E0h, 0FFh
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	0Dh, 0Dh, 19h, 3Bh, 7Bh, 0F3h, 07h, 0FFh
 
-; 19
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-
-; 1A
-	DB	0FFh, 0E0h, 0CFh, 0DEh, 0DCh, 98h, 0B0h, 0B0h
+._1B:	DB	0FFh, 0E0h, 0CFh, 0DEh, 0DCh, 98h, 0B0h, 0B0h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	0FFh, 07h, 0F3h, 7Bh, 3Bh, 19h, 0Dh, 0Dh
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 
-; 1B
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-
-; 1C
-	DB	80h, 60h, 60h, 00h, 00h, 00h, 00h, 00h
+._1D:	DB	80h, 60h, 60h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 
-; 1D
-	DB	0C0h, 0C0h, 20h, 00h, 00h, 00h, 00h, 00h
+._1E:	DB	0C0h, 0C0h, 20h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 
-; 1E
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 03h, 03h
+._1F:	DB	00h, 00h, 00h, 00h, 00h, 00h, 03h, 03h
 	DB	01h, 01h, 02h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 00h, 20h, 60h, 80h
 	DB	0C0h, 20h, 00h, 00h, 00h, 00h, 00h, 00h
 
-; 1F
-	DB	00h, 00h, 00h, 10h, 1Ch, 0Fh, 0Fh, 0Fh
+._20:	DB	00h, 00h, 00h, 10h, 1Ch, 0Fh, 0Fh, 0Fh
 	DB	07h, 0Fh, 08h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 0C0h, 0F0h, 0C0h, 0C0h, 80h
 	DB	0C0h, 0E0h, 30h, 00h, 00h, 00h, 00h, 00h
 
-; 20
-	DB	00h, 11h, 89h, 8Fh, 7Fh, 3Fh, 7Fh, 0FFh
+._21:	DB	00h, 11h, 89h, 8Fh, 7Fh, 3Fh, 7Fh, 0FFh
 	DB	7Fh, 7Fh, 7Fh, 3Fh, 4Fh, 0Fh, 0Ch, 18h
 	DB	80h, 81h, 03h, 0Eh, 1Eh, 7Ch, 0FCh, 0FFh
 	DB	0FEh, 0FEh, 0F0h, 0F0h, 0F8h, 3Ch, 0Eh, 03h
 
-; 21
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+._22:	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 00h, 00h, 01h, 00h, 03h, 03h
 	DB	08h, 04h, 06h, 16h, 10h, 3Fh, 7Fh, 08h
 	DB	70h, 0E0h, 0FCh, 9Eh, 0F8h, 30h, 0FCh, 0FEh
 
-; 22
-	DB	00h, 00h, 0C0h, 0E0h, 0F8h, 0E2h, 0FFh, 7Fh
+._23:	DB	00h, 00h, 0C0h, 0E0h, 0F8h, 0E2h, 0FFh, 7Fh
 	DB	1Ch, 07h, 0F7h, 60h, 07h, 07h, 00h, 07h
 	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 0C0h, 0C0h, 0E0h, 0E0h, 0E0h, 30h, 0F0h
 
-; 23
-	DB	07h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+._24:	DB	07h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 	DB	00h, 00h, 1Eh, 3Fh, 7Fh, 0FFh, 0D7h, 57h
 	DB	0ECh, 2Eh, 0E2h, 6Fh, 0Fh, 7Fh, 3Fh, 7Fh
 	DB	7Fh, 3Fh, 0B0h, 0EFh, 0DFh, 0BFh, 0B5h, 0D5h
 
-; 24
-	DB	17h, 36h, 77h, 0F7h, 0F7h, 0F9h, 0FCh, 0F8h
+._25:	DB	17h, 36h, 77h, 0F7h, 0F7h, 0F9h, 0FCh, 0F8h
 	DB	0C7h, 0DFh, 3Fh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 	DB	0F0h, 00h, 0F8h, 0FFh, 0FFh, 0FFh, 0FFh, 3Fh
 	DB	3Fh, 0BFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
@@ -3655,7 +3497,7 @@ L94E4:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
 ; -----------------------------------------------------------------------------
 DATA_CHARSET_4x:
 ; 30 (wall)
-L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
+.L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
@@ -3737,7 +3579,6 @@ L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CBh, 65h, 32h, 19h, 0Ch, 06h, 03h, 01h
 	DB	0D3h, 0A6h, 4Ch, 98h, 30h, 60h, 0C0h, 80h
 
-; unused
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
@@ -3746,29 +3587,29 @@ L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 
 ; -----------------------------------------------------------------------------
 DATA_CHARSET_1x:
-; 60 (life)
-L9BA4:	DB	18h, 3Ch, 3Ch, 18h, 7Eh, 0BDh, 7Eh, 0C3h
+; $50 = life
+	DB	18h, 3Ch, 3Ch, 18h, 7Eh, 0BDh, 7Eh, 0C3h
 	DB	0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h
 	
-; FF
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-
-; 61
+; $51 = visited room
 	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
 	DB	0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h
 
-; ($62 = sphynx room)
+; $52 = sphynx room
 	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
 	DB	60h, 60h, 60h, 60h, 60h, 60h, 60h, 60h
 
-; ($63 = non visited room)
+; $53 = non visited room
 	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
 	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
 
-; ($64 = current room)
+; $54 = current room
 	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
 	DB	70h, 70h, 70h, 70h, 70h, 70h, 70h, 70h
+	
+; $FF
+	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3790,30 +3631,21 @@ LITERAL:
 .AIR: ; 9C2A
 	DB	$0A, $12, $1B				; AIR
 
-; 9C2D (unused)
-	DB	$0D, $12, $0A, $16, $18, $17, $0D	; DIAMOND (unused)
-; 9C34 (unused)
-	DB	$00, $00, $00, $00, $00, $00, $00	; 7x $00 (unused)
-	
 .WALL_x25: ; 9C3B
 	DB	$30, $30, $30, $30, $30, $30, $30, $30	; 25x wall
 	DB	$30, $30, $30, $30, $30, $30, $30, $30
 	DB	$30, $30, $30, $30, $30, $30, $30, $30
 	DB	$30
 .ROOMS_x7:	; 9C54
-	DB	$63, $63, $63, $63, $63, $63, $63	; 7x black room
+	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 	
-; 9C5B (unused)
-	DB	$0D, $12, $0A, $16, $18, $17, $0D	; DIAMOND (unused)
-
-.BLANK_x21: ; 9C62
-	DB	$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+.BLANK_x13: ; 9C62
 	DB	$FF, $FF, $FF, $FF, $FF, $FF, $FF
 .BLANK_x6: ; 9C71
 	DB	$FF, $FF, $FF, $FF, $FF, $FF
 	
 .LIVES_x6: ; 9C77
-	DB	$60, $60, $60, $60, $60, $60		; 6x life
+	DB	$50, $50, $50, $50, $50, $50		; 6x life
 	
 .CONGRATULATIONS: ; 9C7D
 	DB	$0C, $18, $17, $10, $1B, $0A, $1D, $1E
@@ -3846,7 +3678,7 @@ LITERAL:
 ; -----------------------------------------------------------------------------
 DATA_ROOMS:
 ; 00				; XXXXXXXXXXXXX
-L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
+.L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
 	DB	004h, 000h	; X_____X_____X
 	DB	0B5h, 0A0h	; XX_XX_X_XX_XX
 	DB	080h, 000h	; XX__________X
@@ -4147,19 +3979,19 @@ L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
 
 ; -----------------------------------------------------------------------------
 DATA_RANDOMIZE_PYRAMID_FLOOR1:
-L9EEB:	DB	01h, 05h, 03h, 02h, 06h, 04h, 07h
+.L9EEB:	DB	01h, 05h, 03h, 02h, 06h, 04h, 07h
 	DB	04h, 05h, 01h, 07h, 03h, 06h, 02h
 	DB	05h, 02h, 06h, 04h, 01h, 07h, 03h
 	DB	06h, 01h, 04h, 05h, 02h, 03h, 07h
 	
 DATA_RANDOMIZE_PYRAMID_FLOOR2:
-L9F03:	DB	08h, 0Ch, 0Ah, 09h, 0Bh
+.L9F03:	DB	08h, 0Ch, 0Ah, 09h, 0Bh
 	DB	0Bh, 08h, 0Ah, 09h, 0Ch
 	DB	0Ch, 0Ah, 09h, 0Bh, 08h
 	DB	0Ah, 09h, 08h, 0Ch, 0Bh
 	
 DATA_RANDOMIZE_PYRAMID_FLOOR3:
-L9F19:	DB	0Dh, 0Eh, 0Fh
+.L9F19:	DB	0Dh, 0Eh, 0Fh
 	DB	0Eh, 0Dh, 0Fh
 	DB	0Fh, 0Eh, 0Dh
 	DB	0Dh, 0Fh, 0Eh
@@ -4167,19 +3999,19 @@ L9F19:	DB	0Dh, 0Eh, 0Fh
 
 ; -----------------------------------------------------------------------------
 DATA_SPHYNX_SPRATR:
-L9F28:	DB	07h, 50h, 84h, 04h
-	DB	07h, 70h, 88h, 04h
-	DB	27h, 50h, 8Ch, 04h
-	DB	27h, 70h, 90h, 04h
+.L9F28:	DB	07h, 50h, $7c, $04 ; ..., 84h, 04h
+	DB	07h, 70h, $80, $04 ; ..., 88h, 04h
+	DB	27h, 50h, $84, $04 ; ..., 8Ch, 04h
+	DB	27h, 70h, $88, $04 ; ..., 90h, 04h
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 DATA_SOUND.MUTE_CHANNELS:
-L9F38:	DB	01h ; length
+.L9F38:	DB	01h ; length
 	DB	07h, 0BFh
 	
 DATA_SOUND.SPHYNX:
-L9F3B:	DB	0Dh ; length
+.L9F3B:	DB	0Dh ; length
 	DB	00h, 01h
 	DB	01h, 01h
 	DB	02h, 05h
@@ -4196,7 +4028,7 @@ L9F3B:	DB	0Dh ; length
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-L9F56:	db	" PYRAMID WARP", $a0
+.L9F56:	db	" PYRAMID WARP", $a0
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
@@ -4204,16 +4036,16 @@ L9F56:	db	" PYRAMID WARP", $a0
 
 debug_rom_end_original: equ $9f8c
 debug_rom_end_new:	equ $
-debug_rom_end_diff:	equ debug_rom_end_new - debug_rom_end_original
+debug_rom_end_diff:	equ debug_rom_end_original - debug_rom_end_new
 
 ; -----------------------------------------------------------------------------
 ; Padding to a 8kB boundary
-L9F8C:	ds	($ OR $1fff) -$ +1, $00
+	ds	($ OR $1fff) -$ +1, $00
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; RAM
-	org	$e000, $f380
+	org	$e000, $f380 ; 8KB RAM
 	
 box1: ; C000H
 	.y:		rb 1	; C000H
@@ -4313,8 +4145,6 @@ aux.frame_counter:	rb 1	; C05FH
 new_player_direction:	rb 1	; C060H
 direction_table:	rb 4	; C061H
 current_enemy_ptr:	rb 2	; C065H
-			rb 1	; C067H (unused?)
-			rb 1	; C068H (unused?)
 spawn_enemy_delay:	rb 1	; C069H
 check_wall_for_player:	rb 1	; C06AH
 exit:
@@ -4337,22 +4167,19 @@ game.high_score_bcd:	rb 3	; C07FH (6 digits)
 game.score_bcd:		rb 3	; C082H (6 digits)
 pyramid: ; C085H
 	.room_index:	rb 1	; C085H
-			rb 1	; C086H (unused?)
 	.room_array:	rb 16	; C087H (7+5+3+1 rooms)
 	.room_namtbl_ptr:rb 2	; C097H
 sound_buffer: ; C099H
 	.start:		rb 1+20	; C099H
-	.unknown:	rb 1+20	; C0AEH
+	.dead:		rb 1+20	; C0AEH
 	.end:		rb 1+20	; C0C3H
 aux.frame_counter_2:	rb 1	; C0D8H
-			rb 1	; C0D9H (unused?)
 player_entering_door:	rb 1	; C0DAH
-			rb 1	; C0DBH (unused?)
 aux.dying_flashes:	rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
 debug_ram_end_new:	equ $ -1
-debug_ram_end_diff:	equ debug_ram_end_new - debug_ram_end_original
+debug_ram_end_diff:	equ debug_ram_end_original - debug_ram_end_new
 
 ; EOF

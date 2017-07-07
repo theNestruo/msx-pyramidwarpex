@@ -41,7 +41,7 @@
 	
 ; -----------------------------------------------------------------------------
 ; ROM header and entry point
-	org	$8000, $bfff
+	org	$8000, $9fff ; 8KB ROM
 ROM_START:
 	db	"AB"		; ID ("AB")
 	dw	.INIT		; INIT
@@ -2659,7 +2659,7 @@ PLAY_DEAD_MUSIC:
 	ld	(aux.dying_flashes),a
 ; (descending notes)
 	ld	a,0Ah ; initial tone
-	ld	ix,sound_buffer.unknown
+	ld	ix,sound_buffer.dead
 .L8FBD:	push	af
 	call	PLAY_DEAD_MUSIC.NOTE
 	pop	af
@@ -2736,7 +2736,7 @@ PLAY_DEAD_MUSIC.NOTE:
 	ld	(ix+14h),a
 ; Plays the note
 	call	RESET_SOUND
-	ld	hl,sound_buffer.unknown
+	ld	hl,sound_buffer.dead
 	call	PLAY_SOUND
 ; Flashes the background color
 	ld	a,(aux.dying_flashes)
@@ -2758,7 +2758,7 @@ PLAY_DEAD_MUSIC.NOTE:
 	
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_SPHYNX:
-L9067:	call	RESET_SOUND
+.L9067:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.SPHYNX
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2768,7 +2768,7 @@ L9067:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_EXIT:
-L9070:	call	RESET_SOUND
+.L9070:	call	RESET_SOUND
 ; color ,,3
 	ld	c,07h
 	ld	b,03h
@@ -2853,7 +2853,7 @@ L9070:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_INGAME:
-L910C:	call	RESET_SOUND
+.L910C:	call	RESET_SOUND
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	nz,.L911B
@@ -2868,7 +2868,7 @@ L910C:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BOX:
-L9121:	call	RESET_SOUND
+.L9121:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BOX
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2878,7 +2878,7 @@ L9121:	call	RESET_SOUND
 	
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_DOOR:
-L912A:	call	RESET_SOUND
+.L912A:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.DOOR
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2888,7 +2888,7 @@ L912A:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET_HIT:
-L9133:	call	RESET_SOUND
+.L9133:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BULLET_HIT
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2898,7 +2898,7 @@ L9133:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET:
-L913C:	call	RESET_SOUND
+.L913C:	call	RESET_SOUND
 	ld	hl,DATA_SOUND.BULLET
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
@@ -2908,7 +2908,7 @@ L913C:	call	RESET_SOUND
 
 ; -----------------------------------------------------------------------------
 RESET_SOUND:
-L9145:	ld	hl,DATA_SOUND.RESET
+.L9145:	ld	hl,DATA_SOUND.RESET
 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
@@ -3006,7 +3006,7 @@ DATA_SOUND:
 ; param a: sprite index
 ; param de: ROM/RAM source SPRTBL data
 INIT_SPRTBL:
-L91D2:	ld	hl,SPRTBL
+.L91D2:	ld	hl,SPRTBL
 	ld	bc,0020h	; address or value?
 	inc	a
 .L91D9: dec	a
@@ -3024,7 +3024,7 @@ L91D2:	ld	hl,SPRTBL
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
 PUT_SPRITE:
-L91E3:	ld	hl,SPRATR
+.L91E3:	ld	hl,SPRATR
 	ld	bc,4 ; 4b per sprite
 	inc	a
 .L91EA: dec	a
@@ -3043,15 +3043,14 @@ L91E3:	ld	hl,SPRATR
 	
 ; -----------------------------------------------------------------------------
 INIT_4xCXRTBL:
-L91F5:	ld	hl,0020h	; address or value?
-	jr	L91FD
+.L91F5:	ld	hl,0020h	; address or value?
+	jr	INIT_NxCXRTBL
 
 INIT_1xCXRTBL:
-L91FA:	ld	hl,0008h	; address or value?
+.L91FA:	ld	hl,0008h	; address or value?
 
-	; Referenced from 91F8
-	; --- START PROC L91FD ---
-L91FD:	ld	(aux.how_many_bytes),hl
+INIT_NxCXRTBL:
+.L91FD:	ld	(aux.how_many_bytes),hl
 	ld	hl,0000h	; address or value?
 	ld	bc,0008h	; address or value?
 	inc	a
@@ -3091,17 +3090,16 @@ L91FD:	ld	(aux.how_many_bytes),hl
 	
 ; -----------------------------------------------------------------------------
 WRTVRM_2x2_CHAR:
-L9231:	ex	af,af'
+.L9231:	ex	af,af'
 	ld	a,04h
-	jr	L9239
+	jr	WRTVRM_NxN_CHAR
 
 WRTVRM_1x1_CHAR:
-L9236:	ex	af,af'
+.L9236:	ex	af,af'
 	ld	a,01h
 
-	; Referenced from 9234
-	; --- START PROC L9239 ---
-L9239:	ld	(aux.how_many_bytes),a
+WRTVRM_NxN_CHAR:
+.L9239:	ld	(aux.how_many_bytes),a
 	ex	af,af'
 	ld	hl,1800h	; address or value?
 	ld	bc,0020h	; address or value?
@@ -3134,7 +3132,7 @@ L9239:	ld	(aux.how_many_bytes),a
 ; -----------------------------------------------------------------------------
 ; param hl: sound data pointer
 PLAY_SOUND:
-L9264:	ld	b,(hl)
+.L9264:	ld	b,(hl)
 .L9265:	inc	hl
 	ld	a,(hl)
 	inc	hl
@@ -3149,7 +3147,7 @@ L9264:	ld	b,(hl)
 
 ; -----------------------------------------------------------------------------
 GTSTCK_ANY:
-L926F:	xor	a
+.L926F:	xor	a
 	call	GTSTCK
 	or	a
 	ret	nz
@@ -3166,7 +3164,7 @@ L926F:	xor	a
 
 ; -----------------------------------------------------------------------------
 GTTRIG_ANY:
-L9280:	xor	a
+.L9280:	xor	a
 	call	GTTRIG
 	or	a
 	ret	nz
@@ -3183,7 +3181,7 @@ L9280:	xor	a
 
 ; -----------------------------------------------------------------------------
 SCREEN_2:
-L9291:	ld	a,02h
+.L9291:	ld	a,02h
 	jp	CHGMOD
 ; -----------------------------------------------------------------------------
 
@@ -3193,7 +3191,7 @@ L9291:	ld	a,02h
 ; -----------------------------------------------------------------------------
 ; param de: score to add (BCD)
 ADD_SCORE:
-L9296:	ld	hl,game.score_bcd + 2
+.L9296:	ld	hl,game.score_bcd + 2
 	ld	a,e
 	add	a,(hl)
 	daa
@@ -3217,7 +3215,7 @@ L9296:	ld	hl,game.score_bcd + 2
 ; -----------------------------------------------------------------------------
 UPDATE_HIGH_SCORE:
 ; Compares score (BCD) with high score (BCD)
-L92A9:	ld	hl,game.score_bcd
+.L92A9:	ld	hl,game.score_bcd
 	ld	a,(game.high_score_bcd)
 	cp	(hl)
 	jr	c,.L92C3
@@ -3249,7 +3247,7 @@ L92A9:	ld	hl,game.score_bcd
 
 ; -----------------------------------------------------------------------------
 PRINT_SCORE:
-L92D6:	ld	hl,game.score_bcd
+.L92D6:	ld	hl,game.score_bcd
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 92D4
@@ -3261,7 +3259,7 @@ L92D6:	ld	hl,game.score_bcd
 ; param de: yx
 WRTVRM_6x_BCD:
 ; 3 times 2 characters
-L92D9:	call	.L92DF
+.L92D9:	call	.L92DF
 	call	.L92DF
 ; First digit
 .L92DF: push	hl
@@ -3299,7 +3297,7 @@ L92D9:	call	.L92DF
 ; param b: number of chars
 WRTVRM_CHARS:
 ; Writes (hl)
-L92FC:	push	bc
+.L92FC:	push	bc
 	push	de
 	push	hl
 	ld	a,(hl)
@@ -3320,7 +3318,7 @@ L92FC:	push	bc
 ; -----------------------------------------------------------------------------
 INIT_FONT:
 ; FILVRM with '/' character
-L930B:	ld	a,2Fh		; '/'
+.L930B:	ld	a,2Fh		; '/'
 	ld	hl,1800h	; address or value?
 	ld	bc,0300h	; address or value?
 	call	FILVRM
@@ -3345,7 +3343,7 @@ L930B:	ld	a,2Fh		; '/'
 ; -----------------------------------------------------------------------------
 COLOR_A_B_C:
 ; color a,b,c
-L933A:	ld	(FORCLR),a
+.L933A:	ld	(FORCLR),a
 	ld	a,b
 	ld	(BAKCLR),a
 	ld	a,c
@@ -3370,7 +3368,7 @@ L933A:	ld	(FORCLR),a
 
 ; -----------------------------------------------------------------------------
 DATA_FONT:
-L9364:	DB	3Ch, 42h, 46h, 5Ah, 62h, 42h, 3Ch, 00h ; 00
+.L9364:	DB	3Ch, 42h, 46h, 5Ah, 62h, 42h, 3Ch, 00h ; 00
 	DB	08h, 18h, 28h, 08h, 08h, 08h, 3Eh, 00h ; 01
 	DB	3Ch, 42h, 02h, 1Ch, 20h, 40h, 7Eh, 00h ; 02
 	DB	3Ch, 42h, 02h, 0Ch, 02h, 42h, 3Ch, 00h ; 03
@@ -3424,7 +3422,7 @@ DATA_FONT.SIZE:	equ $ - DATA_FONT
 ; -----------------------------------------------------------------------------
 DATA_SPRTBL:
 ; 00
-L94E4:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
+.L94E4:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
 	DB	7Dh, 07h, 18h, 1Fh, 1Ch, 1Ch, 0FCh, 0FCh
 	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 0Eh
 	DB	0FAh, 0FAh, 0Ah, 0F8h, 30h, 3Fh, 3Fh, 00h
@@ -3655,7 +3653,7 @@ L94E4:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
 ; -----------------------------------------------------------------------------
 DATA_CHARSET_4x:
 ; 30 (wall)
-L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
+.L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
@@ -3737,7 +3735,6 @@ L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 	DB	0CBh, 65h, 32h, 19h, 0Ch, 06h, 03h, 01h
 	DB	0D3h, 0A6h, 4Ch, 98h, 30h, 60h, 0C0h, 80h
 
-; unused
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
 	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
@@ -3747,7 +3744,7 @@ L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
 ; -----------------------------------------------------------------------------
 DATA_CHARSET_1x:
 ; 60 (life)
-L9BA4:	DB	18h, 3Ch, 3Ch, 18h, 7Eh, 0BDh, 7Eh, 0C3h
+.L9BA4:	DB	18h, 3Ch, 3Ch, 18h, 7Eh, 0BDh, 7Eh, 0C3h
 	DB	0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h
 	
 ; FF
@@ -3846,7 +3843,7 @@ LITERAL:
 ; -----------------------------------------------------------------------------
 DATA_ROOMS:
 ; 00				; XXXXXXXXXXXXX
-L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
+.L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
 	DB	004h, 000h	; X_____X_____X
 	DB	0B5h, 0A0h	; XX_XX_X_XX_XX
 	DB	080h, 000h	; XX__________X
@@ -4147,19 +4144,19 @@ L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
 
 ; -----------------------------------------------------------------------------
 DATA_RANDOMIZE_PYRAMID_FLOOR1:
-L9EEB:	DB	01h, 05h, 03h, 02h, 06h, 04h, 07h
+.L9EEB:	DB	01h, 05h, 03h, 02h, 06h, 04h, 07h
 	DB	04h, 05h, 01h, 07h, 03h, 06h, 02h
 	DB	05h, 02h, 06h, 04h, 01h, 07h, 03h
 	DB	06h, 01h, 04h, 05h, 02h, 03h, 07h
 	
 DATA_RANDOMIZE_PYRAMID_FLOOR2:
-L9F03:	DB	08h, 0Ch, 0Ah, 09h, 0Bh
+.L9F03:	DB	08h, 0Ch, 0Ah, 09h, 0Bh
 	DB	0Bh, 08h, 0Ah, 09h, 0Ch
 	DB	0Ch, 0Ah, 09h, 0Bh, 08h
 	DB	0Ah, 09h, 08h, 0Ch, 0Bh
 	
 DATA_RANDOMIZE_PYRAMID_FLOOR3:
-L9F19:	DB	0Dh, 0Eh, 0Fh
+.L9F19:	DB	0Dh, 0Eh, 0Fh
 	DB	0Eh, 0Dh, 0Fh
 	DB	0Fh, 0Eh, 0Dh
 	DB	0Dh, 0Fh, 0Eh
@@ -4167,7 +4164,7 @@ L9F19:	DB	0Dh, 0Eh, 0Fh
 
 ; -----------------------------------------------------------------------------
 DATA_SPHYNX_SPRATR:
-L9F28:	DB	07h, 50h, 84h, 04h
+.L9F28:	DB	07h, 50h, 84h, 04h
 	DB	07h, 70h, 88h, 04h
 	DB	27h, 50h, 8Ch, 04h
 	DB	27h, 70h, 90h, 04h
@@ -4175,11 +4172,11 @@ L9F28:	DB	07h, 50h, 84h, 04h
 
 ; -----------------------------------------------------------------------------
 DATA_SOUND.MUTE_CHANNELS:
-L9F38:	DB	01h ; length
+.L9F38:	DB	01h ; length
 	DB	07h, 0BFh
 	
 DATA_SOUND.SPHYNX:
-L9F3B:	DB	0Dh ; length
+.L9F3B:	DB	0Dh ; length
 	DB	00h, 01h
 	DB	01h, 01h
 	DB	02h, 05h
@@ -4196,7 +4193,7 @@ L9F3B:	DB	0Dh ; length
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-L9F56:	db	" PYRAMID WARP", $a0
+.L9F56:	db	" PYRAMID WARP", $a0
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
@@ -4204,12 +4201,12 @@ L9F56:	db	" PYRAMID WARP", $a0
 
 ; -----------------------------------------------------------------------------
 ; Padding to a 8kB boundary
-L9F8C:	ds	($ OR $1fff) -$ +1, $00
+.L9F8C:	ds	($ OR $1fff) -$ +1, $00
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; RAM
-	org	$c000, $f380
+	org	$c000, $f380 ; 16KB RAM
 	
 box1: ; C000H
 	.y:		rb 1	; C000H
@@ -4338,7 +4335,7 @@ pyramid: ; C085H
 	.room_namtbl_ptr:rb 2	; C097H
 sound_buffer: ; C099H
 	.start:		rb 1+20	; C099H
-	.unknown:	rb 1+20	; C0AEH
+	.dead:		rb 1+20	; C0AEH
 	.end:		rb 1+20	; C0C3H
 aux.frame_counter_2:	rb 1	; C0D8H
 			rb 1	; C0D9H (unused?)
