@@ -1,141 +1,21 @@
 ; -----------------------------------------------------------------------------
 ; MSX BIOS
-	; CHKRAM:	equ $0000 ; Power-up, check RAM
-	; CGTABL:	equ $0004 ; Two bytes, address of ROM character set
-	; VDP_DR:	equ $0006 ; One byte, VDP Data Port number (read)
-	; VDP_DW:	equ $0007 ; One byte, VDP Data Port number (write)
-	; SYNCHR:	equ $0008 ; Check BASIC program character
-	; RDSLT:	equ $000c ; Read RAM in any slot
-	; CHRGTR:	equ $0010 ; Get next BASIC program character
-	; WRSLT:	equ $0014 ; Write to RAM in any slot
-	; OUTDO:	equ $0018 ; Output to current device
-	; CALSLT:	equ $001c ; Call routine in any slot
-	; DCOMPR:	equ $0020 ; Compare register pairs HL and DE
-	; ENASLT:	equ $0024 ; Enable any slot permanently
-	; GETYPR:	equ $0028 ; Get BASIC operand type
-	; MSXID1:	equ $002b ; Frecuency (1b), date format (3b) and charset (4b)
-	; MSXID2:	equ $002c ; Basic version (4b) and Keybaord type (4b)
-	; MSXID3:	equ $002d ; MSX version number
-	; MSXID4:	equ $002e ; Bit 0: if 1 then MSX-MIDI is present internally (MSX turbo R only)
-	; MSXID5:	equ $002f ; Reserved
-	; CALLF:	equ $0030 ; Call routine in any slot
-	; KEYINT:	equ $0038 ; Interrupt handler, keyboard scan
-	; INITIO:	equ $003b ; Initialize I/O devices
-	; INIFNK:	equ $003e ; Initialize function key strings
-	; DISSCR:	equ $0041 ; Disable screen
-	; ENASCR:	equ $0044 ; Enable screen
 	WRTVDP:	equ $0047 ; Write to any VDP register
 	RDVRM:	equ $004a ; Read byte from VRAM
 	WRTVRM:	equ $004d ; Write byte to VRAM
-	; SETRD:	equ $0050 ; Set up VDP for read
-	; SETWRT:	equ $0053 ; Set up VDP for write
 	FILVRM:	equ $0056 ; Fill block of VRAM with data byte
-	; LDIRMV:	equ $0059 ; Copy block to memory from VRAM
 	LDIRVM:	equ $005c ; Copy block to VRAM, from memory
 	CHGMOD:	equ $005f ; Change VDP mode
 	CHGCLR:	equ $0062 ; Change VDP colours
-	; NMI:		equ $0066 ; Non Maskable Interrupt handler
 	CLRSPR:	equ $0069 ; Clear all sprites
-	; INITXT:	equ $006c ; Initialize VDP to 40x24 Text Mode
-	; INIT32:	equ $006f ; Initialize VDP to 32x24 Text Mode
-	; INIGRP:	equ $0072 ; Initialize VDP to Graphics Mode
-	; INIMLT:	equ $0075 ; Initialize VDP to Multicolour Mode
-	; SETTXT:	equ $0078 ; Set VDP to 40x24 Text Mode
-	; SETT32:	equ $007b ; Set VDP to 32x24 Text Mode
-	; SETGRP:	equ $007e ; Set VDP to Graphics Mode
-	; SETMLT:	equ $0081 ; Set VDP to Multicolour Mode
-	; CALPAT:	equ $0084 ; Calculate address of sprite pattern
-	; CALATR:	equ $0087 ; Calculate address of sprite attribute
-	; GSPSIZ:	equ $008a ; Get sprite size
-	; GRPPRT:	equ $008d ; Print character on graphic screen
-	; GICINI:	equ $0090 ; Initialize PSG (GI Chip)
-	; WRTPSG:	equ $0093 ; Write to any PSG register
-	; RDPSG:	equ $0096 ; Read from any PSG register
-	; STRTMS:	equ $0099 ; Start music dequeueing
-	; CHSNS:	equ $009c ; Sense keyboard buffer for character
-	; CHGET:	equ $009f ; Get character from keyboard buffer (wait)
-	; CHPUT:	equ $00a2 ; Screen character output
-	; LPTOUT:	equ $00a5 ; Line printer character output
-	; LPTSTT:	equ $00a8 ; Line printer status test
-	; CNVCHR:	equ $00ab ; Convert character with graphic header
-	; PINLIN:	equ $00ae ; Get line from console (editor)
-	; INLIN:	equ $00b1 ; Get line from console (editor)
-	; QINLIN:	equ $00b4 ; Display "?", get line from console (editor)
-	; BREAKX:	equ $00b7 ; Check CTRL-STOP key directly
-	; ISCNTC:	equ $00ba ; Check CRTL-STOP key
-	; CKCNTC:	equ $00bd ; Check CTRL-STOP key
-	; BEEP:		equ $00c0 ; Go beep
-	; CLS:		equ $00c3 ; Clear screen
-	; POSIT:	equ $00c6 ; Set cursor position
-	; FNKSB:	equ $00c9 ; Check if function key display on
-	; ERAFNK:	equ $00cc ; Erase function key display
-	; DSPFNK:	equ $00cf ; Display function keys
-	; TOTEXT:	equ $00d2 ; Return VDP to text mode
 	GTSTCK:	equ $00d5 ; Get joystick status
 	GTTRIG:	equ $00d8 ; Get trigger status
-	; GTPAD:	equ $00db ; Get touch pad status
-	; GTPDL:	equ $00de ; Get paddle status
-	; TAPION:	equ $00e1 ; Tape input ON
-	; TAPIN:	equ $00e4 ; Tape input
-	; TAPIOF:	equ $00e7 ; Tape input OFF
-	; TAPOON:	equ $00ea ; Tape output ON
-	; TAPOUT:	equ $00ed ; Tape output
-	; TAPOOF:	equ $00f0 ; Tape output OFF
-	; STMOTR:	equ $00f3 ; Turn motor ON/OFF
-	; LFTQ:		equ $00f6 ; Space left in music queue
-	; PUTQ:		equ $00f9 ; Put byte in music queue
-	; RIGHTC:	equ $00fc ; Move current pixel physical address right
-	; LEFTC:	equ $00ff ; Move current pixel physical address left
-	; UPC:		equ $0102 ; Move current pixel physical address up
-	; TUPC:		equ $0105 ; Test then UPC if legal
-	; DOWNC:	equ $0108 ; Move current pixel physical address down
-	; TDOWNC:	equ $010b ; Test then DOWNC if legal
-	; SCALXY:	equ $010e ; Scale graphics coordinates
-	; MAPXYC:	equ $0111 ; Map graphic coordinates to physical address
-	; FETCHC:	equ $0114 ; Fetch current pixel physical address
-	; STOREC:	equ $0117 ; Store current pixel physical address
-	; SETATR:	equ $011a ; Set attribute byte
-	; READC:	equ $011d ; Read attribute of current pixel
-	; SETC:		equ $0120 ; Set attribute of current pixel
-	; NSETCX:	equ $0123 ; Set attribute of number of pixels
-	; GTASPC:	equ $0126 ; Get aspect ratio
-	; PNTINI:	equ $0129 ; Paint initialize
-	; SCANR:	equ $012c ; Scan pixels to right
-	; SCANL:	equ $012f ; Scan pixels to left
-	; CHGCAP:	equ $0132 ; Change Caps Lock LED
-	; CHGSND:	equ $0135 ; Change Key Click sound output
-	; RSLREG:	equ $0138 ; Read Primary Slot Register
-	; WSLREG:	equ $013b ; Write to Primary Slot Register
-	; RDVDP:	equ $013e ; Read VDP Status Register
-	; SNSMAT:	equ $0141 ; Read row of keyboard matrix
-	; PHYDIO:	equ $0144 ; Disk, no action
-	; FORMAT:	equ $0147 ; Disk, no action
-	; ISFLIO:	equ $014a ; Check for file I/O
-	; OUTDLP:	equ $014d ; Formatted output to line printer
-	; GETVCP:	equ $0150 ; Get music voice pointer
-	; GETVC2:	equ $0153 ; Get music voice pointer
-	; KILBUF:	equ $0156 ; Clear keyboard buffer
-	; CALBAS:	equ $0159 ; Call to BASIC from any slot
 
 ; MSX system variables
-	; CLIKSW:	equ $f3db ; Keyboard click sound
-	; RG0SAV:	equ $f3df ; Content of VDP(0) register (R#0)
-	; RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
-	; RG2SAV:	equ $f3e1 ; Content of VDP(2) register (R#2)
-	; RG3SAV:	equ $f3e2 ; Content of VDP(3) register (R#3)
-	; RG4SAV:	equ $f3e3 ; Content of VDP(4) register (R#4)
-	; RG5SAV:	equ $f3e4 ; Content of VDP(5) register (R#5)
-	; RG6SAV:	equ $f3e5 ; Content of VDP(6) register (R#6)
-	; RG7SAV:	equ $f3e6 ; Content of VDP(7) register (R#7)
-	; TRGFLG:	equ $f3e8 ; State of the four joystick trigger inputs and the space key
 	FORCLR:	equ $f3e9 ; Foreground colour
 	BAKCLR:	equ $f3ea ; Background colour
 	BDRCLR:	equ $f3eb ; Border colour
-	; OLDKEY:	equ $fbda ; Previous state of the keyboard matrix (11b)
-	; NEWKEY:	equ $fbe5 ; Current state of the keyboard matrix (11b)
-	; HIMEM:	equ $fc4a ; High free RAM address available (init stack with)
-	; EXPTBL:	equ $fcc1 ; Set to $80 during power-up if Primary Slot is expanded (4b)
-	; SLTTBL:	equ $fcc5 ; Mirror of the four possible Secondary Slot Registers (4b)
+	JIFFY: equ $fc9e ; Software clock; each VDP interrupt gets increased by 1
 
 ; VRAM addresses
 	CHRTBL:		equ $0000 ; Pattern table
@@ -156,14 +36,7 @@
 
 ; VDP symbolic constants
 	SCR_WIDTH:	equ 32
-	; SCR_HEIGHT:	equ 24
-	; NAMTBL_SIZE:	equ 32 * 24
-	; CHRTBL_SIZE:	equ 256 * 8
-	; SPRTBL_SIZE:	equ 32 * 64
-	; SPRATR_SIZE:	equ 32 * 4
-	; SPAT_END:	equ $d0 ; Sprite attribute table end marker
 	SPAT_OB:	equ $d1 ; Sprite out of bounds marker (not standard)
-	; SPAT_EC:	equ $80 ; Early clock bit (32 pixels)
 ; -----------------------------------------------------------------------------
 	
 ; -----------------------------------------------------------------------------
@@ -177,7 +50,7 @@ ROM_START:
 ; Entry Point
 .INIT:
 ; screen 2
-L8010:	call	SCREEN_2
+.L8010:	call	SCREEN_2
 	
 ; screen ,2
 	ld	bc,0E201h	; address or value?
@@ -396,7 +269,7 @@ L8010:	call	SCREEN_2
 ; -----------------------------------------------------------------------------
 NEW_GAME_ONCE:
 ; color ,,4
-L820D:	ld	c,07h
+.L820D:	ld	c,07h
 	ld	b,04h
 	call	WRTVDP
 	
@@ -482,7 +355,7 @@ L820D:	ld	c,07h
 ; -----------------------------------------------------------------------------
 NEW_GAME:
 ; Erases lives
-L82B8:	ld	b,06h
+.L82B8:	ld	b,06h
 	ld	de,1719h
 	ld	hl,LITERAL.BLANK_x6
 	call	WRTVRM_CHARS
@@ -512,7 +385,7 @@ L82B8:	ld	b,06h
 ; -----------------------------------------------------------------------------
 NEW_PYRAMID:
 ; Room 0
-L82E7:	xor	a
+.L82E7:	xor	a
 	ld	(pyramid.room_index),a
 	
 ; Chooses a random first floor
@@ -592,7 +465,7 @@ L82E7:	xor	a
 	call	WRTVRM_1x1_CHAR
 	
 ; Plays "Start game" music
-	call	L8F14
+	call	PLAY_START_GAME_MUSIC
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8DD5
@@ -601,7 +474,7 @@ L82E7:	xor	a
 ; -----------------------------------------------------------------------------
 DEC_LIVES_AND_NEW_ROOM:
 ; Clear lives
-L836A:	ld	b,05h
+.L836A:	ld	b,05h
 	ld	hl,LITERAL.BLANK_x6
 	ld	de,1719h	; address or value?
 	call	WRTVRM_CHARS
@@ -626,7 +499,7 @@ L836A:	ld	b,05h
 ; -----------------------------------------------------------------------------
 NEW_ROOM:
 ; Print score and updates high score
-L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+.L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
 ; Hides the sprites (one by one)
 	ld	b,00h ; 256 sprites (!?)
@@ -641,7 +514,7 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	
 ; Reads the current room index
 	ld	a,(pyramid.room_index)
-	ld	hl,0C087h	; address or value?
+	ld	hl,pyramid.room_array
 	call	ADD_HL_A
 	ld	a,(hl)
 	ld	(game.current_room),a
@@ -813,7 +686,7 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 ; param de: VRAM destination
 PRINT_AIR_LEFT:
 ; Computes air_left_bcd (first digit)
-L849B:	ld	bc,03E8h ; 1000
+.L849B:	ld	bc,03E8h ; 1000
 	xor	a
 .L849F:	sbc	hl,bc
 	inc	a
@@ -855,7 +728,7 @@ L849B:	ld	bc,03E8h ; 1000
 PRINT_ROOM_DECORATION:
 ; param hl: room data pointer (after walls definition)
 ; Is sphynx room?
-L84D1:	ld	a,(game.current_room)
+.L84D1:	ld	a,(game.current_room)
 	cp	10h
 	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
 	
@@ -1039,7 +912,7 @@ L84D1:	ld	a,(game.current_room)
 ; -----------------------------------------------------------------------------
 PRINT_SPHYNX_ROOM_DECORATION:
 ; Prints single box
-L85CC:	ld	de,0B0Ch	; address or value?
+.L85CC:	ld	de,0B0Ch	; address or value?
 	ld	a,34h ; ($34 = box)
 	call	WRTVRM_2x2_CHAR
 ; Prints air value
@@ -1082,7 +955,7 @@ L85CC:	ld	de,0B0Ch	; address or value?
 ; return de:	NAMTBL yx (d=2d+1, e=2e+2)
 TO_VRAM_COORDINATES:
 ; [ix++] = 16d+8
-L8603:	ld	a,d
+.L8603:	ld	a,d
 	add	a,a
 	inc	a
 	add	a,a
@@ -1118,7 +991,7 @@ L8603:	ld	a,d
 ; -----------------------------------------------------------------------------
 INIT_GAME_LOOP_NO_SPHYNX:
 ; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
-L8622:	ld	hl,0BB8h ; 3000
+.L8622:	ld	hl,0BB8h ; 3000
 	ld	a,(game.first_pyramid)
 	or	a
 	jr	z,.L862E
@@ -1141,7 +1014,7 @@ L8622:	ld	hl,0BB8h ; 3000
 ; param hl: player.spratr_x
 ; param a: value for player.spratr_x
 INIT_GAME_LOOP:
-L8640:	ld	(hl),a
+.L8640:	ld	(hl),a
 ; Sets player pattern
 	inc	hl
 	ld	a,04h
@@ -1193,7 +1066,7 @@ L8640:	ld	(hl),a
 ; -----------------------------------------------------------------------------
 GAME_LOOP:
 ; Configures game speed according air left
-L867C:	ld	hl,(game.air_left)
+.L867C:	ld	hl,(game.air_left)
 	ld	a,40h ; speed = 40
 	ld	de,03E8h ; 1000
 	sbc	hl,de
@@ -1339,7 +1212,7 @@ L867C:	ld	hl,(game.air_left)
 ; -----------------------------------------------------------------------------
 GAME_LOOP.DOORS_OK:
 	; Referenced from 8739, 8742, 8749
-L8767:	ld	a,(player.direction)
+.L8767:	ld	a,(player.direction)
 	ld	b,a ; b = 0..3
 	ld	a,(player_has_gun) ; b += 0/8
 	add	a,b
@@ -1412,7 +1285,7 @@ L8767:	ld	a,(player.direction)
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.GUN_OK:
-L87E8:	call	SHORT_DELAY
+.L87E8:	call	SHORT_DELAY
 
 ; Is the skull active?
 	ld	a,(skull.status)
@@ -1558,7 +1431,7 @@ L87E8:	call	SHORT_DELAY
 ; continues below: if the skull was moved
 MOVE_SKULL:
 ; Wall in that direction?
-L88C9:	ld	hl,direction_table
+.L88C9:	ld	hl,direction_table
 	ld	b,a
 	call	ADD_HL_A
 	ld	a,(hl)
@@ -1604,7 +1477,7 @@ L88C9:	ld	hl,direction_table
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.SKULL_OK:
-L8908:	call	SHORT_DELAY
+.L8908:	call	SHORT_DELAY
 ; Is bullet shot?
 	ld	a,(bullet.status)
 	or	a
@@ -1673,7 +1546,7 @@ L8908:	call	SHORT_DELAY
 	
 ; -----------------------------------------------------------------------------
 GAME_LOOP.BULLET_OK:
-L8969:	call	SHORT_DELAY
+.L8969:	call	SHORT_DELAY
 ; Sphynx room?
 	ld	a,(game.current_room)
 	cp	10h
@@ -1741,7 +1614,7 @@ L8969:	call	SHORT_DELAY
 	
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EXIT_OK:
-L89E1:	call	SHORT_DELAY
+.L89E1:	call	SHORT_DELAY
 ; Updates box2, scorpion2, bat2 and box3
 	ld	ix,box2
 	call	UPDATE_BOX
@@ -1796,7 +1669,7 @@ L89E1:	call	SHORT_DELAY
 	
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EVERYTHING_OK:
-L8A3A:	call	SHORT_DELAY
+.L8A3A:	call	SHORT_DELAY
 ; Decreases air counter
 	ld	hl,(game.air_left)
 	dec	hl
@@ -1833,9 +1706,9 @@ L8A3A:	call	SHORT_DELAY
 	ld	a,(exit.has_diamond)
 	or	a
 	jr	z,.L8A8B ; no
-; yes: enables the door (condition unclear; sync purposes?)
+; yes: enables the door (some "airs" after getting the diamond)
 	ld	hl,(game.air_left)
-	ld	de,(game.air_left +2)
+	ld	de,(game.air_left_copy)
 	xor	a
 	sbc	hl,de
 	jr	nc,.L8A88
@@ -1869,14 +1742,14 @@ L8A3A:	call	SHORT_DELAY
 	
 ; -----------------------------------------------------------------------------
 GAME_LOOP.NEXT:
-L8AB4:	jp	GAME_LOOP
+.L8AB4:	jp	GAME_LOOP
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 	; Referenced from 8971
 CHECK_SPHYNX_ROOM_BOX:
 ; Is the player at ($60,$58)?
-L8AB7:	ld	hl,player.spratr_y
+.L8AB7:	ld	hl,player.spratr_y
 	ld	a,58h
 	cp	(hl)
 	jr	nz,GAME_LOOP.NEXT ; no
@@ -1974,7 +1847,7 @@ L8AB7:	ld	hl,player.spratr_y
 ; ret: direction_table values are filled
 CHECK_ALL_WALLS:
 ; up (left character)
-L8B69:	push	de
+.L8B69:	push	de
 	dec	e ; (y--)
 	ld	ix,direction_table
 	call	CHECK_WALL
@@ -2061,7 +1934,7 @@ L8B69:	push	de
 ; ret a: $00 = wall, $FF = not a wall
 CHECK_WALL:
 ; (d, e) /= 8
-L8BE2:	srl	e
+.L8BE2:	srl	e
 	srl	e
 	srl	e
 	srl	d
@@ -2072,10 +1945,10 @@ L8BE2:	srl	e
 	ld	bc,SCR_WIDTH
 	inc	d
 .L8BF5:	dec	d
-	jr	z,L8BFB
+	jr	z,.L8BFB
 	add	hl,bc ; y++
 	jr	.L8BF5
-L8BFB:	add	hl,de ; += x (d = 0, e = x)
+.L8BFB:	add	hl,de ; += x (d = 0, e = x)
 ; Reads the character
 	call	RDVRM
 	ld	b,a
@@ -2120,7 +1993,7 @@ L8BFB:	add	hl,de ; += x (d = 0, e = x)
 	
 ; -----------------------------------------------------------------------------
 ADD_HL_A:
-L8C27:	add	a,l
+.L8C27:	add	a,l
 	ld	l,a
 	ld	a,00h
 	adc	a,h
@@ -2134,7 +2007,7 @@ L8C27:	add	a,l
 ; -----------------------------------------------------------------------------
 ; ret a: random value
 RANDOMIZE:
-L8C2E:	ld	iy,0FC9Eh	; address or value?
+.L8C2E:	ld	iy,JIFFY
 	ld	a,r
 	add	a,(iy+00h)
 	add	a,a
@@ -2147,7 +2020,7 @@ L8C2E:	ld	iy,0FC9Eh	; address or value?
 
 ; -----------------------------------------------------------------------------
 SHORT_DELAY:
-L8C3C:	ld	b,04h
+.L8C3C:	ld	b,04h
 .L8C3E:	ld	a,(game.short_delay)
 .L8C41:	dec	a
 	jr	nz,.L8C41
@@ -2160,7 +2033,7 @@ L8C3C:	ld	b,04h
 
 ; -----------------------------------------------------------------------------
 LONG_DELAY:
-L8C47:	ld	hl,3000h	; address or value?
+.L8C47:	ld	hl,3000h	; address or value?
 .L8C4A:	dec	hl
 	ld	a,h
 	or	l
@@ -2175,7 +2048,7 @@ L8C47:	ld	hl,3000h	; address or value?
 ; param ix: pointer to the enemy
 UPDATE_ENEMY:
 ; Preserves pointer
-L8C50:	ld	(current_enemy_ptr),ix
+.L8C50:	ld	(current_enemy_ptr),ix
 ; Active?
 	ld	a,(ix+05h)
 	or	a
@@ -2195,7 +2068,7 @@ L8C50:	ld	(current_enemy_ptr),ix
 ; -----------------------------------------------------------------------------
 SPAWN_NEW_ENEMY:
 ; 50% of the time
-L8C67:	call	RANDOMIZE
+.L8C67:	call	RANDOMIZE
 	cp	80h
 	jp	c,SHORT_DELAY ; waits a little longer
 ; yes: restarts delay
@@ -2233,7 +2106,7 @@ L8C67:	call	RANDOMIZE
 ; -----------------------------------------------------------------------------
 UPDATE_ALIVE_ENEMY:
 ; Reads enemy coordinates in de
-L8CA5:	ld	d,(ix+00h)
+.L8CA5:	ld	d,(ix+00h)
 	ld	e,(ix+01h)
 ; Checks available directions
 	call	CHECK_ALL_WALLS
@@ -2292,7 +2165,7 @@ L8CA5:	ld	d,(ix+00h)
 ; continues below: if the enemy was moved
 MOVE_ENEMY:
 ; Wall in that direction?
-L8CFD:	ld	hl,direction_table
+.L8CFD:	ld	hl,direction_table
 	ld	b,a
 	call	ADD_HL_A
 	ld	a,(hl)
@@ -2335,7 +2208,7 @@ L8CFD:	ld	hl,direction_table
 ; -----------------------------------------------------------------------------
 CHECK_ENEMY_BULLET_COLLISION:
 ; Is there any bullet?
-L8D3C:	ld	a,(bullet.status)
+.L8D3C:	ld	a,(bullet.status)
 	or	a
 	jr	z,CHECK_ENEMY_PLAYER_COLLISION ; no
 ; Yes: compares y
@@ -2405,7 +2278,7 @@ L8D3C:	ld	a,(bullet.status)
 ; -----------------------------------------------------------------------------
 ; param ix: pointer to the enemy
 CHECK_ENEMY_PLAYER_COLLISION:
-L8DAC:	ld	a,(player.spratr_y)
+.L8DAC:	ld	a,(player.spratr_y)
 	ld	d,a
 	ld	a,(player.spratr_x)
 	ld	e,a
@@ -2431,8 +2304,8 @@ L8DAC:	ld	a,(player.spratr_y)
 ; -----------------------------------------------------------------------------
 KILL_PLAYER:
 ; (no ret from call CHECK_ENEMY_PLAYER_COLLISION or call KILL_PLAYER)
-L8DCA:	pop	hl
-	call	L8FB3
+.L8DCA:	pop	hl
+	call	PLAY_DEAD_MUSIC
 ; color ,,4
 	ld	b,04h
 	ld	c,07h
@@ -2445,7 +2318,7 @@ L8DCA:	pop	hl
 	
 ; -----------------------------------------------------------------------------
 GAME_OVER:
-L8DD8:	call	RESET_SOUND
+.L8DD8:	call	RESET_SOUND
 ; Prints GAME OVER message
 	ld	hl,LITERAL.GAME_OVER
 	ld	de,0808h
@@ -2474,66 +2347,95 @@ L8DD8:	call	RESET_SOUND
 	; --- START PROC L8E0A ---
 	
 ; -----------------------------------------------------------------------------
+; param ix: pointer to the box
 UPDATE_BOX:
-L8E0A:	ld	a,(ix+02h)
+; Is the box just open?
+.L8E0A:	ld	a,(ix+02h) ; .is_opening
 	or	a
-	jp	nz,L8EB8
+	jp	nz,UPDATE_BOX_JUST_OPEN ; yes
+; Compares y
 	ld	hl,player.spratr_y
-	ld	a,(ix+00h)
+	ld	a,(ix+00h) ; .y
 	cp	(hl)
-	ret	nz
+	ret	nz ; no collision
+; Compares x
 	inc	hl ; hl = player.spratr_x
-	ld	a,(ix+01h)
+	ld	a,(ix+01h) ; .x
 	cp	(hl)
-	ret	nz
+	ret	nz ; no collision
+; Opens the box
 	call	PLAY_SOUND_BOX
 	call	SHORT_DELAY
 	ld	a,0FFh
-	ld	(ix+02h),a
+	ld	(ix+02h),a ; .status
+	
 	ld	a,32h		; '2'
 	ld	(ix+03h),a
 	ld	d,(ix+00h)
 	ld	e,(ix+01h)
+; Checks the contents
 	ld	a,(ix+04h)
 	or	a
-	jr	z,L8E89
+	jr	z,OPEN_BOX_SKULL ; skull
+; Is the gun or the diamond; prepares the coordinates
 	srl	d
 	srl	d
 	srl	d
 	srl	e
 	srl	e
 	srl	e
-	cp	38h		; '8'
-	jr	z,L8E76
+; Is the gun?
+	cp	38h ; $38 = gun
+	jr	z,OPEN_BOX_GUN ; Diamond
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+OPEN_BOX_DIAMOND:
+; Sets the proper flags
 	ld	a,0FFh
 	ld	(exit.has_diamond),a
 	ld	a,01h
-	ld	(0C06Bh),a
+	ld	(exit.unused1),a
 	ld	(exit.blink_counter),a
 	xor	a
-	ld	(0C06Ch),a
-	ld	a,3Ch		; '<'
+	ld	(exit.unused2),a
+; Prints the diamond
+	ld	a,3Ch
 	call	WRTVRM_2x2_CHAR
+; Prepares the mark to opening the door (2 "airs" later)
 	ld	hl,(game.air_left)
-	ld	bc,0002h	; address or value?
+	ld	bc,0002h ; number of "airs"
 	xor	a
 	sbc	hl,bc
-	ld	(0C079h),hl
-	ld	de,0300h	; address or value?
+	ld	(game.air_left_copy),hl
+; Scores 3000 points
+	ld	de,0300h
 	call	ADD_SCORE
 	jp	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8E49
-L8E76:	ld	a,08h
+	
+; -----------------------------------------------------------------------------
+OPEN_BOX_GUN:
+; Sets the proper flags
+.L8E76:	ld	a,08h
 	ld	(player_has_gun),a
-	ld	a,38h		; '8'
+; Prints the gun
+	ld	a,38h
 	call	WRTVRM_2x2_CHAR
-	ld	de,0100h	; address or value?
+; Scores 100 points
+	ld	de,0100h
 	call	ADD_SCORE
 	jp	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8E39
-L8E89:	ld	hl,skull.spratr_y
+	
+; -----------------------------------------------------------------------------
+OPEN_BOX_SKULL:
+; Initializes the skull
+.L8E89:	ld	hl,skull.spratr_y
 	push	de
 	ld	(hl),d
 	inc	hl ; skull.spratr_x
@@ -2548,36 +2450,53 @@ L8E89:	ld	hl,skull.spratr_y
 	xor	a
 	ld	(hl),a
 	inc	hl ; skull.status
-	inc	hl ; skull. ???
+	inc	hl ; skull.base_pattern
 	ld	a,10h
 	ld	(hl),a
-	inc	hl ; skull. ???
+	inc	hl ; skull.sprite_plane
 	ld	a,03h
 	ld	(hl),a
+; Put skull sprite
 	ld	de,skull
 	ld	a,03h
 	call	PUT_SPRITE
-	ld	de,0200h	; address or value?
+; Scores 200 points
+	ld	de,0200h
 	call	ADD_SCORE
 	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	pop	de
-	jr	L8ECE
+; Immediatly removes box
+	jr	REMOVE_OPEN_BOX
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8E0E
-L8EB8:	ld	a,(ix+03h)
+	
+; -----------------------------------------------------------------------------
+; param ix: pointer to the box
+UPDATE_BOX_JUST_OPEN:
+; Already open?
+.L8EB8:	ld	a,(ix+03h) ; .remove_delay
 	or	a
-	ret	z
+	ret	z ; yes
+; Decreases counter
 	dec	a
-	ld	(ix+03h),a
-	ret	nz
-	ld	d,(ix+00h)
-	ld	e,(ix+01h)
-	ld	a,(ix+04h)
+	ld	(ix+03h),a ; .remove_delay
+	ret	nz ; not yet
+; After initial delay...
+	ld	d,(ix+00h) ; .y
+	ld	e,(ix+01h) ; .x
+	ld	a,(ix+04h) ; .content
+; Is skull?
 	or	a
-	jr	z,L8EE0
+	jr	z,ACTIVATE_SKULL ; yes: activate skull
+; no: simply removes the box
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8EB6
-L8ECE:	srl	d
+
+; -----------------------------------------------------------------------------
+REMOVE_OPEN_BOX:
+.L8ECE:	srl	d
 	srl	d
 	srl	d
 	srl	e
@@ -2585,16 +2504,20 @@ L8ECE:	srl	d
 	srl	e
 	call	WRTVRM_2x2_BLANK
 	jp	SHORT_DELAY
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8ECC
-L8EE0:	ld	a,0FFh
+	
+; -----------------------------------------------------------------------------
+ACTIVATE_SKULL:
+.L8EE0:	ld	a,0FFh
 	ld	(skull.status),a
 	ret
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 DATA_RANDOMIZE_BOX_CONTENTS:
-L8EE6:	DB	38h ; gun
+.L8EE6:	DB	38h ; gun
 	DB	3Ch ; jewel
 	DB	00h ; skull
 	DB	38h ; gun
@@ -2606,7 +2529,7 @@ L8EE6:	DB	38h ; gun
 
 ; -----------------------------------------------------------------------------
 WRTVRM_2x2_BLANK:
-L8EEB:	push	de
+.L8EEB:	push	de
 	ld	a,0FFh
 	call	WRTVRM_1x1_CHAR
 	pop	de
@@ -2630,7 +2553,7 @@ L8EEB:	push	de
 
 ; -----------------------------------------------------------------------------
 PRINT_SCORE_AND_UPDATE_HIGH_SCORE:
-L8F08:	ld	de,0B19h	; address or value?
+.L8F08:	ld	de,0B19h	; address or value?
 	call	PRINT_SCORE
 	ld	de,0819h	; address or value?
 	jp	UPDATE_HIGH_SCORE
@@ -2638,41 +2561,46 @@ L8F08:	ld	de,0B19h	; address or value?
 
 	; Referenced from 8367
 	; --- START PROC L8F14 ---
-L8F14:	ld	ix,sound_buffer.start
-	ld	b,03h
 
-	; Referenced from 8F30
-L8F1A:	push	bc
-	ld	a,0Ah
-	call	L8F49
-	ld	a,14h
-	call	L8F49
+; -----------------------------------------------------------------------------
+PLAY_START_GAME_MUSIC:
+.L8F14:	ld	ix,sound_buffer.start
+
+; Three times
+	ld	b,03h
+.L8F1A:	push	bc
+	ld	a,0Ah ; note
+	call	PLAY_START_GAME_MUSIC.NOTE
+	ld	a,14h ; note
+	call	PLAY_START_GAME_MUSIC.NOTE
 	ld	a,1Eh
-	call	L8F49
+	call	PLAY_START_GAME_MUSIC.NOTE
 	ld	a,14h
-	call	L8F49
+	call	PLAY_START_GAME_MUSIC.NOTE
 	pop	bc
-	djnz	L8F1A
+	djnz	.L8F1A ; loops
+; Long last note
 	ld	a,0Ah
-	call	L8F49
+	call	PLAY_START_GAME_MUSIC.NOTE
+; (delay)
 	ld	b,03h
-
-	; Referenced from 8F41
-L8F39:	ld	hl,0000h	; address or value?
-
-	; Referenced from 8F3F
-L8F3C:	dec	hl
+.L8F39:	ld	hl,0000h
+.L8F3C:	dec	hl
 	ld	a,h
 	or	l
-	jr	nz,L8F3C
-	djnz	L8F39
+	jr	nz,.L8F3C
+	djnz	.L8F39
+; Stops music	
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8F1D, 8F22, 8F27, 8F2C, 8F34
 	; --- START PROC L8F49 ---
-L8F49:	ld	b,0Ah
-	ld	(ix+00h),b
+	
+PLAY_START_GAME_MUSIC.NOTE:
+; Prepares the buffer
+.L8F49:	ld	b,0Ah
+	ld	(ix+00h),b ; length
 	ld	c,a
 	ld	b,00h
 	ld	(ix+01h),b
@@ -2714,51 +2642,56 @@ L8F49:	ld	b,0Ah
 	inc	b
 	ld	(ix+13h),b
 	ld	(ix+14h),a
+; Plays the note
 	call	RESET_SOUND
 	ld	hl,sound_buffer.start
 	call	PLAY_SOUND
 	jp	LONG_DELAY
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8DCB
 	; --- START PROC L8FB3 ---
-L8FB3:	xor	a
-	ld	(0C0DCh),a
-	ld	a,0Ah
+	
+; -----------------------------------------------------------------------------
+PLAY_DEAD_MUSIC:
+; Initializes the "flashing" flag
+.L8FB3:	xor	a
+	ld	(aux.dying_flashes),a
+; (descending notes)
+	ld	a,0Ah ; initial tone
 	ld	ix,sound_buffer.unknown
-
-	; Referenced from 8FC6
-L8FBD:	push	af
-	call	L8FE8
+.L8FBD:	push	af
+	call	PLAY_DEAD_MUSIC.NOTE
 	pop	af
-	add	a,14h
-	cp	0E6h
-	jr	nz,L8FBD
+	add	a,14h ; decreases tone
+	cp	0E6h ; until x
+	jr	nz,.L8FBD
 ; color ,,6
 	ld	c,07h
 	ld	b,06h
 	call	WRTVDP
+; (delay)
 	ld	b,03h
-
-	; Referenced from 8FD9
-L8FD1:	ld	hl,0000h	; address or value?
-
-	; Referenced from 8FD7
-L8FD4:	dec	hl
+.L8FD1:	ld	hl,0000h
+.L8FD4:	dec	hl
 	ld	a,h
 	or	l
-	jr	nz,L8FD4
-	djnz	L8FD1
+	jr	nz,.L8FD4
+	djnz	.L8FD1
 ; color ,,4
 	ld	c,07h
 	ld	b,04h
 	call	WRTVDP
-; mute
+; Stops music	
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8FBE
 	; --- START PROC L8FE8 ---
-L8FE8:	ld	b,0Ah
+	
+PLAY_DEAD_MUSIC.NOTE:
+; Prepares the buffer
+.L8FE8:	ld	b,0Ah ; length
 	ld	(ix+00h),b
 	ld	c,a
 	ld	b,00h
@@ -2801,25 +2734,24 @@ L8FE8:	ld	b,0Ah
 	inc	b
 	ld	(ix+13h),b
 	ld	(ix+14h),a
+; Plays the note
 	call	RESET_SOUND
 	ld	hl,sound_buffer.unknown
 	call	PLAY_SOUND
-	ld	a,(0C0DCh)
+; Flashes the background color
+	ld	a,(aux.dying_flashes)
 	cpl
 	or	a
-	ld	(0C0DCh),a
-	jr	z,L905D
-	ld	b,04h
-	jr	L905F
-
-	; Referenced from 9057
-L905D:	ld	b,06h
-
-	; Referenced from 905B
+	ld	(aux.dying_flashes),a
+	jr	z,.L905D
+	ld	b,04h ; blue
+	jr	.L905F
+.L905D:	ld	b,06h ; red
 ; color ,,b
-L905F:	ld	c,07h
+.L905F:	ld	c,07h
 	call	WRTVDP
 	jp	LONG_DELAY
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8AFE
 	; --- START PROC L9067 ---
@@ -3261,7 +3193,7 @@ L9291:	ld	a,02h
 ; -----------------------------------------------------------------------------
 ; param de: score to add (BCD)
 ADD_SCORE:
-L9296:	ld	hl,0C084h	; address or value?
+L9296:	ld	hl,game.score_bcd + 2
 	ld	a,e
 	add	a,(hl)
 	daa
@@ -4280,10 +4212,15 @@ L9F8C:	ds	($ OR $1fff) -$ +1, $00
 	org	$c000, $f380
 	
 box1: ; C000H
-	.data:		rb 4	; C000H
+	.y:		rb 1	; C000H
+	.x:		rb 1	; C001H
+	.is_opening:	rb 1	; C002H
+	.remove_delay:	rb 1	; C003H
 	.content:	rb 1	; C004H
 box2: ; C005H
-	.data:		rb 4	; C005H
+	.x:		rb 1	; C005H
+	.y:		rb 1	; C006H
+	.status:	rb 2	; C007H
 	.content:	rb 1	; C009H
 box3: ; C00AH
 	.data:		rb 4	; C00AH
@@ -4313,8 +4250,8 @@ skull: ; C01EH
 	.spratr_color:	rb 1	; C021H
 	.direction:	rb 1	; C022H
 	.status:	rb 1	; C023H
-			rb 1	; C024H (skull related)
-			rb 1	; C025H (skull related)
+	.base_pattern:	rb 1	; C024H (never read?)
+	.sprite_plane:	rb 1	; C025H (never read?)
 scorpion1: ; C026H
 	.spratr_y:	rb 3	; C026H
 	.spratr_color:	rb 1	; C029H
@@ -4376,9 +4313,9 @@ current_enemy_ptr:	rb 2	; C065H
 			rb 1	; C068H (unused?)
 spawn_enemy_delay:	rb 1	; C069H
 check_wall_for_player:	rb 1	; C06AH
-			rb 1	; C06BH ($01, never read)
-			rb 1	; C06CH ($00, never read)
 exit:
+	.unused1:	rb 1	; C06BH ($01, never read)
+	.unused2:	rb 1	; C06CH ($00, never read)
 	.has_diamond:	rb 1	; C06DH
 	.blink_counter:	rb 1	; C06EH
 	.blink_flag:	rb 1	; C06FH
@@ -4387,7 +4324,8 @@ game: ; C071H
 	.air_left_bcd:	rb 4	; C071H
 	.short_delay:	rb 1	; C075H
 	.current_room:	rb 1	; C076H
-	.air_left:	rb 4	; C077H
+	.air_left:	rb 2	; C077H
+	.air_left_copy:	rb 2	; C079H
 	.first_pyramid:	rb 1	; C07BH
 	.lives:		rb 1	; C07CH
 aux.how_many_bytes:	rb 2	; C07DH
@@ -4406,7 +4344,7 @@ aux.frame_counter_2:	rb 1	; C0D8H
 			rb 1	; C0D9H (unused?)
 player_entering_door:	rb 1	; C0DAH
 			rb 1	; C0DBH (unused?)
-			rb 1	; C0DCH
+aux.dying_flashes:	rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
 
 ; EOF
