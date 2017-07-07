@@ -771,37 +771,37 @@ L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	ld	(scorpion2.status),a
 	ld	(bat1.status),a
 	ld	(bat2.status),a
-	ld	(0C03Bh),a
-	ld	(0C053h),a
+	ld	(unused_enemy_slot1.status),a
+	ld	(unused_enemy_slot2.status),a
 	ld	(bullet.status),a
 	ld	(aux.frame_counter),a
-	ld	(exit.is_open),a
+	ld	(exit.is_enabled),a
 	ld	(exit.blink_flag),a
-	ld	(0C06Dh),a
+	ld	(exit.has_diamond),a
 	ld	(player_has_gun),a
 	ld	a,01h
 	ld	(new_player_direction),a
 	ld	a,12h
-	ld	(0C02Ch),a
-	ld	(0C044h),a
+	ld	(scorpion1.base_pattern),a
+	ld	(scorpion2.base_pattern),a
 	ld	a,14h
-	ld	(0C034h),a
-	ld	(0C04Ch),a
+	ld	(bat1.base_pattern),a
+	ld	(bat2.base_pattern),a
 	ld	a,16h
-	ld	(0C03Ch),a
-	ld	(0C054h),a
+	ld	(unused_enemy_slot1.base_pattern),a
+	ld	(unused_enemy_slot2.base_pattern),a
 	ld	a,04h
-	ld	(0C02Dh),a
+	ld	(scorpion1.sprite_plane),a
 	inc	a
-	ld	(0C035h),a
+	ld	(bat1.sprite_plane),a ; $05
 	inc	a
-	ld	(0C03Dh),a
+	ld	(unused_enemy_slot1.sprite_plane),a ; $06
 	inc	a
-	ld	(0C045h),a
+	ld	(scorpion2.sprite_plane),a ; $07
 	inc	a
-	ld	(0C04Dh),a
+	ld	(bat2.sprite_plane),a ; $08
 	inc	a
-	ld	(0C055h),a
+	ld	(unused_enemy_slot2.sprite_plane),a ; $09
 	jr	PRINT_ROOM_DECORATION
 ; -----------------------------------------------------------------------------
 
@@ -1444,6 +1444,7 @@ L87E8:	call	SHORT_DELAY
 	call	ADD_HL_A
 	xor	a
 	ld	(hl),a ; (fakes the wall)
+	
 ; Compares player and skull coordinates
 .L8815:	ld	a,(player.spratr_x)
 	ld	b,a
@@ -1593,9 +1594,9 @@ L88C9:	ld	hl,direction_table
 	ld	a,03h
 	ld	de,skull
 	call	PUT_SPRITE
-; 
+; Checks collision between the skull and the player
 	ld	ix,skull
-	call	L8DAC
+	call	CHECK_ENEMY_PLAYER_COLLISION
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 87EF
@@ -1685,7 +1686,7 @@ L8969:	call	SHORT_DELAY
 	ld	ix,bat1
 	call	UPDATE_ENEMY
 ; Is the exit open?
-	ld	a,(exit.is_open)
+	ld	a,(exit.is_enabled)
 	or	a
 	jr	z,GAME_LOOP.EXIT_OK ; no
 ; yes: makes the exit blink
@@ -1807,7 +1808,7 @@ L8A3A:	call	SHORT_DELAY
 	ld	hl,(game.air_left)
 	ld	a,h
 	or	l
-	call	z,AIR_OVER
+	call	z,KILL_PLAYER
 ; Animates the enemies nest each four frames
 	ld	a,(aux.frame_counter)
 	and	04h
@@ -1828,44 +1829,46 @@ L8A3A:	call	SHORT_DELAY
 	ld	a,b
 	call	WRTVRM_2x2_CHAR
 	
-	ld	a,(0C06Dh)
+; Does the player has the diamond?
+	ld	a,(exit.has_diamond)
 	or	a
-	jr	z,L8A8B
+	jr	z,.L8A8B ; no
+; yes: enables the door (condition unclear; sync purposes?)
 	ld	hl,(game.air_left)
-	ld	de,(0C079h)
+	ld	de,(game.air_left +2)
 	xor	a
 	sbc	hl,de
-	jr	nc,L8A88
-	dec	a
+	jr	nc,.L8A88
+	dec	a ; a = $ff
+.L8A88:	ld	(exit.is_enabled),a
 
-	; Referenced from 8A85
-L8A88:	ld	(exit.is_open),a
-
-	; Referenced from 8A79
-L8A8B:	ld	a,(aux.frame_counter)
+; Swaps door colors each four frames
+.L8A8B:	ld	a,(aux.frame_counter)
 	and	04h
-	jr	z,L8A98
+	jr	z,.L8A98
 	ld	b,07h
 	ld	c,08h
-	jr	L8A9C
-
-	; Referenced from 8A90
-L8A98:	ld	b,08h
+	jr	.L8A9C
+.L8A98:	ld	b,08h
 	ld	c,07h
-
-	; Referenced from 8A96
-L8A9C:	ld	a,b
+; Sets door colors (RAM)
+.L8A9C:	ld	a,b
 	ld	(door1.spratr_color),a
 	ld	a,c
 	ld	(door2.spratr_color),a
+; Sets door colors (VRAM)
 	ld	de,door1.spratr_y
 	ld	a,00h
 	call	PUT_SPRITE
 	ld	de,door2.spratr_y
 	ld	a,01h
 	call	PUT_SPRITE
+; ------VVVV----falls through--------------------------------------------------
 	
 	; Referenced from 8ABD, 8AC3
+	
+; -----------------------------------------------------------------------------
+GAME_LOOP.NEXT:
 L8AB4:	jp	GAME_LOOP
 ; -----------------------------------------------------------------------------
 
@@ -1876,11 +1879,11 @@ CHECK_SPHYNX_ROOM_BOX:
 L8AB7:	ld	hl,player.spratr_y
 	ld	a,58h
 	cp	(hl)
-	jr	nz,L8AB4 ; no
+	jr	nz,GAME_LOOP.NEXT ; no
 	inc	hl ; player.spratr_x
 	ld	a,60h
 	cp	(hl)
-	jr	nz,L8AB4 ; no
+	jr	nz,GAME_LOOP.NEXT ; no
 ; yes	
 	call	PLAY_SOUND_BOX
 ; screen ,3
@@ -2169,50 +2172,70 @@ L8C47:	ld	hl,3000h	; address or value?
 	; --- START PROC L8C50 ---
 	
 ; -----------------------------------------------------------------------------
+; param ix: pointer to the enemy
 UPDATE_ENEMY:
+; Preserves pointer
 L8C50:	ld	(current_enemy_ptr),ix
+; Active?
 	ld	a,(ix+05h)
 	or	a
-	jr	nz,L8CA5
-	ld	a,(0C069h)
+	jr	nz,UPDATE_ALIVE_ENEMY ; yes
+; no: ready to spawn?
+	ld	a,(spawn_enemy_delay)
 	or	a
-	jr	z,L8C67
+	jr	z,SPAWN_NEW_ENEMY ; yes
+; no: decreases the delay
 	dec	a
-	ld	(0C069h),a
+	ld	(spawn_enemy_delay),a
 	jp	SHORT_DELAY
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8C5E
+	
+; -----------------------------------------------------------------------------
+SPAWN_NEW_ENEMY:
+; 50% of the time
 L8C67:	call	RANDOMIZE
 	cp	80h
-	jp	c,SHORT_DELAY
-	ld	a,20h		; ' '
-	ld	(0C069h),a
+	jp	c,SHORT_DELAY ; waits a little longer
+; yes: restarts delay
+	ld	a,20h
+	ld	(spawn_enemy_delay),a
+; Initializes coords from nest, state, direction
 	ld	bc,(nest)
-	ld	(ix+00h),c
-	ld	(ix+01h),b
+	ld	(ix+00h),c ; .spratr_y
+	ld	(ix+01h),b ; .spratr_x
 	ld	a,0FFh
-	ld	(ix+05h),a
+	ld	(ix+05h),a ; .status
 	xor	a
-	ld	(ix+04h),a
-	ld	b,(ix+06h)
+	ld	(ix+04h),a ; .direction (0 = left)
+; Reads enemy pattern
+	ld	b,(ix+06h) ; .base_pattern
 	ld	a,(aux.frame_counter)
 	and	04h
-	jr	z,L8C92
+	jr	z,.L8C92
 	inc	b
-
-	; Referenced from 8C8F
-L8C92:	ld	a,b
+; Computes actual pattern
+.L8C92:	ld	a,b
 	add	a,a
 	add	a,a
-	ld	(ix+02h),a
-	ld	a,(ix+07h)
+	ld	(ix+02h),a ; .spratr_pattern
+; Puts sprite
+	ld	a,(ix+07h) ; .sprite_plane
 	ld	de,(current_enemy_ptr)
 	call	PUT_SPRITE
-	jp	L8D3C
+; Checks enemy and bullet collision
+	jp	CHECK_ENEMY_BULLET_COLLISION
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8C58
+
+; -----------------------------------------------------------------------------
+UPDATE_ALIVE_ENEMY:
+; Reads enemy coordinates in de
 L8CA5:	ld	d,(ix+00h)
 	ld	e,(ix+01h)
+; Checks available directions
 	call	CHECK_ALL_WALLS
 	ld	ix,(current_enemy_ptr)
 	ld	hl,direction_table
@@ -2223,182 +2246,199 @@ L8CA5:	ld	d,(ix+00h)
 	add	a,(hl)
 	inc	hl
 	add	a,(hl)
-	inc	a
-	jr	z,L8CCC
+; Only one direction available?
+	inc	a ; $ff +1 = $00
+	jr	z,.L8CCC ; yes
+; no: avoids moving back faking a wall in the incoming direction
 	ld	a,(ix+04h)
-	xor	02h
+	xor	02h ; (reverses direction)
 	ld	hl,direction_table
 	call	ADD_HL_A
 	xor	a
-	ld	(hl),a
+	ld	(hl),a ; (fakes the wall)
 
-	; Referenced from 8CBD
-L8CCC:	call	RANDOMIZE
+; Randomizes new enemy direction
+.L8CCC:	call	RANDOMIZE
 	and	03h
 	or	a
-	jr	z,L8CE9
+	jr	z,.L8CE9
 	dec	a
-	jr	z,L8CE4
+	jr	z,.L8CE4
 	dec	a
-	jr	z,L8CDF
-	ld	a,03h
-	call	L8CFD
-
-	; Referenced from 8CD8
-L8CDF:	ld	a,02h
-	call	L8CFD
-
-	; Referenced from 8CD5
-L8CE4:	ld	a,01h
-	call	L8CFD
-
-	; Referenced from 8CD2
-L8CE9:	ld	a,00h
-	call	L8CFD
-	ld	a,03h
-	call	L8CFD
-	ld	a,02h
-	call	L8CFD
-	ld	a,01h
-	call	L8CFD
+	jr	z,.L8CDF
+	ld	a,03h ; down
+	call	MOVE_ENEMY
+.L8CDF:	ld	a,02h ; right
+	call	MOVE_ENEMY
+.L8CE4:	ld	a,01h ; up
+	call	MOVE_ENEMY
+.L8CE9:	ld	a,00h ; left
+	call	MOVE_ENEMY
+	ld	a,03h ; down
+	call	MOVE_ENEMY
+	ld	a,02h ; right
+	call	MOVE_ENEMY
+	ld	a,01h ; up
+	call	MOVE_ENEMY
+	; (control never reaches here)
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8CDC, 8CE1, 8CE6, 8CEB, 8CF0, 8CF5, 8CFA
 	; --- START PROC L8CFD ---
+	
+; -----------------------------------------------------------------------------
+; param a: direction to try (0..3 = left, up, right, down)
+; ret: if the enemy could not be moved in that direction
+; continues below: if the enemy was moved
+MOVE_ENEMY:
+; Wall in that direction?
 L8CFD:	ld	hl,direction_table
 	ld	b,a
 	call	ADD_HL_A
 	ld	a,(hl)
 	or	a
-	ret	z
+	ret	z; yes
+; no: (no ret)
 	pop	hl
+; Moves the enemy
 	ld	hl,(current_enemy_ptr)
-	ld	(ix+04h),b
-	ld	a,02h
+	ld	(ix+04h),b ; .direction
+	ld	a,02h ; (two pixels)
 	srl	b
-	jr	c,L8D15
-	inc	hl
-
-	; Referenced from 8D12
-L8D15:	srl	b
-	jr	c,L8D1B
+	jr	c,.L8D15
+	inc	hl ; .x
+.L8D15:	srl	b
+	jr	c,.L8D1B
 	neg
-
-	; Referenced from 8D17
-L8D1B:	add	a,(hl)
+.L8D1B:	add	a,(hl)
 	ld	(hl),a
+; Animates the enemy each four frames
 	ld	ix,(current_enemy_ptr)
-	ld	b,(ix+06h)
+	ld	b,(ix+06h) ; .base_pattern
 	ld	a,(aux.frame_counter)
 	and	04h
-	jr	z,L8D2C
+	jr	z,.L8D2C
 	inc	b
-
-	; Referenced from 8D29
-L8D2C:	ld	a,b
+; (computes enemy pattern)
+.L8D2C:	ld	a,b
 	add	a,a
 	add	a,a
-	ld	(ix+02h),a
-	ld	a,(ix+07h)
+	ld	(ix+02h),a ; .spratr_pattern
+	ld	a,(ix+07h) ; .sprite_plane
 	ld	de,(current_enemy_ptr)
 	call	PUT_SPRITE
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8CA2
 	; --- START PROC L8D3C ---
+	
+; -----------------------------------------------------------------------------
+CHECK_ENEMY_BULLET_COLLISION:
+; Is there any bullet?
 L8D3C:	ld	a,(bullet.status)
 	or	a
-	jr	z,L8DAC
+	jr	z,CHECK_ENEMY_PLAYER_COLLISION ; no
+; Yes: compares y
 	ld	ix,(current_enemy_ptr)
-	ld	a,(ix+00h)
-	add	a,08h
+	ld	a,(ix+00h) ; .y
+	add	a,08h ; (8 pixels distance)
 	ld	b,a
 	ld	a,(bullet.spratr_y)
 	inc	a
 	sub	b
-	jr	nc,L8D55
+	jr	nc,.L8D55
 	neg
-
-	; Referenced from 8D51
-L8D55:	cp	05h
-	jr	nc,L8DAC
-	ld	a,(ix+01h)
-	add	a,08h
+.L8D55:	cp	05h
+	jr	nc,CHECK_ENEMY_PLAYER_COLLISION ; no collision
+; Compares x
+	ld	a,(ix+01h) ; .x
+	add	a,08h ; (8 pixels distance)
 	ld	b,a
 	ld	a,(bullet.spratr_x)
 	inc	a
 	sub	b
-	jr	nc,L8D68
+	jr	nc,.L8D68
 	neg
-
-	; Referenced from 8D64
-L8D68:	cp	05h
-	jr	nc,L8DAC
-	ld	hl,bullet
+.L8D68:	cp	05h
+	jr	nc,CHECK_ENEMY_PLAYER_COLLISION ; no collision
+; Sets the enemy coords to the bullet (for the explosion)
+	ld	hl,bullet.spratr_y
 	ld	a,(ix+00h)
 	ld	(hl),a
-	inc	hl
+	inc	hl ; bullet.spratr_x
 	ld	a,(ix+01h)
 	ld	(hl),a
-	inc	hl
-	ld	a,78h		; 'x'
+	inc	hl ; bullet.spratr_pat
+	ld	a,78h
 	ld	(hl),a
-	inc	hl
+	inc	hl ; bullet.spratr_color
 	ld	a,06h
 	ld	(hl),a
-	inc	hl
-	inc	hl
+	inc	hl ; bullet.direction
+	inc	hl ; bullet.status
 	ld	a,06h
 	ld	(hl),a
+; Prints explosion sprite
 	ld	de,bullet
 	ld	a,0Ah
 	call	PUT_SPRITE
+; Play sound
 	call	PLAY_SOUND_BULLET_HIT
-	ld	de,0030h	; address or value?
+; Scores 30 points
+	ld	de,0030h
 	call	ADD_SCORE
 	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+; Removes enemy (RAM)
 	xor	a
-	ld	(ix+05h),a
+	ld	(ix+05h),a ; .status
 	ld	a,SPAT_OB
-	ld	(ix+00h),a
+	ld	(ix+00h),a ; .spratr_y
+; Removes enemy (VRAM)
 	ld	de,(current_enemy_ptr)
-	ld	a,(ix+07h)
+	ld	a,(ix+07h) ; .sprite_plane
 	jp	PUT_SPRITE
+; -----------------------------------------------------------------------------
 
 	; Referenced from 8905, 8D40, 8D57, 8D6A
 	; --- START PROC L8DAC ---
+	
+; -----------------------------------------------------------------------------
+; param ix: pointer to the enemy
+CHECK_ENEMY_PLAYER_COLLISION:
 L8DAC:	ld	a,(player.spratr_y)
 	ld	d,a
 	ld	a,(player.spratr_x)
 	ld	e,a
-	ld	a,(ix+00h)
+; Compares y
+	ld	a,(ix+00h) ; .y
 	sub	d
-	jr	nc,L8DBC
+	jr	nc,.L8DBC
 	neg
-
-	; Referenced from 8DB8
-L8DBC:	cp	08h
-	ret	nc
-	ld	a,(ix+01h)
+.L8DBC:	cp	08h ; (8 pixels distance)
+	ret	nc ; no collision
+; Compares x
+	ld	a,(ix+01h) ; .x
 	sub	e
-	jr	nc,L8DC7
+	jr	nc,.L8DC7
 	neg
-
-	; Referenced from 8DC3
-L8DC7:	cp	08h
-	ret	nc
-; -----------------------------------------------------------------------------
+.L8DC7:	cp	08h ; (8 pixels distance)
+	ret	nc ; no collision
+; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8A4F
 	; --- START PROC L8DCA ---
 
 ; -----------------------------------------------------------------------------
-AIR_OVER:
-L8DCA:	pop	hl ; (invoked with CALL, acts as a JP)
+KILL_PLAYER:
+; (no ret from call CHECK_ENEMY_PLAYER_COLLISION or call KILL_PLAYER)
+L8DCA:	pop	hl
 	call	L8FB3
 ; color ,,4
 	ld	b,04h
 	ld	c,07h
 	call	WRTVDP
 	jp	DEC_LIVES_AND_NEW_ROOM
+; -----------------------------------------------------------------------------
 
 	; Referenced from 837C
 	; --- START PROC L8DD8 ---
@@ -2406,32 +2446,29 @@ L8DCA:	pop	hl ; (invoked with CALL, acts as a JP)
 ; -----------------------------------------------------------------------------
 GAME_OVER:
 L8DD8:	call	RESET_SOUND
+; Prints GAME OVER message
 	ld	hl,LITERAL.GAME_OVER
-	ld	de,0808h	; address or value?
+	ld	de,0808h
 	ld	b,09h
 	call	WRTVRM_CHARS
 
-	; Referenced from 8E05
-L8DE6:	call	GTTRIG_ANY
+; Blinks "hit space key" message
+.L8DE6:	call	GTTRIG_ANY
 	or	a
-	jr	nz,L8E07
+	jr	nz,.L8E07
 	ld	a,(aux.frame_counter_2)
 	inc	a
 	ld	(aux.frame_counter_2),a
 	ld	hl,LITERAL.HIT_SPACE_KEY
 	and	80h
-	jr	z,L8DFD
+	jr	z,.L8DFD
 	ld	hl,LITERAL.BLANK_x21
-
-	; Referenced from 8DF8
-L8DFD:	ld	de,0C06h	; address or value?
+.L8DFD:	ld	de,0C06h
 	ld	b,0Dh
 	call	WRTVRM_CHARS
-	jr	L8DE6
-
-	; Referenced from 8DEA
-	; --- START PROC L8E07 ---
-L8E07:	jp	L82B8
+	jr	.L8DE6
+.L8E07:	jp	NEW_GAME
+; -----------------------------------------------------------------------------
 
 	; Referenced from 897F, 89E8, 89FD
 	; --- START PROC L8E0A ---
@@ -2469,7 +2506,7 @@ L8E0A:	ld	a,(ix+02h)
 	cp	38h		; '8'
 	jr	z,L8E76
 	ld	a,0FFh
-	ld	(0C06Dh),a
+	ld	(exit.has_diamond),a
 	ld	a,01h
 	ld	(0C06Bh),a
 	ld	(exit.blink_counter),a
@@ -4281,39 +4318,45 @@ skull: ; C01EH
 scorpion1: ; C026H
 	.spratr_y:	rb 3	; C026H
 	.spratr_color:	rb 1	; C029H
-			rb 1	; C02AH (unused?)
+	.direction:	rb 1	; C02AH
 	.status:	rb 1	; C02BH
-			rb 1	; C02CH ($12, never read)
-			rb 1	; C02DH ($04, never read)
+	.base_pattern:	rb 1	; C02CH ($12)
+	.sprite_plane:	rb 1	; C02DH ($04)
 bat1: ; C02EH
 	.spratr_y:	rb 3	; C02EH
 	.spratr_color:	rb 1	; C031H
-			rb 1	; C032H (unused?)
+	.direction:	rb 1	; C032H
 	.status:	rb 1	; C033H
-			rb 1	; C034H ($14, never read)
-			rb 1	; C035H ($05, never read)
-			rb 5	; C036H (unused?)
-			rb 1	; C03BH ($00, never read)
-			rb 1	; C03CH ($16, never read)
-			rb 1	; C03DH ($06, never read)
+	.base_pattern:	rb 1	; C034H ($14)
+	.sprite_plane:	rb 1	; C035H ($05)
+unused_enemy_slot1: ; C036H
+	.spratr_y:	rb 3	; C036H
+	.spratr_color:	rb 1	; C039H
+	.direction:	rb 1	; C03AH
+	.status:	rb 1	; C03BH
+	.base_pattern:	rb 1	; C03CH ($16)
+	.sprite_plane:	rb 1	; C03DH ($06)
 scorpion2: ; C03EH
 	.spratr_y:	rb 3	; C03EH
 	.spratr_color:	rb 1	; C041H
-			rb 1	; C042H (unused?)
+	.direction:	rb 1	; C042H
 	.status:	rb 1	; C043H
-			rb 1	; C044H ($12, never read)
-			rb 1	; C045H ($07, never read)
+	.base_pattern:	rb 1	; C044H ($12)
+	.sprite_plane:	rb 1	; C045H ($07)
 bat2: ; C046H
 	.spratr_y:	rb 3	; C046H
 	.spratr_color:	rb 1	; C049H
-			rb 1	; C04AH (unused?)
+	.direction:	rb 1	; C04AH
 	.status:	rb 1	; C04BH
-			rb 1	; C04CH ($14, never read)
-			rb 1	; C04DH ($08, never read)
-			rb 5	; C04EH (unused?)
-			rb 1	; C053H ($00, never read)
-			rb 1	; C054H ($16, never read)
-			rb 1	; C055H ($09, never read)
+	.base_pattern:	rb 1	; C04CH ($14)
+	.sprite_plane:	rb 1	; C04DH ($08)
+unused_enemy_slot2: ; C04EH
+	.spratr_y:	rb 3	; C04EH
+	.spratr_color:	rb 1	; C051H
+	.direction:	rb 1	; C052H
+	.status:	rb 1	; C053H
+	.base_pattern:	rb 1	; C054H ($16)
+	.sprite_plane:	rb 1	; C055H ($09)
 bullet: ; C056H
 	.spratr_y:	rb 1	; C056H
 	.spratr_x:	rb 1	; C057H
@@ -4331,15 +4374,15 @@ direction_table:	rb 4	; C061H
 current_enemy_ptr:	rb 2	; C065H
 			rb 1	; C067H (unused?)
 			rb 1	; C068H (unused?)
-			rb 1	; C069H (???)
+spawn_enemy_delay:	rb 1	; C069H
 check_wall_for_player:	rb 1	; C06AH
 			rb 1	; C06BH ($01, never read)
 			rb 1	; C06CH ($00, never read)
-			rb 1	; C06DH (???)
 exit:
+	.has_diamond:	rb 1	; C06DH
 	.blink_counter:	rb 1	; C06EH
 	.blink_flag:	rb 1	; C06FH
-	.is_open:	rb 1	; C070H
+	.is_enabled:	rb 1	; C070H
 game: ; C071H
 	.air_left_bcd:	rb 4	; C071H
 	.short_delay:	rb 1	; C075H
