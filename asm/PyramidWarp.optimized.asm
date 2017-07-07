@@ -8,6 +8,7 @@
 	CHGMOD:	equ $005f ; Change VDP mode
 	CHGCLR:	equ $0062 ; Change VDP colours
 	CLRSPR:	equ $0069 ; Clear all sprites
+	INIGRP:	equ $0072 ; Initialize VDP to Graphics Mode
 	GTSTCK:	equ $00d5 ; Get joystick status
 	GTTRIG:	equ $00d8 ; Get trigger status
 
@@ -51,7 +52,7 @@ ROM_START:
 ; Entry Point
 .INIT:
 ; screen 2
-.L8010:	call	SCREEN_2
+	call	INIGRP
 	
 ; screen ,2
 	ld	bc,0E201h	; address or value?
@@ -64,61 +65,41 @@ ROM_START:
 	ld	c,01h
 	call	COLOR_A_B_C
 	
+; CLS (with custom "blank" characteR)
+	ld	hl,NAMTBL
+	ld	bc,NAMTBL.SIZE
+	ld	a,2Fh
+	call	FILVRM
+	
 ; init font
-	call	INIT_FONT
+	ld	hl,DATA_FONT
+	ld	de,CHRTBL
+	ld	bc,DATA_FONT.SIZE
+	call	LDIRVM_3_BANKS
 	
 ; init sprites
 	ld	hl,DATA_SPRTBL
 	ld	de,SPRTBL
-	ld	bc,$22 * $20
+	ld	bc,$23 * $20 ; 23 sprites x 32 bytes
 	call	LDIRVM
 	
-; Init 2x2 blocks CHRTBL/CLRTBL
-	ld	a,$30 ; 30h
-	ld	de,DATA_CHARSET_4x + 0 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$34 ; 34h ; ($34 = box)
-	ld	de,DATA_CHARSET_4x + 1 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$38 ; 38h		; '8'
-	ld	de,DATA_CHARSET_4x + 2 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$3c ; 3Ch		; '<'
-	ld	de,DATA_CHARSET_4x + 3 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$40 ; 4Ch
-	ld	de,DATA_CHARSET_4x + 4 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$44 ; 50h
-	ld	de,DATA_CHARSET_4x + 5 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$48 ; 54h		; 'T'
-	ld	de,DATA_CHARSET_4x + 6 * 64
-	call	INIT_4xCXRTBL
-	ld	a,$4c ; 58h		; 'X'
-	ld	de,DATA_CHARSET_4x + 7 * 64
-	call	INIT_4xCXRTBL
+; Init CHRTBL/CLRTBL
+	ld	hl, DATA_CHARSET.CHR
+	ld	de, CHRTBL + $30 * $08
+	ld	bc, DATA_CHARSET.SIZE - $08
+	call	LDIRVM_3_BANKS
+	ld	hl, DATA_CHARSET.CLR
+	ld	de, CLRTBL + $30 * $08
+	call	LDIRVM_3_BANKS
 	
-; Init other CHRTBL/CLRTBL
-	ld	a,$50 ; 60h
-	ld	de,DATA_CHARSET_1x + 0 * 16
-	call	INIT_1xCXRTBL
-	ld	a,$51 ; 61h
-	ld	de,DATA_CHARSET_1x + 1 * 16
-	call	INIT_1xCXRTBL
-	ld	a,$52 ; 62h
-	ld	de,DATA_CHARSET_1x + 2 * 16
-	call	INIT_1xCXRTBL
-	ld	a,$53 ; 63h
-	ld	de,DATA_CHARSET_1x + 3 * 16
-	call	INIT_1xCXRTBL
-	ld	a,$54 ; 64h
-	ld	de,DATA_CHARSET_1x + 4 * 16
-	call	INIT_1xCXRTBL
-	
-	ld	a,0FFh
-	ld	de,DATA_CHARSET_1x + 5 * 16
-	call	INIT_1xCXRTBL
+; Init CHRTBL/CLRTBL (last character)
+	ld	hl, DATA_CHARSET.CHR_FF
+	ld	de, CHRTBL + $FF * $08
+	ld	bc, $08
+	call	LDIRVM_3_BANKS
+	ld	hl, DATA_CHARSET.CLR_FF
+	ld	de, CLRTBL + $FF * $08
+	call	LDIRVM_3_BANKS
 	
 ; Init on-screen texts
 	ld	hl,LITERAL.MSX
@@ -2893,27 +2874,6 @@ DATA_SOUND:
 	DB	0Ch, 00h
 	DB	0Dh, 00h
 ; -----------------------------------------------------------------------------
-
-	; Referenced from 802D, 8035, 803D, 8045, 804D, 8055, 805D, 8065, 806D, 8075, 807D, 8085, 808D, 8095, 809D, 80A5, 80AD, 80B5, 80BD, 80C5, 80CD, 80D5, 80DD, 80E5, 80ED, 80F5, 80FD, 8105, 810D, 8115, 811D, 8125, 812D, 8135, 813D, 8145, 814D
-	; --- START PROC L91D2 ---
-	
-; ; -----------------------------------------------------------------------------
-; ; param a: sprite index
-; ; param de: ROM/RAM source SPRTBL data
-; INIT_SPRTBL:
-; .L91D2:	ld	hl,SPRTBL
-	; ld	bc,0020h	; address or value?
-	; inc	a
-; .L91D9: dec	a
-	; jr	z,.L91DF
-	; add	hl,bc
-	; jr	.L91D9
-; .L91DF: ex	de,hl
-	; jp	LDIRVM
-; ; -----------------------------------------------------------------------------
-
-	; Referenced from 855D, 8590, 8652, 8794, 87E2, 88FE, 8966, 8AD4, 8ADC, 8AE4, 8AEC, 8D39, 8D8A, 8DA9, 8C9F, 8EA9, 8A37, 8AA9, 8AB1
-	; --- START PROC L91E3 ---
 	
 ; -----------------------------------------------------------------------------
 ; param a: sprite index
@@ -2930,51 +2890,26 @@ PUT_SPRITE:
 	jp	LDIRVM
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8155, 815D, 8165, 816D, 8175, 817D, 8185, 818D
-	; --- START PROC L91F5 ---
-	
-	; Referenced from 8195, 819D, 81A5, 81AD, 81B5, 81BD
-	; --- START PROC L91FA ---
-	
 ; -----------------------------------------------------------------------------
-INIT_4xCXRTBL:
-.L91F5:	ld	hl,0020h	; address or value?
-	jr	INIT_NxCXRTBL
-
-INIT_1xCXRTBL:
-.L91FA:	ld	hl,0008h	; address or value?
-
-INIT_NxCXRTBL:
-.L91FD:	ld	(aux.how_many_bytes),hl
-	ld	hl,0000h	; address or value?
-	ld	bc,0008h	; address or value?
-	inc	a
-.L9207: dec	a
-	jr	z,.L920D
-	add	hl,bc
-	jr	.L9207
-.L920D: ld	a,06h
-.L920F: push	af
-	ex	de,hl
+LDIRVM_3_BANKS:
+	call	.BLIT
+	call	.BLIT
+.BLIT:
+; Preserves everything
 	push	hl
+	push	bc
 	push	de
-	ld	bc,(aux.how_many_bytes)
+; Actual LDIRVM
 	call	LDIRVM
+; Restores dest and moves to next bank
 	pop	hl
-	pop	de
-	ld	bc,0800h	; address or value?
-	add	hl,bc
-	pop	af
-	dec	a
-	ret	z
-	cp	03h
-	jr	nz,.L920F
-	add	hl,bc
-	ex	de,hl
-	ld	bc,(aux.how_many_bytes)
-	add	hl,bc
-	ex	de,hl
-	jr	.L920F
+	ld	bc, CHRTBL.BANK_SIZE
+	add	hl, bc
+	ex	de, hl
+; Restores size and source
+	pop	bc
+	pop	hl
+	ret
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8417, 84EB, 8501, 8517, 8529, 859A, 85A3, 85AC, 85B7, 85C0, 85C7, 85D1, 89AC, 8E5E, 8E7D, 8A72
@@ -3070,18 +3005,6 @@ GTTRIG_ANY:
 	ld	a,02h
 	jp	GTTRIG
 ; -----------------------------------------------------------------------------
-
-	; Referenced from 8010
-	; --- START PROC L9291 ---
-
-; -----------------------------------------------------------------------------
-SCREEN_2:
-.L9291:	ld	a,02h
-	jp	CHGMOD
-; -----------------------------------------------------------------------------
-
-	; Referenced from 8B04, 8E70, 89D8, 8D93, 8EAF, 8E83
-	; --- START PROC L9296 ---
 
 ; -----------------------------------------------------------------------------
 ; param de: score to add (BCD)
@@ -3207,34 +3130,6 @@ WRTVRM_CHARS:
 	ret
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8025
-	; --- START PROC L930B ---
-
-; -----------------------------------------------------------------------------
-INIT_FONT:
-; FILVRM with '/' character
-.L930B:	ld	a,2Fh		; '/'
-	ld	hl,NAMTBL
-	ld	bc,NAMTBL.SIZE
-	call	FILVRM
-; Blits to CHRTBL three times
-	ld	hl,DATA_FONT
-	ld	de,CHRTBL.BANK_0
-	ld	bc,DATA_FONT.SIZE
-	call	LDIRVM
-	ld	hl,DATA_FONT
-	ld	de,CHRTBL.BANK_1
-	ld	bc,DATA_FONT.SIZE
-	call	LDIRVM
-	ld	hl,DATA_FONT
-	ld	de,CHRTBL.BANK_2
-	ld	bc,DATA_FONT.SIZE
-	jp	LDIRVM
-; -----------------------------------------------------------------------------
-
-	; Referenced from 8022
-	; --- START PROC L933A ---
-
 ; -----------------------------------------------------------------------------
 COLOR_A_B_C:
 ; color a,b,c
@@ -3263,353 +3158,20 @@ COLOR_A_B_C:
 
 ; -----------------------------------------------------------------------------
 DATA_FONT:
-.L9364:	DB	3Ch, 42h, 46h, 5Ah, 62h, 42h, 3Ch, 00h ; 00
-	DB	08h, 18h, 28h, 08h, 08h, 08h, 3Eh, 00h ; 01
-	DB	3Ch, 42h, 02h, 1Ch, 20h, 40h, 7Eh, 00h ; 02
-	DB	3Ch, 42h, 02h, 0Ch, 02h, 42h, 3Ch, 00h ; 03
-	DB	04h, 0Ch, 14h, 24h, 7Eh, 04h, 04h, 00h ; 04
-	DB	7Eh, 40h, 7Ch, 02h, 02h, 42h, 3Ch, 00h ; 05
-	DB	1Ch, 20h, 40h, 7Ch, 42h, 42h, 3Ch, 00h ; 06
-	DB	7Fh, 42h, 04h, 08h, 10h, 10h, 10h, 00h ; 07
-	DB	3Ch, 42h, 42h, 3Ch, 42h, 42h, 3Ch, 00h ; 08
-	DB	3Ch, 42h, 42h, 3Eh, 02h, 04h, 38h, 00h ; 09
-	DB	18h, 24h, 42h, 7Eh, 42h, 42h, 42h, 00h ; 0A
-	DB	7Ch, 22h, 22h, 3Ch, 22h, 22h, 7Ch, 00h ; 0B
-	DB	1Ch, 22h, 40h, 40h, 40h, 22h, 1Ch, 00h ; 0C
-	DB	78h, 24h, 22h, 22h, 22h, 24h, 78h, 00h ; 0D
-	DB	7Eh, 40h, 40h, 78h, 40h, 40h, 7Eh, 00h ; 0E
-	DB	7Eh, 40h, 40h, 78h, 40h, 40h, 40h, 00h ; 0F
-	DB	1Ch, 22h, 40h, 40h, 4Eh, 22h, 1Ch, 00h ; 10
-	DB	42h, 42h, 42h, 7Eh, 42h, 42h, 42h, 00h ; 11
-	DB	1Ch, 08h, 08h, 08h, 08h, 08h, 1Ch, 00h ; 12
-	DB	0Eh, 04h, 04h, 04h, 04h, 44h, 38h, 00h ; 13
-	DB	42h, 44h, 48h, 70h, 48h, 44h, 42h, 00h ; 14
-	DB	40h, 40h, 40h, 40h, 40h, 40h, 7Eh, 00h ; 15
-	DB	42h, 66h, 5Ah, 5Ah, 42h, 42h, 42h, 00h ; 16
-	DB	42h, 62h, 52h, 4Ah, 46h, 42h, 42h, 00h ; 17
-	DB	3Ch, 42h, 42h, 42h, 42h, 42h, 3Ch, 00h ; 18
-	DB	7Ch, 42h, 42h, 7Ch, 40h, 40h, 40h, 00h ; 19
-	DB	3Ch, 42h, 42h, 42h, 4Ah, 44h, 3Ah, 00h ; 1A
-	DB	7Ch, 42h, 42h, 7Ch, 48h, 44h, 42h, 00h ; 1B
-	DB	3Ch, 42h, 40h, 3Ch, 02h, 42h, 3Ch, 00h ; 1C
-	DB	3Eh, 08h, 08h, 08h, 08h, 08h, 08h, 00h ; 1D
-	DB	42h, 42h, 42h, 42h, 42h, 42h, 3Ch, 00h ; 1E
-	DB	42h, 42h, 42h, 24h, 24h, 18h, 18h, 00h ; 1F
-	DB	42h, 42h, 42h, 5Ah, 5Ah, 66h, 42h, 00h ; 20
-	DB	42h, 42h, 24h, 18h, 24h, 42h, 42h, 00h ; 21
-	DB	22h, 22h, 22h, 1Ch, 08h, 08h, 08h, 00h ; 22
-	DB	7Eh, 02h, 04h, 18h, 20h, 40h, 7Eh, 00h ; 23
-	DB	30h, 48h, 48h, 30h, 4Ah, 44h, 3Ah, 00h ; 24
-	DB	00h, 00h, 00h, 00h, 08h, 08h, 10h, 00h ; 25
-	DB	00h, 00h, 00h, 00h, 00h, 18h, 18h, 00h ; 26
-	DB	00h, 00h, 00h, 7Eh, 00h, 00h, 00h, 00h ; 27
-	DB	04h, 08h, 10h, 10h, 10h, 08h, 04h, 00h ; 28
-	DB	20h, 10h, 08h, 08h, 08h, 10h, 20h, 00h ; 29
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h ; 2A
-	DB	00h, 00h, 3Eh, 40h, 3Ch, 02h, 7Ch, 00h ; 2B
-	DB	00h, 00h, 3Ch, 42h, 42h, 42h, 3Ch, 00h ; 2C
-	DB	0Ch, 12h, 10h, 7Ch, 10h, 10h, 10h, 00h ; 2D
-	DB	10h, 10h, 7Ch, 10h, 10h, 12h, 0Ch, 00h ; 2E
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h ; 2F
-DATA_FONT.SIZE:	equ $ - DATA_FONT
-; -----------------------------------------------------------------------------
+	incbin	"asm\original.font.pcx.chr"
+.SIZE:	equ $ - DATA_FONT
 
-; -----------------------------------------------------------------------------
 DATA_SPRTBL:
-._00:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 40h		   ; '@'
-	DB	7Dh, 07h, 18h, 1Fh, 1Ch, 1Ch, 0FCh, 0FCh
-	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 0Eh
-	DB	0FAh, 0FAh, 0Ah, 0F8h, 30h, 3Fh, 3Fh, 00h
+	incbin	"asm\original.sprites.pcx.spr"
 
-._01:	DB	0Fh, 0Fh, 1Eh, 0Fh, 3Fh, 0Fh, 0Fh, 08h
-	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
-	DB	0F0h, 0F8h, 78h, 0F8h, 0FCh, 0FBh, 0F3h, 09h
-	DB	0FCh, 0FEh, 0FAh, 06h, 0FEh, 0FCh, 00h, 00h
-
-._02:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 70h 
-	DB	5Fh, 5Fh, 50h, 1Fh, 0Fh, 0FCh, 0FCh, 00h
-	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 02h
-	DB	0BEh, 0E0h, 18h, 0F8h, 0F8h, 38h, 3Fh, 3Fh 
-
-._03:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
-	DB	18h, 3Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
-	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D6h, 0E6h
-	DB	1Ah, 0FCh, 0FAh, 06h, 0FEh, 0FCh, 00h, 00h
-
-._04:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
-	DB	1Bh, 1Fh, 10h, 1Fh, 1Fh, 0FCh, 0FCh, 00h
-	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 08h
-	DB	0F8h, 0F8h, 48h, 0F8h, 0F8h, 78h, 3Fh, 3Fh
-
-._05:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
-	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
-	DB	0F0h, 0F8h, 78h, 0F8h, 0FCh, 0F8h, 0F0h, 08h
-	DB	0FCh, 0FEh, 0FAh, 06h, 0FEh, 0C4h, 38h, 38h 
-
-._06:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 10h
-	DB	1Fh, 1Fh, 11h, 1Fh, 1Fh, 0Eh, 0FCh, 0FCh
-	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
-	DB	0D8h, 0F8h, 08h, 0F8h, 0F8h, 3Fh, 3Fh, 00h
-
-._07:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
-	DB	58h, 3Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
-	DB	0F8h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D0h, 0E0h
-	DB	18h, 0FCh, 0FAh, 06h, 0FEh, 0C4h, 38h, 38h 
-
-._08:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
-	DB	7Fh, 02h, 1Fh, 1Fh, 1Fh, 0FCh, 0FCh, 00h
-	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F0h, 04h
-	DB	0FEh, 0EFh, 5Eh, 0BCh, 0F8h, 78h, 3Fh, 3Fh 
-
-._09:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 0DFh, 0CFh, 90h
-	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 3Fh, 00h, 00h
-	DB	0F0h, 0F8h, 7Ah, 0FAh, 0FEh, 0FAh, 0F2h, 0Ah
-	DB	0FCh, 0FEh, 0FBh, 06h, 0FEh, 0C4h, 38h, 38h 
-
-._0A:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 2Fh, 70h 
-	DB	0FDh, 77h, 3Ah, 1Dh, 0Fh, 0FCh, 0FCh, 00h
-	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
-	DB	0FEh, 40h, 0F8h, 0F8h, 0F8h, 38h, 3Fh, 3Fh 
-
-._0B:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 0Bh, 07h
-	DB	38h, 7Fh, 0CFh, 4Ch, 2Bh, 2Fh, 1Ch, 1Ch
-	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D6h, 0E6h
-	DB	1Ah, 0FCh, 3Eh, 0FEh, 0FEh, 0FCh, 00h, 00h
-
-._0C:	DB	0Fh, 17h, 19h, 3Eh, 17h, 3Fh, 1Fh, 00h
-	DB	7Fh, 02h, 1Fh, 1Fh, 1Fh, 1Ch, 0FCh, 0FCh
-	DB	0F0h, 0F8h, 0F8h, 04h, 0F8h, 0F8h, 0F4h, 0Eh
-	DB	0BFh, 0EEh, 5Ch, 0B8h, 0F0h, 3Fh, 3Fh, 00h
-
-._0D:	DB	0Fh, 1Fh, 1Eh, 1Fh, 3Fh, 1Fh, 0Fh, 10h
-	DB	3Fh, 7Fh, 5Fh, 60h, 7Fh, 23h, 1Ch, 1Ch
-	DB	0F0h, 0F8h, 7Ah, 0FAh, 0FEh, 0FBh, 0F3h, 09h
-	DB	0FCh, 0FEh, 0FBh, 06h, 0FEh, 0FCh, 00h, 00h
-
-._0E:	DB	0Fh, 1Fh, 1Fh, 20h, 1Fh, 1Fh, 0Fh, 20h 
-	DB	7Fh, 0F7h, 7Ah, 3Dh, 1Fh, 1Eh, 0FCh, 0FCh
-	DB	0F0h, 0E8h, 98h, 7Ch, 0E8h, 0FCh, 0F8h, 00h
-	DB	0FEh, 40h, 0F8h, 0F8h, 0F8h, 3Fh, 3Fh, 00h
-
-._0F:	DB	0Fh, 1Fh, 1Eh, 1Dh, 33h, 0Fh, 6Bh, 67h 
-	DB	58h, 3Fh, 4Fh, 0CCh, 6Bh, 2Fh, 00h, 00h
-	DB	0F0h, 0F8h, 78h, 0B8h, 0CCh, 0F0h, 0D0h, 0E0h
-	DB	18h, 0FCh, 3Eh, 0FEh, 0FEh, 0C4h, 38h, 38h 
-
-._10:	DB	0Fh, 1Fh, 3Dh, 39h, 31h, 31h, 33h, 1Fh
-	DB	0CFh, 33h, 0Ch, 03h, 00h, 0Fh, 30h, 0C0h
-	DB	0F0h, 0F8h, 0BCh, 9Ch, 8Ch, 8Ch, 9Ch, 0F8h
-	DB	0F0h, 0C0h, 0C7h, 38h, 0C0h, 00h, 0C7h, 38h 
-
-._11:	DB	0Fh, 1Fh, 3Eh, 3Ch, 38h, 38h, 3Ch, 1Fh
-	DB	0Fh, 03h, 0E3h, 1Ch, 00h, 03h, 0E3h, 1Ch
-	DB	0F0h, 0F8h, 0BCh, 9Ch, 8Ch, 8Ch, 0CCh, 0F8h
-	DB	0F3h, 0CCh, 30h, 0C0h, 00h, 0F0h, 0Ch, 03h
-
-._13:	DB	30h, 30h , 78h , 0FCh, 0FCh, 0FEh, 0FDh, 79h 
-	DB	33h , 32h , 0Fh, 00h, 01h, 02h, 01h, 00h
-	DB	0Ch, 0Ch, 1Eh, 3Fh , 3Fh , 7Fh , 0BFh, 9Eh
-	DB	0CCh, 4Ch , 0B0h, 40h , 84h, 4Eh , 9Ah, 0E1h
-
-._14:	DB	84h, 84h, 84h, 0CCh, 0CCh, 0CEh, 79h, 79h
-	DB	33h, 32h, 0Dh, 02h, 21h, 72h, 59h, 87h
-	DB	21h, 21h, 21h, 33h, 33h, 73h, 9Eh, 9Eh
-	DB	0CCh, 0CCh, 0B0h, 40h, 80h, 40h, 80h, 00h
-
-._15:	DB	0Ch, 19h, 13h, 3Ah, 79h, 7Fh, 0FEh, 0FDh
-	DB	0FBh, 0F7h, 0B5h, 0D5h, 0C8h, 0C4h, 40h, 20h
-	DB	30h, 98h, 0C8h, 5Ch, 9Eh, 0FEh, 7Fh, 0BFh
-	DB	0DFh, 0EFh, 0AFh, 0ABh, 13h, 23h, 02h, 04h
-
-._16:	DB	06h, 1Dh, 13h, 3Ah, 39h, 3Fh, 3Fh, 3Eh
-	DB	37h, 35h, 35h, 15h, 1Ah, 0Ah, 0Dh, 05h
-	DB	60h, 0B8h, 0C8h, 5Ch, 9Ch, 0FCh, 0FCh, 7Ch
-	DB	0ECh, 0ACh, 0ACh, 0A8h, 58h, 50h, 0B0h, 0A0h
-
-._17: ; (currently unused)
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-
-._18: ; (currently unused)
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-
-._19:	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0B0h, 0B0h, 98h, 0DCh, 0DEh, 0CFh, 0E0h, 0FFh
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0Dh, 0Dh, 19h, 3Bh, 7Bh, 0F3h, 07h, 0FFh
-
-._1B:	DB	0FFh, 0E0h, 0CFh, 0DEh, 0DCh, 98h, 0B0h, 0B0h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	0FFh, 07h, 0F3h, 7Bh, 3Bh, 19h, 0Dh, 0Dh
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-
-._1D:	DB	80h, 60h, 60h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-
-._1E:	DB	0C0h, 0C0h, 20h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-
-._1F:	DB	00h, 00h, 00h, 00h, 00h, 00h, 03h, 03h
-	DB	01h, 01h, 02h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 20h, 60h, 80h
-	DB	0C0h, 20h, 00h, 00h, 00h, 00h, 00h, 00h
-
-._20:	DB	00h, 00h, 00h, 10h, 1Ch, 0Fh, 0Fh, 0Fh
-	DB	07h, 0Fh, 08h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 0C0h, 0F0h, 0C0h, 0C0h, 80h
-	DB	0C0h, 0E0h, 30h, 00h, 00h, 00h, 00h, 00h
-
-._21:	DB	00h, 11h, 89h, 8Fh, 7Fh, 3Fh, 7Fh, 0FFh
-	DB	7Fh, 7Fh, 7Fh, 3Fh, 4Fh, 0Fh, 0Ch, 18h
-	DB	80h, 81h, 03h, 0Eh, 1Eh, 7Ch, 0FCh, 0FFh
-	DB	0FEh, 0FEh, 0F0h, 0F0h, 0F8h, 3Ch, 0Eh, 03h
-
-._22:	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 01h, 00h, 03h, 03h
-	DB	08h, 04h, 06h, 16h, 10h, 3Fh, 7Fh, 08h
-	DB	70h, 0E0h, 0FCh, 9Eh, 0F8h, 30h, 0FCh, 0FEh
-
-._23:	DB	00h, 00h, 0C0h, 0E0h, 0F8h, 0E2h, 0FFh, 7Fh
-	DB	1Ch, 07h, 0F7h, 60h, 07h, 07h, 00h, 07h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 0C0h, 0C0h, 0E0h, 0E0h, 0E0h, 30h, 0F0h
-
-._24:	DB	07h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 1Eh, 3Fh, 7Fh, 0FFh, 0D7h, 57h
-	DB	0ECh, 2Eh, 0E2h, 6Fh, 0Fh, 7Fh, 3Fh, 7Fh
-	DB	7Fh, 3Fh, 0B0h, 0EFh, 0DFh, 0BFh, 0B5h, 0D5h
-
-._25:	DB	17h, 36h, 77h, 0F7h, 0F7h, 0F9h, 0FCh, 0F8h
-	DB	0C7h, 0DFh, 3Fh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-	DB	0F0h, 00h, 0F8h, 0FFh, 0FFh, 0FFh, 0FFh, 3Fh
-	DB	3Fh, 0BFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_CHARSET_4x:
-; 30 (wall)
-.L99A4:	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-
-	DB	9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah
-	DB	9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah
-	DB	9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah
-	DB	9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah, 9Ah
-
-; 34 (box)
-	DB	0FFh, 80h, 9Fh, 0AFh, 0B7h, 0B8h, 0BBh, 0BBh
-	DB	0FFh, 01h, 0F9h, 0F5h, 0EDh, 1Dh, 0DDh, 0DDh
-	DB	0BBh, 0BBh, 0B8h, 0B7h, 0AFh, 9Fh, 80h, 0FFh
-	DB	0DDh, 0DDh, 1Dh, 0DDh, 0EDh, 0F5h, 01h, 0FFh
-
-	DB	0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh
-	DB	0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh
-	DB	0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh
-	DB	0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh, 0CAh
-
-; 38 (gun)
-	DB	00h, 00h, 00h, 00h, 0FFh, 0FFh, 3Fh, 1Fh
-	DB	00h, 00h, 00h, 01h, 0FFh, 0FFh, 0F0h, 0F0h
-	DB	1Ah, 1Ah, 38h, 3Fh, 78h, 0F8h, 00h, 00h
-	DB	80h, 80h, 80h, 00h, 00h, 00h, 00h, 00h
-
-	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
-	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
-	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
-	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
-
-; 3C (jewel)
-	DB	07h, 1Fh, 0Fh, 07h, 0Fh, 11h, 11h, 20h
-	DB	0E0h, 0F8h, 0F0h, 0E0h, 0F0h, 88h, 88h, 04h
-	DB	20h, 20h, 10h, 10h, 08h, 07h, 00h, 00h
-	DB	04h, 04h, 08h, 08h, 10h, 0E0h, 00h, 00h
-
-	DB	0B0h, 0B0h, 0B0h, 0B0h, 0E0h, 0E0h, 0E0h, 0E0h
-	DB	0B0h, 0B0h, 0B0h, 0B0h, 0E0h, 0E0h, 0E0h, 0E0h
-	DB	0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h
-	DB	0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h, 0E0h
-
-; 4C (exit wall)
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-	DB	0CCh, 33h, 0CCh, 33h, 0CCh, 33h, 0CCh, 33h
-
-	DB	9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh
-	DB	9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh
-	DB	9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh
-	DB	9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh, 9Dh
-
-; 50 (warp)
-	DB	0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh
-	DB	0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh
-	DB	0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh
-	DB	0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh, 0AAh
-
-	DB	0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh
-	DB	0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh
-	DB	0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh
-	DB	0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh, 0FEh
-
-; 54 (nest #1)
-	DB	01h, 03h, 06h, 0Dh, 1Ah, 35h, 6Ah, 0D4h
-	DB	80h, 0C0h, 60h, 0B0h, 58h, 0ACh, 56h, 2Bh
-	DB	0D4h, 6Ah, 35h, 1Ah, 0Dh, 06h, 03h, 01h
-	DB	2Bh, 56h, 0ACh, 58h, 0B0h, 60h, 0C0h, 80h
-
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-
-; 58 (nest #2)
-	DB	01h, 03h, 06h, 0Ch, 19h, 32h, 65h, 0CBh
-	DB	80h, 0C0h, 60h, 30h, 98h, 4Ch, 0A6h, 0D3h
-	DB	0CBh, 65h, 32h, 19h, 0Ch, 06h, 03h, 01h
-	DB	0D3h, 0A6h, 4Ch, 98h, 30h, 60h, 0C0h, 80h
-
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-	DB	90h, 90h, 90h, 90h, 90h, 90h, 90h, 90h
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_CHARSET_1x:
-; $50 = life
-	DB	18h, 3Ch, 3Ch, 18h, 7Eh, 0BDh, 7Eh, 0C3h
-	DB	0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h, 0F0h
-	
-; $51 = visited room
-	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
-	DB	0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h, 0B0h
-
-; $52 = sphynx room
-	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
-	DB	60h, 60h, 60h, 60h, 60h, 60h, 60h, 60h
-
-; $53 = non visited room
-	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
-	DB	10h, 10h, 10h, 10h, 10h, 10h, 10h, 10h
-
-; $54 = current room
-	DB	00h, 00h, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
-	DB	70h, 70h, 70h, 70h, 70h, 70h, 70h, 70h
-	
-; $FF
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
-	DB	00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+DATA_CHARSET:
+.CHR:
+	incbin	"asm\original.charset.pcx.chr"
+.CHR_FF:	equ $ - 8
+.SIZE:	equ $ - DATA_CHARSET
+.CLR:
+	incbin	"asm\original.charset.pcx.clr"
+.CLR_FF:	equ $ - 8
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
