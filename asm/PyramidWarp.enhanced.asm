@@ -40,7 +40,33 @@
 	SCR_WIDTH:	equ 32
 	SPAT_OB:	equ $d1 ; Sprite out of bounds marker (not standard)
 ; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+CFG_ENHANCEMENTS:	; Uncomment to use enchanced...
+	; .FONT:	; ...font
+	; .SPRITES:	; ...sprites
+	; .CHARSET:	; ...graphical charset
+	; .ROOMS:	; ...room and pyramid definition
 	
+CFG_COLOR:
+	.SKULL:		equ 15	; 15
+	.SCORPION:	equ 9	; 9
+	.BAT:		equ 1	; 1
+	.PLAYER:	equ 11	; 11
+	.PLAYER_GUN:	equ 15	; 15
+	.BULLET:	equ 15	; 15
+	.EXPLOSION:	equ 6	; 6
+	.DOOR_0:	equ 3	; 3
+	.DOOR_1:	equ 5	; 7
+	.DOOR_2:	equ 7	; 8
+	
+	.BG:		equ 4	; 4
+	.BG_SPHYNX:	equ 1	; 1
+	.BG_DEAD_1:	equ 6	; 6
+	.BG_DEAD_2:	equ 8	; 4
+	.BG_EXIT:	equ 3	; 3
+; -----------------------------------------------------------------------------
+
 ; -----------------------------------------------------------------------------
 ; ROM header and entry point
 	org	$8000, $9fff ; 8KB ROM
@@ -106,7 +132,6 @@ ROM_START:
 	ld	de,080Dh
 	ld	b,03h
 	call	WRTVRM_CHARS
-	
 	ld	hl,LITERAL.PYRAMID_WARP
 	ld	de,0A09h
 	ld	b,0Ch
@@ -146,7 +171,7 @@ ROM_START:
 NEW_GAME_ONCE:
 ; color ,,4
 .L820D:	ld	c,07h
-	ld	b,04h
+	ld	b,CFG_COLOR.BG
 	call	WRTVDP
 	
 ; Score, high score = 0
@@ -214,13 +239,15 @@ NEW_GAME_ONCE:
 	jr	nz,.L8293
 	
 ; Sprite colors
-	ld	a,0Fh
+	ld	a,CFG_COLOR.SKULL ; 0Fh
 	ld	(skull.spratr_color),a
 	ld	(bullet.spratr_color),a
-	ld	a,09h
+	
+	ld	a,CFG_COLOR.SCORPION ; 09h
 	ld	(scorpion1.spratr_color),a
 	ld	(scorpion2.spratr_color),a
-	ld	a,01h
+	
+	ld	a,CFG_COLOR.BAT ; 01h
 	ld	(bat1.spratr_color),a
 	ld	(bat2.spratr_color),a
 ; ------VVVV----falls through--------------------------------------------------
@@ -269,7 +296,7 @@ NEW_PYRAMID:
 	and	03h
 	inc	a
 	ld	b,a ; b = 1..4
-	ld	hl,DATA_RANDOMIZE_PYRAMID_FLOOR1 -7
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR1
 	ld	de,0007h ; 7 rooms
 .L82F8: add	hl,de
 	djnz	.L82F8
@@ -285,7 +312,7 @@ NEW_PYRAMID:
 	call	RANDOMIZE
 	and	03h
 	inc	a
-	ld	hl,DATA_RANDOMIZE_PYRAMID_FLOOR2 -5
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR2
 	ld	de,0005h ; 5 rooms
 	ld	b,a ; b = 1..4
 .L8317:	add	hl,de
@@ -301,7 +328,7 @@ NEW_PYRAMID:
 	call	RANDOMIZE
 	and	03h
 	inc	a
-	ld	hl,DATA_RANDOMIZE_PYRAMID_FLOOR3 -3
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR3
 	ld	de,0003h ; 3 rooms
 	ld	b,a ; b = 1..4
 .L8332:	add	hl,de
@@ -684,7 +711,7 @@ PRINT_ROOM_DECORATION:
 	call	TO_VRAM_COORDINATES
 	inc	ix
 ; saves door color
-	ld	a,03h
+	ld	a,CFG_COLOR.DOOR_0 ; 03h
 	ld	(ix+00h),a
 ; saves door1 pattern based on b
 	push	hl
@@ -721,7 +748,7 @@ PRINT_ROOM_DECORATION:
 	call	TO_VRAM_COORDINATES
 	inc	ix
 ; saves door color
-	ld	a,03h
+	ld	a,CFG_COLOR.DOOR_0 ; 03h
 	ld	(ix+00h),a
 ; saves door2 pattern based on b
 	ld	a,b
@@ -893,15 +920,15 @@ INIT_GAME_LOOP:
 .L8640:	ld	(hl),a
 ; Sets player pattern
 	inc	hl
-	ld	a,04h
+	ld	a,$0c ; down (original 04h up)
 	ld	(hl),a
 ; Sets player color
 	inc	hl
-	ld	a,0Bh
+	ld	a,CFG_COLOR.PLAYER ; 0Bh
 	ld	(hl),a
 ; Sets player direction
 	inc	hl
-	ld	a,01h
+	ld	a,$03 ; down (original = 01h up)
 	ld	(hl),a
 ; Put player sprite
 	ld	de,player.spratr_y
@@ -1106,11 +1133,11 @@ GAME_LOOP.DOORS_OK:
 	add	a,a
 	ld	(player.spratr_pat),a
 ; Computes and sets the sprite color
-	ld	b,0Bh ; yellow (without gun)
+	ld	b,CFG_COLOR.PLAYER ; yellow (without gun)
 	ld	a,(player_has_gun)
 	or	a
 	jr	z,.L878B
-	ld	b,0Fh ; white (with gun)
+	ld	b,CFG_COLOR.PLAYER_GUN ; white (with gun)
 .L878B:	ld	a,b
 	ld	(player.spratr_color),a
 ; Prints the player sprite	
@@ -1146,7 +1173,7 @@ GAME_LOOP.DOORS_OK:
 	ld	(iy+01h),a
 	ld	a,70h ; bullet pattern
 	ld	(iy+02h),a
-	ld	a,0Fh; bullet color
+	ld	a,CFG_COLOR.BULLET; bullet color
 	ld	(iy+03h),a
 	ld	a,(ix+04h) ; direction
 	ld	(iy+04h),a
@@ -1404,7 +1431,7 @@ GAME_LOOP.SKULL_OK:
 	ld	a,78h
 	ld	(hl),a
 	inc	hl ; bullet.spratr_color
-	ld	a,06h
+	ld	a,CFG_COLOR.EXPLOSION
 	ld	(hl),a
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
@@ -1527,7 +1554,7 @@ GAME_LOOP.EXIT_OK:
 	add	a,a
 	add	a,a
 	ld	(ix+02h),a ; bullet.spratr_pat
-	ld	a,06h
+	ld	a,CFG_COLOR.EXPLOSION
 	ld	(ix+03h),a ; bullet.spratr_color
 	jr	.L8A32
 
@@ -1595,11 +1622,11 @@ GAME_LOOP.EVERYTHING_OK:
 .L8A8B:	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L8A98
-	ld	b,07h
-	ld	c,08h
+	ld	b,CFG_COLOR.DOOR_1
+	ld	c,CFG_COLOR.DOOR_2
 	jr	.L8A9C
-.L8A98:	ld	b,08h
-	ld	c,07h
+.L8A98:	ld	b,CFG_COLOR.DOOR_2
+	ld	c,CFG_COLOR.DOOR_1
 ; Sets door colors (RAM)
 .L8A9C:	ld	a,b
 	ld	(door1.spratr_color),a
@@ -1657,7 +1684,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	de,121Ch	; address or value?
 	call	WRTVRM_1x1_CHAR
 ; color ,,1
-	ld	b,01h
+	ld	b,CFG_COLOR.BG_SPHYNX
 	ld	c,07h
 	call	WRTVDP
 ; Sphynx sound	
@@ -1702,7 +1729,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	call	WRTVDP
 ; color ,,4
 	ld	c,07h
-	ld	b,04h
+	ld	b,CFG_COLOR.BG
 	call	WRTVDP
 ; Extra life
 	ld	a,(game.lives)
@@ -2121,7 +2148,7 @@ CHECK_ENEMY_BULLET_COLLISION:
 	ld	a,78h
 	ld	(hl),a
 	inc	hl ; bullet.spratr_color
-	ld	a,06h
+	ld	a,CFG_COLOR.EXPLOSION
 	ld	(hl),a
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
@@ -2183,7 +2210,7 @@ KILL_PLAYER:
 .L8DCA:	pop	hl
 	call	PLAY_DEAD_MUSIC
 ; color ,,4
-	ld	b,04h
+	ld	b,CFG_COLOR.BG
 	ld	c,07h
 	call	WRTVDP
 	jp	DEC_LIVES_AND_NEW_ROOM
@@ -2320,7 +2347,7 @@ OPEN_BOX_SKULL:
 	ld	a,40h
 	ld	(hl),a
 	inc	hl ; skull.spratr_color
-	ld	a,0Fh
+	ld	a,CFG_COLOR.SKULL
 	ld	(hl),a
 	inc	hl ; skull.direction
 	xor	a
@@ -2544,7 +2571,7 @@ PLAY_DEAD_MUSIC:
 	jr	nz,.L8FBD
 ; color ,,6
 	ld	c,07h
-	ld	b,06h
+	ld	b,CFG_COLOR.BG_DEAD_1
 	call	WRTVDP
 ; (delay)
 	ld	b,03h
@@ -2556,7 +2583,7 @@ PLAY_DEAD_MUSIC:
 	djnz	.L8FD1
 ; color ,,4
 	ld	c,07h
-	ld	b,04h
+	ld	b,CFG_COLOR.BG_DEAD_2
 	call	WRTVDP
 ; Stops music	
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
@@ -2620,9 +2647,9 @@ PLAY_DEAD_MUSIC.NOTE:
 	or	a
 	ld	(aux.dying_flashes),a
 	jr	z,.L905D
-	ld	b,04h ; blue
+	ld	b,CFG_COLOR.BG_DEAD_2
 	jr	.L905F
-.L905D:	ld	b,06h ; red
+.L905D:	ld	b,CFG_COLOR.BG_DEAD_1
 ; color ,,b
 .L905F:	ld	c,07h
 	call	WRTVDP
@@ -2647,7 +2674,7 @@ PLAY_SOUND_EXIT:
 .L9070:	call	RESET_SOUND
 ; color ,,3
 	ld	c,07h
-	ld	b,03h
+	ld	b,CFG_COLOR.BG_EXIT
 	call	WRTVDP
 ; Ascending arpegio
 	ld	a,0F0h
@@ -2667,7 +2694,7 @@ PLAY_SOUND_EXIT:
 	call	PLAY_SOUND
 ; color ,,4
 	ld	c,07h
-	ld	b,04h
+	ld	b,CFG_COLOR.BG
 	jp	WRTVDP
 
 ; Prepares one note of the arpeggio
@@ -3157,33 +3184,11 @@ COLOR_A_B_C:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-DATA_FONT:
-	incbin	"asm\original.font.pcx.chr"
-.SIZE:	equ $ - DATA_FONT
-
-DATA_SPRTBL:
-	incbin	"asm\original.sprites.pcx.spr"
-
-DATA_CHARSET:
-.CHR:
-	incbin	"asm\original.charset.pcx.chr"
-.CHR_FF:	equ $ - 8
-.SIZE:	equ $ - DATA_CHARSET
-.CLR:
-	incbin	"asm\original.charset.pcx.clr"
-.CLR_FF:	equ $ - 8
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
 LITERAL:
 .DASHES: ; 9C04
 	DB	$27, $27, $27, $27, $27, $27, $27	; -------
-.PYRAMID: ; 9C0B
-	DB	$19, $22, $1B, $0A, $16, $12, $0D	; PYRAMID
 .TnESOFT: ; 9C12
 	DB	$1D, $24, $0E, $2B, $2C, $2D, $2E	; T&Esoft
-.Y1983: ; 9C19
-	DB	$01, $09, $08, $03			; 1983
 .HIGH: ; 9C1D
 	DB	$11, $12, $10, $11			; HIGH
 .SCORE: ; 9C21
@@ -3194,10 +3199,10 @@ LITERAL:
 	DB	$0A, $12, $1B				; AIR
 
 .WALL_x25: ; 9C3B
-	DB	$30, $30, $30, $30, $30, $30, $30, $30	; 25x wall
-	DB	$30, $30, $30, $30, $30, $30, $30, $30
-	DB	$30, $30, $30, $30, $30, $30, $30, $30
-	DB	$30
+	DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
+	DB	$31, $30, $31, $30, $31, $30, $31, $30
+	DB	$31, $30, $31, $30, $31, $30, $31, $30
+	DB	$31
 .ROOMS_x7:	; 9C54
 	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 	
@@ -3216,18 +3221,19 @@ LITERAL:
 	DB	$1D, $1B, $22, $FF			; TRY_
 	DB	$1D, $11, $0E, $FF			; THE_
 	DB	$17, $0E, $21, $1D, $FF			; NEXT_
-	DB	$19, $22, $1B, $0A, $16, $12, $0D	; PYRAMID
+.PYRAMID:
+.PYRAMID_WARP:
+	DB	$19, $22, $1B, $0A, $16, $12, $0D, $FF	; PYRAMID_
+	DB	$20, $0A, $1B, $19			; WARP
 .HIT_SPACE_KEY: ; 9C9F
 	DB	$11, $12, $1D, $FF			; HIT_
 	DB	$1C, $19, $0A, $0C, $0E, $FF		; SPACE_
 	DB	$14, $0E, $22				; KEY
 .MSX: ; 9CAC
 	DB	$16, $1C, $21				; MSX
-.PYRAMID_WARP: ; 9CAF
-	DB	$19, $22, $1B, $0A, $16, $12, $0D, $FF	; PYRAMID_
-	DB	$20, $0A, $1B, $19			; WARP
 .COPYRIGHT: ; 9CBB
 	DB	$28, $0C, $29, $FF			; (C)_
+.Y1983:
 	DB	$01, $09, $08, $03, $FF			; 1983_
 	DB	$0B, $22, $FF				; BY_
 	DB	$1D, $24, $0E, $FF			; T&E_
@@ -3235,328 +3241,6 @@ LITERAL:
 .GAME_OVER: ; 9CCF
 	DB	$10, $0A, $16, $0E, $FF			; GAME_
 	DB	$18, $1F, $0E, $1B			; OVER
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_ROOMS:
-; 00				; XXXXXXXXXXXXX
-.L9CD8:	DB	0D1h, 040h	; XBX^X___X_X_X
-	DB	004h, 000h	; X_____X_____X
-	DB	0B5h, 0A0h	; XX_XX_X_XX_XX
-	DB	080h, 000h	; XX__________X
-	DB	02Eh, 0C0h	; X__X_HHH_XX_X
-	DB	060h, 080h	; X_XB_____X__X
-	DB	06Eh, 0A0h	; X_XX_HHH_X_XX
-	DB	000h, 020h	; X__________BX
-	DB	075h, 0A0h	; X_XXX_X_XX_XX
-	DB	040h, 080h	; X_X______X_NX
-	DB	05Ah, 020h 	; X_X_XXvX___XX
-				; XXXXXXXXXXXXX
-	DB	00h, 00h	; box1
-	DB	02h, 05h	; box2
-	DB	0Ah, 07h	; box3
-	DB	0Ah, 0Ah	; nest
-	DB	82h, 00h	; door (^)
-	DB	05h, 0Ah	; door (v)
-	
-; 01
-	DB	0AEh, 0A0h	; walls
-	DB	08h, 00h
-	DB	0BAh, 0C0h
-	DB	00h, 80h
-	DB	0EEh, 0A0h
-	DB	80h, 00h
-	DB	0AEh, 0A0h
-	DB	88h, 20h 
-	DB	0ABh, 0A0h
-	DB	80h, 00h
-	DB	0AEh, 0A0h
-	DB	05h, 00h	; boxes
-	DB	00h, 07h
-	DB	0Ah, 07h
-	DB	00h, 00h	; nest
-	DB	01h, 0Ah	; doors
-	DB	89h, 00h
-	
-; 02
-	DB	0EEh, 0E0h	; walls
-	DB	0AAh, 0A0h
-	DB	00h, 00h
-	DB	0AAh, 0A0h
-	DB	0Eh, 00h
-	DB	0A0h, 0A0h
-	DB	0Eh, 00h
-	DB	0AAh, 0A0h
-	DB	80h, 20h 
-	DB	0EAh, 0E0h
-	DB	0Ah, 00h
-	DB	01h, 00h	; boxes
-	DB	05h, 00h
-	DB	09h, 00h
-	DB	08h, 04h	; nest
-	DB	05h, 0Ah	; doors
-	DB	87h, 00h
-
-; 03
-	DB	6Ah, 0C0h	; walls
-	DB	00h, 00h
-	DB	0BBh, 0A0h
-	DB	00h, 00h
-	DB	6Eh , 0C0h
-	DB	00h, 00h
-	DB	6Eh , 0C0h
-	DB	00h, 00h
-	DB	0BBh, 0A0h
-	DB	00h, 00h
-	DB	6Ah , 0C0h
-	DB	01h, 02h	; boxes
-	DB	09h, 02h
-	DB	09h, 08h
-	DB	00h, 08h	; nest
-	DB	85h, 00h	; doors
-	DB	05h, 0Ah
-
-; 04
-	DB	8Bh, 40h 	; walls
-	DB	0A8h, 00h
-	DB	0A2h, 0C0h
-	DB	0Ah, 00h
-	DB	0DEh, 0C0h
-	DB	00h, 80h
-	DB	5Eh , 20h 
-	DB	02h, 80h
-	DB	6Bh , 0E0h
-	DB	08h, 80h
-	DB	62h , 20h 
-	DB	05h, 00h	; boxes
-	DB	07h, 08h
-	DB	0Ah, 08h
-	DB	00h, 01h	; nest
-	DB	00h, 0Ah	; doors
-	DB	8Ah, 00h
-
-; 05
-	DB	85h, 00h	; walls
-	DB	0DDh, 0C0h
-	DB	84h, 00h
-	DB	0B1h, 60h 
-	DB	1Eh, 00h
-	DB	40h , 0C0h
-	DB	0EEh, 0C0h
-	DB	24h , 00h
-	DB	0ADh, 60h 
-	DB	04h, 00h
-	DB	0F1h, 0C0h
-	DB	00h, 00h	; boxes
-	DB	01h, 0Ah
-	DB	08h, 0Ah
-	DB	01h, 06h	; nest
-	DB	0Ah, 0Ah	; doors
-	DB	86h, 00h
-
-; 06
-	DB	0AAh, 0A0h	; walls
-	DB	88h, 80h
-	DB	0AAh, 0A0h
-	DB	22h , 20h 
-	DB	0AEh, 80h
-	DB	80h, 40h 
-	DB	0AEh, 80h
-	DB	22h , 20h 
-	DB	0EBh, 0A0h
-	DB	88h, 80h
-	DB	0AAh, 0A0h
-	DB	00h, 0Ah	; boxes
-	DB	04h, 01h
-	DB	07h, 08h
-	DB	08h, 05h	; nest
-	DB	81h, 00h	; doors
-	DB	09h, 0Ah
-
-; 07
-	DB	0DEh, 0C0h	; walls
-	DB	42h , 00h
-	DB	58h , 0A0h
-	DB	02h, 0A0h
-	DB	5Eh , 00h
-	DB	00h, 0C0h
-	DB	5Fh , 0C0h
-	DB	00h, 00h
-	DB	0ADh, 40h 
-	DB	05h, 40h 
-	DB	0D4h, 60h 
-	DB	00h, 00h	; boxes
-	DB	00h, 0Ah
-	DB	09h, 09h
-	DB	05h, 00h	; nest
-	DB	8Ah, 00h	; doors
-	DB	04h, 0Ah
-
-; 08
-	DB	0BBh, 0A0h	; walls
-	DB	08h, 00h
-	DB	63h , 0C0h
-	DB	4Ah , 00h
-	DB	7Eh , 0A0h
-	DB	00h, 00h
-	DB	0AEh, 0E0h
-	DB	0EAh, 20h 
-	DB	8Ah, 0A0h
-	DB	20h , 80h
-	DB	0EAh, 0A0h
-	DB	01h, 0Ah	; boxes
-	DB	0Ah, 07h
-	DB	07h, 00h
-	DB	01h, 03h	; nest
-	DB	85h, 00h	; doors
-	DB	05h, 0Ah
-
-; 09
-	DB	74h, 60h 	; walls
-	DB	15h, 00h
-	DB	0D5h, 0C0h
-	DB	04h, 20h 
-	DB	7Fh , 60h 
-	DB	00h, 00h
-	DB	0DFh, 60h 
-	DB	10h, 40h 
-	DB	7Bh , 0C0h
-	DB	10h, 40h 
-	DB	0DFh, 00h
-	DB	02h, 00h	; boxes
-	DB	03h, 09h
-	DB	0Ah, 00h
-	DB	0Ah, 05h	; nest
-	DB	0Ah, 02h	; doors
-	DB	8Ah, 07h
-
-; 0A
-	DB	15h, 00h	; walls
-	DB	44h , 40h 
-	DB	51h , 40h 
-	DB	44h , 40h 
-	DB	7Fh , 0C0h
-	DB	00h, 00h
-	DB	7Fh , 0C0h
-	DB	51h , 0C0h
-	DB	44h , 40h 
-	DB	51h , 40h 
-	DB	54h , 00h
-	DB	01h, 02h	; boxes
-	DB	01h, 09h
-	DB	09h, 02h
-	DB	05h, 03h	; nest
-	DB	04h, 0Ah	; doors
-	DB	84h, 00h
-
-; 0B
-	DB	2Ah , 80h	; walls
-	DB	0A0h, 0C0h
-	DB	2Ah , 80h
-	DB	7Fh , 0A0h
-	DB	1Fh, 00h
-	DB	0C0h, 40h 
-	DB	1Fh, 00h
-	DB	44h , 40h 
-	DB	6Fh , 00h
-	DB	41h , 40h 
-	DB	14h, 00h
-	DB	03h, 03h	; boxes
-	DB	05h, 03h
-	DB	07h, 03h
-	DB	05h, 08h	; nest
-	DB	85h, 00h	; doors
-	DB	04h, 0Ah
-
-; 0C
-	DB	0E0h, 0E0h	; walls
-	DB	8Ah, 20h 
-	DB	2Ah , 80h
-	DB	64h , 0C0h
-	DB	0Eh, 00h
-	DB	0A0h, 0E0h
-	DB	0Eh, 00h
-	DB	64h , 0C0h
-	DB	2Eh , 80h
-	DB	8Ah, 20h 
-	DB	0E0h, 0E0h
-	DB	01h, 00h	; boxes
-	DB	01h, 0Ah
-	DB	0Ah, 05h
-	DB	05h, 07h	; nest
-	DB	05h, 02h	; doors
-	DB	85h, 09h
-
-; 0D
-	DB	50h , 0E0h	; walls
-	DB	56h , 0C0h
-	DB	06h, 00h
-	DB	50h, 0A0h
-	DB	1Eh, 20h
-	DB	0E0h, 0A0h
-	DB	8Eh, 00h
-	DB	6Ch, 0C0h
-	DB	0Ah, 00h
-	DB	60h, 0A0h
-	DB	0Eh, 0A0h
-	DB	00h, 05h	; boxes
-	DB	0Ah, 04h
-	DB	05h, 0Ah
-	DB	0Ah, 00h	; nest
-	DB	80h, 00h	; doors
-	DB	07h, 0Ah
-
-; 0E
-	DB	0FBh, 0E0h	; walls
-	DB	0A0h, 80h
-	DB	0AAh, 0A0h
-	DB	8Ah, 20h
-	DB	2Eh, 0A0h
-	DB	60h, 80h
-	DB	2Eh, 0C0h
-	DB	8Ah, 00h
-	DB	0A0h, 0A0h
-	DB	2Dh, 80h
-	DB	0A0h, 0A0h
-	DB	01h, 00h	; box
-	DB	02h, 05h
-	DB	0Ah, 03h
-	DB	00h, 0Ah	; nest
-	DB	05h, 03h	; doors
-	DB	85h, 07h
-
-; 0F (sphynx room)
-	DB	20h, 80h	; walls
-	DB	20h, 80h
-	DB	20h, 80h
-	DB	20h, 80h
-	DB	3Bh, 80h
-	DB	0Ah, 00h
-	DB	00h, 00h
-	DB	55h, 40h
-	DB	00h, 00h
-	DB	00h, 00h
-	DB	00h, 00h
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_RANDOMIZE_PYRAMID_FLOOR1:
-.L9EEB:	DB	01h, 05h, 03h, 02h, 06h, 04h, 07h
-	DB	04h, 05h, 01h, 07h, 03h, 06h, 02h
-	DB	05h, 02h, 06h, 04h, 01h, 07h, 03h
-	DB	06h, 01h, 04h, 05h, 02h, 03h, 07h
-	
-DATA_RANDOMIZE_PYRAMID_FLOOR2:
-.L9F03:	DB	08h, 0Ch, 0Ah, 09h, 0Bh
-	DB	0Bh, 08h, 0Ah, 09h, 0Ch
-	DB	0Ch, 0Ah, 09h, 0Bh, 08h
-	DB	0Ah, 09h, 08h, 0Ch, 0Bh
-	
-DATA_RANDOMIZE_PYRAMID_FLOOR3:
-.L9F19:	DB	0Dh, 0Eh, 0Fh
-	DB	0Eh, 0Dh, 0Fh
-	DB	0Fh, 0Eh, 0Dh
-	DB	0Dh, 0Fh, 0Eh
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3587,6 +3271,58 @@ DATA_SOUND.SPHYNX:
 	DB	0Ah, 10h
 	DB	0Ch, 0FFh
 	DB	0Dh, 00h
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+DATA_FONT:
+	IFDEF CFG_ENHANCEMENTS.FONT
+		incbin	"asm/enhanced/font.pcx.chr"
+	ELSE
+		incbin	"asm/original/font.pcx.chr"
+	ENDIF
+	.SIZE:	equ $ - DATA_FONT
+
+DATA_SPRTBL:
+	IFDEF CFG_ENHANCEMENTS.SPRITES
+		incbin	"asm/enhanced/sprites.pcx.spr"
+	ELSE
+		incbin	"asm/original/sprites.pcx.spr"
+	ENDIF
+
+DATA_CHARSET:
+	.CHR:
+	IFDEF CFG_ENHANCEMENTS.CHARSET
+		incbin	"asm/enhanced/charset.pcx.chr"
+	ELSE
+		incbin	"asm/original/charset.pcx.chr"
+	ENDIF
+	.CHR_FF:	equ $ - 8
+	.SIZE:	equ $ - DATA_CHARSET
+	
+	.CLR:
+	IFDEF CFG_ENHANCEMENTS.CHARSET
+		incbin	"asm/enhanced/charset.pcx.clr"
+	ELSE
+		incbin	"asm/original/charset.pcx.clr"
+	ENDIF
+	.CLR_FF:	equ $ - 8
+
+DATA_ROOMS:
+	IFDEF CFG_ENHANCEMENTS.ROOMS
+		include	"asm/enhanced/rooms.asm"
+	ELSE
+		include	"asm/original/rooms.asm"
+	ENDIF
+	
+DATA_RANDOMIZE_PYRAMID:
+	IFDEF CFG_ENHANCEMENTS.ROOMS
+		include	"asm/enhanced/pyramids.asm"
+	ELSE
+		include	"asm/original/pyramids.asm"
+	ENDIF
+	.FLOOR1:	equ DATA_RANDOMIZE_PYRAMID -7
+	.FLOOR2:	equ DATA_RANDOMIZE_PYRAMID +(7*4) -5
+	.FLOOR3:	equ DATA_RANDOMIZE_PYRAMID +(7*4) +(5*4) -3
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
