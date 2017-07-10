@@ -13,6 +13,8 @@
 	GTTRIG:	equ $00d8 ; Get trigger status
 
 ; MSX system variables
+	CLIKSW:	equ $f3db ; Keyboard click sound
+	RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
 	FORCLR:	equ $f3e9 ; Foreground colour
 	BAKCLR:	equ $f3ea ; Background colour
 	BDRCLR:	equ $f3eb ; Border colour
@@ -43,28 +45,38 @@
 
 ; -----------------------------------------------------------------------------
 CFG_ENHANCEMENTS:	; Uncomment to use enchanced...
-	; .FONT:	; ...font
-	; .SPRITES:	; ...sprites
-	; .CHARSET:	; ...graphical charset
-	; .ROOMS:	; ...room and pyramid definition
+	.FONT:		; ...font
+	.SPRITES:	; ...sprites
+	.CHARSET:	; ...graphical charset
+	.ROOMS:		; ...room and pyramid definition
 	
 CFG_COLOR:
 	.SKULL:		equ 15	; 15
-	.SCORPION:	equ 9	; 9
+	.SCORPION:	equ 14	; 9
 	.BAT:		equ 1	; 1
-	.PLAYER:	equ 11	; 11
+	.PLAYER:	equ 14	; 11
 	.PLAYER_GUN:	equ 15	; 15
 	.BULLET:	equ 15	; 15
 	.EXPLOSION:	equ 6	; 6
-	.DOOR_0:	equ 3	; 3
-	.DOOR_1:	equ 5	; 7
-	.DOOR_2:	equ 7	; 8
+	.DOOR_0:	equ 15	; 3
+	.DOOR_1:	equ 7	; 7
+	.DOOR_2:	equ 15	; 8
 	
 	.BG:		equ 4	; 4
 	.BG_SPHYNX:	equ 1	; 1
 	.BG_DEAD_1:	equ 6	; 6
-	.BG_DEAD_2:	equ 8	; 4
-	.BG_EXIT:	equ 3	; 3
+	.BG_DEAD_2:	equ 4	; 4
+	.BG_EXIT:	equ 2	; 3
+	
+CFG_HUD:			; $yyxx coordinates
+	.HIGH_COORDS:		equ $081A ; 0819h
+	.SCORE_COORDS:		equ $0B1A ; 0B19h
+	.AIR_LEFT_COORDS:	equ $0E1C ; 0E19h
+	.ROOM_COORDS:		equ $101E ; 101Dh
+	.LIVES_COORDS:		equ $171A ; 1719h
+	
+CFG_OTHERS:
+	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -77,20 +89,24 @@ ROM_START:
 
 ; Entry Point
 .INIT:
+; color 15, 0, 1
+	ld	a,0Fh
+	ld	(FORCLR),a
+	xor	a
+	ld	(BAKCLR),a
+	inc	a
+	ld	(BDRCLR),a
+	
 ; screen 2
 	call	INIGRP
-	
 ; screen ,2
 	ld	bc,0E201h	; address or value?
 	call	WRTVDP
 	call	CLRSPR
-	
-; color 15, 0, 1
-	ld	a,0Fh
-	ld	b,00h
-	ld	c,01h
-	call	COLOR_A_B_C
-	
+; screen ,,0
+	xor	a
+	ld	[CLIKSW], a
+		
 ; CLS (with custom "blank" characteR)
 	ld	hl,NAMTBL
 	ld	bc,NAMTBL.SIZE
@@ -102,13 +118,10 @@ ROM_START:
 	ld	de,CHRTBL
 	ld	bc,DATA_FONT.SIZE
 	call	LDIRVM_3_BANKS
-	
-; init sprites
-	ld	hl,DATA_SPRTBL
-	ld	de,SPRTBL
-	ld	bc,$23 * $20 ; 23 sprites x 32 bytes
-	call	LDIRVM
-	
+	ld	a, 15 << 4 or 0
+	ld	hl,CLRTBL
+	ld	bc,CLRTBL.SIZE
+	call	FILVRM
 ; Init CHRTBL/CLRTBL
 	ld	hl, DATA_CHARSET.CHR
 	ld	de, CHRTBL + $30 * $08
@@ -117,7 +130,6 @@ ROM_START:
 	ld	hl, DATA_CHARSET.CLR
 	ld	de, CLRTBL + $30 * $08
 	call	LDIRVM_3_BANKS
-	
 ; Init CHRTBL/CLRTBL (last character)
 	ld	hl, DATA_CHARSET.CHR_FF
 	ld	de, CHRTBL + $FF * $08
@@ -126,130 +138,137 @@ ROM_START:
 	ld	hl, DATA_CHARSET.CLR_FF
 	ld	de, CLRTBL + $FF * $08
 	call	LDIRVM_3_BANKS
+; init sprites
+	ld	hl,DATA_SPRTBL
+	ld	de,SPRTBL
+	ld	bc,DATA_SPRTBL.SIZE
+	call	LDIRVM
 	
 ; Init on-screen texts
 	ld	hl,LITERAL.MSX
 	ld	de,080Dh
 	ld	b,03h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.PYRAMID_WARP
 	ld	de,0A09h
 	ld	b,0Ch
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.COPYRIGHT
 	ld	de,0C05h
 	ld	b,14h
-	call	WRTVRM_CHARS
-	ld	hl,LITERAL.HIT_SPACE_KEY
-	ld	de,1008h
-	ld	b,0Dh
-	call	WRTVRM_CHARS
-
-; Waits for trigger
-.L81EC: call	GTTRIG_ANY
-	or	a
-	jr	nz,NEW_GAME_ONCE
+	call	PRINT
 	
-; Increases counter
-	ld	a,(aux.frame_counter_2)
-	inc	a
-	ld	(aux.frame_counter_2),a
-; Blinks text
-	ld	hl,LITERAL.HIT_SPACE_KEY
-	and	80h
-	jr	z,.L8203
-	ld	hl,LITERAL.BLANK_x13
-.L8203: ld	de,1008h
-	ld	b,0Dh
-	call	WRTVRM_CHARS
-	jr	.L81EC
-; -----------------------------------------------------------------------------
-
-	; Referenced from 81F0
-
-; -----------------------------------------------------------------------------
-NEW_GAME_ONCE:
+; "Hit space key"
+	ld	de, $1008
+	call	HIT_SPACE_KEY
+	
 ; color ,,4
-.L820D:	ld	c,07h
+	ld	c,07h
 	ld	b,CFG_COLOR.BG
 	call	WRTVDP
 	
-; Score, high score = 0
-	xor	a
-	ld	bc,0000h
-	ld	(game.high_score_bcd),a
-	ld	(game.high_score_bcd +1),bc
-	ld	(game.score_bcd),a
-	ld	(game.score_bcd +1),bc
+; Fills in playground
+	ld	de,0001h
+	ld	b,18h
+	ld	c,18h
+.LOOP:	call	.SUB
+	jr	z, .CONT
+	jr	.LOOP
 	
+.SUB:	push	de
+	push	bc
+	ld	hl,LITERAL.WALL_x25_L
+	call	PRINT
+	pop	bc
+	pop	de
+	inc	d
+	dec	c
+	push	de
+	push	bc
+	ld	hl,LITERAL.WALL_x25_H
+	call	PRINT
+	pop	bc
+	pop	de
+	inc	d
+	dec	c
+	ret
+.CONT:
+
 ; Prints HUD
 	ld	hl,LITERAL.DASHES
 	ld	de,0019h
 	ld	b,07h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.PYRAMID
 	ld	de,0119h
 	ld	b,07h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.DASHES
 	ld	de,0219h
 	ld	b,07h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.TnESOFT
 	ld	de,0419h
 	ld	b,07h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.Y1983
 	ld	de,051Bh
 	ld	b,04h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.HIGH
 	ld	de,0719h
 	ld	b,04h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.SCORE
 	ld	de,0A19h
 	ld	b,05h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.ROOM
 	ld	de,1019h
 	ld	b,04h
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.AIR
 	ld	de,0D19h
 	ld	b,03h
-	call	WRTVRM_CHARS
+	call	PRINT
 
-	; Referenced from 829E
-
-; Fills in playground
-	ld	hl,LITERAL.WALL_x25
-	ld	de,0001h
-	ld	b,18h
-	ld	c,18h
-.L8293: push	hl
-	push	de
-	push	bc
-	call	WRTVRM_CHARS
-	pop	bc
-	pop	de
-	pop	hl
-	inc	d
-	dec	c
-	jr	nz,.L8293
+; High score = 0
+	xor	a
+	ld	bc,0000h
+	ld	(game.high_score_bcd),a
+	ld	(game.high_score_bcd +1),bc
 	
-; Sprite colors
-	ld	a,CFG_COLOR.SKULL ; 0Fh
-	ld	(skull.spratr_color),a
-	ld	(bullet.spratr_color),a
-	
+; Sprite patterns, colors and planes
 	ld	a,CFG_COLOR.SCORPION ; 09h
 	ld	(scorpion1.spratr_color),a
 	ld	(scorpion2.spratr_color),a
+	ld	a,12h
+	ld	(scorpion1.base_pattern),a
+	ld	(scorpion2.base_pattern),a
 	
 	ld	a,CFG_COLOR.BAT ; 01h
 	ld	(bat1.spratr_color),a
 	ld	(bat2.spratr_color),a
+	ld	a,14h
+	ld	(bat1.base_pattern),a
+	ld	(bat2.base_pattern),a
+
+	; ld	a,16h
+	; ld	(unused_enemy_slot1.base_pattern),a
+	; ld	(unused_enemy_slot2.base_pattern),a
+	
+	ld	a,04h
+	ld	(scorpion1.sprite_plane),a
+	inc	a
+	ld	(bat1.sprite_plane),a ; $05
+	; inc	a
+	; ld	(unused_enemy_slot1.sprite_plane),a ; $06
+	inc	a
+	ld	(scorpion2.sprite_plane),a ; $07
+	inc	a
+	ld	(bat2.sprite_plane),a ; $08
+	; inc	a
+	; ld	(unused_enemy_slot2.sprite_plane),a ; $09
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8E07
@@ -257,19 +276,9 @@ NEW_GAME_ONCE:
 
 ; -----------------------------------------------------------------------------
 NEW_GAME:
-; Erases lives
-.L82B8:	ld	b,06h
-	ld	de,1719h
-	ld	hl,LITERAL.BLANK_x6
-	call	WRTVRM_CHARS
 ; Five lives
 	ld	a,05h
 	ld	(game.lives),a
-; Draws lives in screen
-	ld	b,a
-	ld	de,1719h
-	ld	hl,LITERAL.LIVES_x6
-	call	WRTVRM_CHARS
 ; First pyramid (extra time)
 	xor	a
 	ld	(game.first_pyramid),a
@@ -278,7 +287,8 @@ NEW_GAME:
 	ld	bc,0000h
 	ld	(game.score_bcd),a
 	ld	(game.score_bcd +1),bc
-	ld	de,0B19h
+	
+	ld	de,CFG_HUD.SCORE_COORDS
 	call	PRINT_SCORE
 ; ------VVVV----falls through--------------------------------------------------
 
@@ -288,84 +298,40 @@ NEW_GAME:
 ; -----------------------------------------------------------------------------
 NEW_PYRAMID:
 ; Room 0
-.L82E7:	xor	a
+	xor	a
 	ld	(pyramid.room_index),a
 	
-; Chooses a random first floor
-	call	RANDOMIZE
-	and	03h
-	inc	a
-	ld	b,a ; b = 1..4
+; Builds the pyramid
+	ld	de, pyramid.room_array
 	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR1
-	ld	de,0007h ; 7 rooms
-.L82F8: add	hl,de
-	djnz	.L82F8
-; Copies the random first floor
-	ld	b,07h ; 7 rooms
-	ld	ix,pyramid.room_array
-.L8301:	ld	a,(hl)
-	inc	hl
-	ld	(ix+00h),a
-	inc	ix
-	djnz	.L8301
-; Chooses a random second floor
-	call	RANDOMIZE
-	and	03h
-	inc	a
+	ld	bc,0007h ; 7 rooms
+	call	RANDOMIZE_FLOOR
 	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR2
-	ld	de,0005h ; 5 rooms
-	ld	b,a ; b = 1..4
-.L8317:	add	hl,de
-	djnz	.L8317
-; Copies the random first floor
-	ld	b,05h ; 5 rooms
-.L831C:	ld	a,(hl)
-	inc	hl
-	ld	(ix+00h),a
-	inc	ix
-	djnz	.L831C
-; Chooses a random third floor
-	call	RANDOMIZE
-	and	03h
-	inc	a
+	ld	bc,0005h ; 5 rooms
+	call	RANDOMIZE_FLOOR
 	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR3
-	ld	de,0003h ; 3 rooms
-	ld	b,a ; b = 1..4
-.L8332:	add	hl,de
-	djnz	.L8332
-; Copies the random third floor
-	ld	b,03h ; 3 rooms
-.L8337:	ld	a,(hl)
-	inc	hl
-	ld	(ix+00h),a
-	inc	ix
-	djnz	.L8337
-; Sets the sphynx room in the fourth floor
-	ld	a,10h
-	ld	(ix+00h),a
+	ld	bc,0003h ; 3 rooms
+	call	RANDOMIZE_FLOOR
+	ld	a,10h ; (sphynx room)
+	ld	(de),a
 	
 ; Prints the pyramid in the HUD
-	ld	hl,LITERAL.ROOMS_x7
 	ld	de,1519h
 	ld	b,07h ; 7 rooms
-.L834D:	push	hl
-	push	de
-	push	bc
-	call	WRTVRM_CHARS
-	pop	bc
-	pop	de
-	pop	hl
+.L834D:	push	bc
+	ld	hl,LITERAL.ROOMS_x7
+	call	PRINT
 	inc	e ; destination += (+1, 1)
 	dec	d
-	dec	b ; length -= 2
+	pop	bc ; length -= 2
+	dec	b
 	dec	b
 	ld	a,01h ; if more than one room, loops
 	cp	b
 	jr	nz,.L834D
 ; Prints the sphynx room
-	ld	de,121Ch	; address or value?
 	ld	a,$52 ; ($52 = sphynx room)
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 	
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
@@ -377,23 +343,20 @@ NEW_PYRAMID:
 ; -----------------------------------------------------------------------------
 DEC_LIVES_AND_NEW_ROOM:
 ; Clear lives
-.L836A:	ld	b,05h
-	ld	hl,LITERAL.BLANK_x6
-	ld	de,1719h	; address or value?
-	call	WRTVRM_CHARS
+	ld	hl,LITERAL.BLANKS
+	ld	de,CFG_HUD.LIVES_COORDS
+	ld	b,05h
+	call	PRINT
 ; Decreases lives
 	ld	a,(game.lives)
 	dec	a
 	ld	(game.lives),a
-; If no lives, go to GAME OVER
-	jp	m,GAME_OVER
+	jp	m,GAME_OVER ; (<0 lives = GAME_OVER)
 ; Prints lives
-	or	a
 	jr	z,NEW_ROOM ; (no lives to print)
-	ld	b,a
-	ld	de,1719h
 	ld	hl,LITERAL.LIVES_x6
-	call	WRTVRM_CHARS
+	ld	b,a
+	call	PRINT
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8380, 89DE
@@ -405,10 +368,10 @@ NEW_ROOM:
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
 ; Hides the sprites (one by one)
-	ld	b,00h ; 256 sprites (!?)
 	ld	hl,SPRATR
-.L8394:	ld	a,SPAT_OB
-	call	WRTVRM
+	ld	a,SPAT_OB
+	ld	b, $20
+.L8394:	call	WRTVRM
 	inc	hl
 	inc	hl
 	inc	hl
@@ -459,19 +422,19 @@ NEW_ROOM:
 	rra
 	rra
 	and	0Fh
-	ld	de,101Dh
-	call	WRTVRM_1x1_CHAR
+	ld	de,CFG_HUD.ROOM_COORDS
+	call	PRINT_CHAR
 ; Prints the room number (units)
 	ld	a,(game.current_room)
 	add	a,00h
 	daa
 	and	0Fh
-	ld	de,101Eh
-	call	WRTVRM_1x1_CHAR
+	ld	de,CFG_HUD.ROOM_COORDS +1
+	call	PRINT_CHAR
 	
 ; Points to the right room data
 	ld	hl,DATA_ROOMS - $0022
-	ld	de,0022h	; address or value?
+	ld	de,0022h
 	ld	a,(game.current_room)
 	ld	b,a
 .L83F7:	add	hl,de
@@ -479,68 +442,227 @@ NEW_ROOM:
 
 ; Prints the room
 
-; param hl: room data pointer
-	xor	a
-	ld	(aux.frame_counter_2),a
 ; For each row
-.L83FE:	xor	a ; (for the character counter)
-; Reads first two bytes in BC
-	ld	c,(hl)
+	ld	d, $01
+.ROW:
+; Reads two bytes from the data
+	ld	c, (hl)
 	inc	hl
-	ld	b,(hl)
+	ld	b, (hl)
 	inc	hl
-; For each character
-.L8403:	sla	b ; rotates BC to left (first bit to carry)
+; (preserves data pointer)	
+	push	hl	
+; For each column
+	ld	e, $02
+.COLUMN:
+; (preserves data bytes and target pointer)
+	push	de
+; Is the first bit set?
+	sla	b
 	rl	c
-; (preserves everything)
-	push	hl
 	push	bc
-	push	af
-; carry?
-	jr	nc,.L841C ; no carry
-; yes: e = 2*a (x)
-	inc	a
-	add	a,a
-	ld	e,a
-; d = 2*aux (y)
-	ld	a,(aux.frame_counter_2)
-	add	a,a
-	inc	a
-	ld	d,a
-; Prints wall
-	ld	a,30h		; '0'
-	call	WRTVRM_2x2_CHAR
-	jr	.L8428
+	jr	nc,.EMPTY ; no
+; (wall)
+	ld	a,30h
+	call	PRINT_TILE
+	jr	.BIT_OK
+.EMPTY:	
+	call	CLEAR_TILE
+.BIT_OK:
 
-; no carry: e = 2*a (x)
-.L841C:	inc	a
-	add	a,a
-	ld	e,a
-; d = 2*aux (y)
-	ld	a,(aux.frame_counter_2)
-	add	a,a
-	inc	a
-	ld	d,a
-; Prints blank space
-	call	WRTVRM_2x2_BLANK
-
-; (restores everything)
-.L8428:	pop	af
+; (restores data bytes and target pointer)
 	pop	bc
-	pop	hl
-; Next character (up to 11)
-	inc	a
-	cp	0Bh
-	jr	nz,.L8403
-; Next row (up to 11)
-	ld	a,(aux.frame_counter_2)
-	inc	a
-	ld	(aux.frame_counter_2),a
-	cp	0Bh
-	jr	nz,.L83FE
+	pop	de
+; x++
+	inc	e
+	inc	e
+; x==24?
+	ld	a, 24
+	cp	e
+	jr	nz, .COLUMN
 	
-; Initializes game vars
+.END_ROW:
+; (restores data pointer)
+	pop	hl
+; y++
+	inc	d
+	inc	d
+; y==23?
+	ld	a, 23
+	cp	d
+	jr	nz, .ROW
 
+; Is sphynx room?
+	ld	a,(game.current_room)
+	cp	10h
+	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param hl: room data pointer (after walls definition)
+PRINT_ROOM_DECORATION:
+; Initializes boxes
+	ld	ix,box1
+	call	NEW_BOX
+	ld	ix,box2
+	call	NEW_BOX
+	ld	ix,box3
+	call	NEW_BOX
+	
+; Initializes next
+	ld	ix,nest
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	push	hl ; (preserve)
+; (prints nest)
+	call	TO_VRAM_COORDINATES
+	ld	a,$48 ; 54h
+	call	PRINT_TILE
+	pop	hl ; (restore)
+	
+; Initializes doors
+	ld	ix,door1
+	call	NEW_DOOR
+	ld	ix,door2
+	call	NEW_DOOR
+	
+; Prints exit zone
+	ld	de,090Ah
+	ld	a,$40
+	call	PRINT_TILE
+	ld	de,090Ch
+	ld	a,$40
+	call	PRINT_TILE
+	ld	de,090Eh
+	ld	a,$40
+	call	PRINT_TILE
+	ld	de,0D0Ah
+	ld	a,$40
+	call	PRINT_TILE
+	ld	de,0D0Ch
+	ld	a,$40
+	call	PRINT_TILE
+	ld	de,0D0Eh
+	ld	a,$40
+	call	PRINT_TILE
+
+; Initial player coordinates	
+	ld	a,58h
+	
+	jp	INIT_GAME_LOOP
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param ix:
+NEW_BOX:
+; Read box data
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	push	hl
+; Initializes coordinates and other values	
+	call	TO_VRAM_COORDINATES
+	xor	a
+	ld	(ix+00h),a ; box.is_opening
+; Prints box
+	ld	a,34h ; ($34 = box)
+	call	PRINT_TILE
+; (restore data pointer and end)
+	pop	hl
+	ret
+; -----------------------------------------------------------------------------
+	
+; -----------------------------------------------------------------------------
+; param ix:
+NEW_DOOR:
+; Read door data
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	push	hl
+	
+; MSB determines door type  (0 = v, 1 = ^)
+	ld	b,00h ; b = 0 = door down (v)
+	ld	a,e ; (preserves e)
+	and	7Fh
+	cp	e
+	jr	z,.DOWN ; no
+	inc	b ; yes: b = 1 = door up (^)
+.DOWN:	ld	(ix+00h),b ; door.type
+
+; saves door coordinates
+	ld	e,a ; (restores e)
+	inc	ix
+	push	ix ; (preserves pointer to spratr_y)
+	call	TO_VRAM_COORDINATES
+; saves door pattern based on b
+	ld	a,b
+	add	a,18h ; a = 18 or 19
+	add	a,a ; a *= 4
+	add	a,a
+	ld	(ix),a ; door.spratr_pat
+; saves door color
+	ld	a,CFG_COLOR.DOOR_0
+	ld	(ix + 1),a ; door.spratr_color
+; Prints door sprite
+	pop	de ; (restores pointer to spratr_y)
+	ld	a,b ; sprite plane according b
+	call	PUT_SPRITE
+; (restore data pointer and end)
+	pop	hl
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+PRINT_SPHYNX_ROOM_DECORATION:
+; Prints single box
+	ld	de,0B0Ch	; address or value?
+	ld	a,34h ; ($34 = box)
+	call	PRINT_TILE
+
+; Do not initialize doors
+	xor	a
+	ld	(door1.spratr_y),a
+	ld	(door2.spratr_y),a
+	
+; ; Prints "6" (for "ROOM 16")
+	; ld	a,06h
+	; ld	de,CFG_HUD.ROOM_COORDS + 1
+	; call	PRINT_CHAR
+	
+; Player initial position
+	ld	a,98h
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param a: initial value for player.spratr_y
+INIT_GAME_LOOP:
+; Player initial position
+	ld	hl,player.spratr_y
+	push	hl
+	ld	(hl),a
+	inc	hl
+	ld	a,60h
+	ld	(hl),a
+	inc	hl
+	push	hl
+	
+; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
+	ld	hl,0BB8h ; 3000
+	ld	a,(game.first_pyramid)
+	or	a
+	jr	z,.L862E
+	ld	hl,07D0h ; 2000
+.L862E:	ld	(game.air_left),hl
+; Prints air left
+	ld	de,CFG_HUD.AIR_LEFT_COORDS
+	call	PRINT_AIR_LEFT
+
+; Initializes game vars
 	xor	a
 	ld	(skull.status),a
 	ld	(scorpion1.status),a
@@ -555,383 +677,24 @@ NEW_ROOM:
 	ld	(exit.blink_flag),a
 	ld	(exit.has_diamond),a
 	ld	(player_has_gun),a
-	ld	a,01h
+	
+; Sets player direction
+	ld	a,CFG_OTHERS.PLAYER_INITIAL_DIR
 	ld	(new_player_direction),a
-	ld	a,12h
-	ld	(scorpion1.base_pattern),a
-	ld	(scorpion2.base_pattern),a
-	ld	a,14h
-	ld	(bat1.base_pattern),a
-	ld	(bat2.base_pattern),a
-	ld	a,16h
-	ld	(unused_enemy_slot1.base_pattern),a
-	ld	(unused_enemy_slot2.base_pattern),a
-	ld	a,04h
-	ld	(scorpion1.sprite_plane),a
-	inc	a
-	ld	(bat1.sprite_plane),a ; $05
-	inc	a
-	ld	(unused_enemy_slot1.sprite_plane),a ; $06
-	inc	a
-	ld	(scorpion2.sprite_plane),a ; $07
-	inc	a
-	ld	(bat2.sprite_plane),a ; $08
-	inc	a
-	ld	(unused_enemy_slot2.sprite_plane),a ; $09
-	jr	PRINT_ROOM_DECORATION
-; -----------------------------------------------------------------------------
-
-	; Referenced from 85E6, 8634, 8A47
-	; --- START PROC L849B ---
-
-; -----------------------------------------------------------------------------
-; param hl: game.air_left value
-; param de: VRAM destination
-PRINT_AIR_LEFT:
-; Computes air_left_bcd (first digit)
-.L849B:	ld	bc,03E8h ; 1000
-	xor	a
-.L849F:	sbc	hl,bc
-	inc	a
-	jr	nc,.L849F
-	add	hl,bc
-	dec	a
-	ld	(game.air_left_bcd),a
-; (second digit)
-	ld	bc,0064h ; 100
-	xor	a
-.L84AD:	sbc	hl,bc
-	inc	a
-	jr	nc,.L84AD
-	add	hl,bc
-	dec	a
-	ld	(game.air_left_bcd +1),a
-; (third digit)
-	ld	bc,000Ah ; 10
-	xor	a
-.L84BB:	sbc	hl,bc
-	inc	a
-	jr	nc,.L84BB
-	add	hl,bc
-	dec	a
-	ld	(game.air_left_bcd +2),a
-; (last digit)
-	ld	a,l
-	ld	(game.air_left_bcd +3),a
-; Prints air left (BCD)
-	ld	hl,game.air_left_bcd
-	ld	b,04h
-	jp	WRTVRM_CHARS
-; -----------------------------------------------------------------------------
-
-	; Referenced from 8499
-	; --- START PROC L84D1 ---
-
-; -----------------------------------------------------------------------------
-PRINT_ROOM_DECORATION:
-; param hl: room data pointer (after walls definition)
-; Is sphynx room?
-.L84D1:	ld	a,(game.current_room)
-	cp	10h
-	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
+	ld	(player.direction),a
 	
-; no: Prints box1 in screen
-	ld	ix,box1
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	call	TO_VRAM_COORDINATES
-	xor	a
-	ld	(ix+00h),a
-	push	hl
-	ld	a,34h ; ($34 = box)
-	call	WRTVRM_2x2_CHAR
-	pop	hl
-	
-; Prints box2 in screen
-	ld	ix,box2
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	call	TO_VRAM_COORDINATES
-	xor	a
-	ld	(ix+00h),a
-	push	hl
-	ld	a,34h ; ($34 = box)
-	call	WRTVRM_2x2_CHAR
-	pop	hl
-	
-; Prints box3 in screen
-	ld	ix,box3
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	call	TO_VRAM_COORDINATES
-	xor	a
-	ld	(ix+00h),a
-	push	hl
-	ld	a,34h ; ($34 = box)
-	call	WRTVRM_2x2_CHAR
-	pop	hl
-	
-; Prints nest in screen
-	ld	ix,nest
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	call	TO_VRAM_COORDINATES
-	push	hl
-	ld	a,$48 ; 54h
-	call	WRTVRM_2x2_CHAR
-	pop	hl
-	
-; Prints door1 in screen
-	ld	ix,door1
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	ld	b,00h ; b = 0 = door down (v)
-; Is the upper bit set?
-	ld	a,e ; (preserves e)
-	and	7Fh
-	cp	e
-	jr	z,.L853E ; no
-; yes
-	inc	b ; b = 1 = door up (^)
-; saves door type
-.L853E: ld	(ix+00h),b
-	inc	ix
-; saves door coordinates
-	ld	e,a
-	call	TO_VRAM_COORDINATES
-	inc	ix
-; saves door color
-	ld	a,CFG_COLOR.DOOR_0 ; 03h
-	ld	(ix+00h),a
-; saves door1 pattern based on b
-	push	hl
-	ld	a,b
-	; add	a,a
-	add	a,18h
-	add	a,a
-	add	a,a
-	ld	(door1.spratr_pat),a
-	ld	de,door1.spratr_y
-	ld	a,00h
-	call	PUT_SPRITE
-	pop	hl
-
-; Prints door2 in screen
-	ld	ix,door2
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	ld	b,00h ; b = 0 = door down (v)
-; Is the upper bit set?
-	ld	a,e ; (preserves e)
-	and	7Fh
-	cp	e
-	jr	z,.L8572 ; no
-; yes
-	inc	b ; b = 1 = door up (^)
-; saves door type
-.L8572:	ld	(ix+00h),b
-	inc	ix
-; saves door coordinates
-	ld	e,a
-	call	TO_VRAM_COORDINATES
-	inc	ix
-; saves door color
-	ld	a,CFG_COLOR.DOOR_0 ; 03h
-	ld	(ix+00h),a
-; saves door2 pattern based on b
-	ld	a,b
-	; add	a,a
-	add	a,18h
-	add	a,a
-	add	a,a
-	ld	(door2.spratr_pat),a
-	ld	de,door2.spratr_y
-	ld	a,01h
-	call	PUT_SPRITE
-	
-; Prints exit zone
-	ld	a,$40 ; 4Ch
-	ld	de,090Ah	; address or value?
-	push	af
-	push	de
-	call	WRTVRM_2x2_CHAR
-	pop	de
-	pop	af
-; (+2,+0)
-	inc	e
-	inc	e
-	push	af
-	push	de
-	call	WRTVRM_2x2_CHAR
-	pop	de
-	pop	af
-; (+2,+0)
-	inc	e
-	inc	e
-	push	af
-	push	de
-	call	WRTVRM_2x2_CHAR
-	pop	de
-	pop	af
-; (+0,+4)
-	inc	d
-	inc	d
-	inc	d
-	inc	d
-	push	af
-	push	de
-	call	WRTVRM_2x2_CHAR
-	pop	de
-	pop	af
-; (-2,+0)
-	dec	e
-	dec	e
-	push	af
-	push	de
-	call	WRTVRM_2x2_CHAR
-	pop	de
-	pop	af
-; (-2,+0)
-	dec	e
-	dec	e
-	call	WRTVRM_2x2_CHAR
-	jr	INIT_GAME_LOOP_NO_SPHYNX
-; -----------------------------------------------------------------------------
-
-	; Referenced from 84D6
-	
-; -----------------------------------------------------------------------------
-PRINT_SPHYNX_ROOM_DECORATION:
-; Prints single box
-.L85CC:	ld	de,0B0Ch	; address or value?
-	ld	a,34h ; ($34 = box)
-	call	WRTVRM_2x2_CHAR
-; Prints air value
-	ld	hl,0BB8h ; 3000
-	ld	a,(game.first_pyramid)
-	or	a
-	jr	z,.L85E0
-	ld	hl,07D0h ; 2000
-.L85E0:	ld	(game.air_left),hl
-	ld	de,0E19h
-	call	PRINT_AIR_LEFT
-; Prints...
-	ld	a,06h
-	ld	de,101Eh	; address or value?
-	call	WRTVRM_1x1_CHAR
-; Do not use doors
-	xor	a
-	ld	(door1.spratr_y),a
-	ld	(door2.spratr_y),a
-; Player initial position
-	ld	hl,player.spratr_y
-	ld	a,98h
-	ld	(hl),a
-	inc	hl ; player.spratr_x
-	ld	a,60h
-; ...
-	jr	INIT_GAME_LOOP
-; -----------------------------------------------------------------------------
-
-	; Referenced from 84E1, 84F7, 850D, 8523, 8544, 8578
-	; --- START PROC L8603 ---
-	
-; -----------------------------------------------------------------------------
-; Translates logical coordinates into NAMTBL and SPRATR coordinates
-; param ix: SPRATR buffer pointer
-; param de: logical coordinates (0..10)
-; return [ix  ]: SPRATR y (16d+8)
-; return [ix+1]: SPRATR x (16e+16)
-; return ix:	ix+2
-; return de:	NAMTBL yx (d=2d+1, e=2e+2)
-TO_VRAM_COORDINATES:
-; [ix++] = 16d+8
-.L8603:	ld	a,d
-	add	a,a
-	inc	a
-	add	a,a
-	add	a,a
-	add	a,a
-	ld	(ix+00h),a
-	inc	ix
-; d = 2d+1
-	ld	a,d
-	add	a,a
-	inc	a
-	ld	d,a
-; [ix++] = 16e+16 
-	ld	a,e
-	inc	a
-	add	a,a
-	add	a,a
-	add	a,a
-	add	a,a
-	ld	(ix+00h),a
-	inc	ix
-; e = 2e+2
-	ld	a,e
-	inc	a
-	add	a,a
-	ld	e,a
-	ret
-; -----------------------------------------------------------------------------
-
-	; Referenced from 85CA
-	; --- START PROC L8622 ---
-
-; -----------------------------------------------------------------------------
-INIT_GAME_LOOP_NO_SPHYNX:
-; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
-.L8622:	ld	hl,0BB8h ; 3000
-	ld	a,(game.first_pyramid)
-	or	a
-	jr	z,.L862E
-	ld	hl,07D0h ; 2000
-.L862E:	ld	(game.air_left),hl
-	ld	de,0E19h	; address or value?
-	call	PRINT_AIR_LEFT
-; Initial player coordinates	
-	ld	hl,player.spratr_y
-	ld	a,58h		; 'X'
-	ld	(hl),a
-	inc	hl
-	ld	a,60h		; '`'
-; ------VVVV----falls through--------------------------------------------------
-
-	; Referenced from 8601
-	; --- START PROC L8640 ---
-
-; -----------------------------------------------------------------------------
-; param hl: player.spratr_x
-; param a: value for player.spratr_x
-INIT_GAME_LOOP:
-.L8640:	ld	(hl),a
 ; Sets player pattern
-	inc	hl
-	ld	a,$0c ; down (original 04h up)
+	pop	hl ; player.spratr_pat
+	add	a ; a = CFG_OTHERS.PLAYER_INITIAL_DIR *4
+	add	a
 	ld	(hl),a
 ; Sets player color
-	inc	hl
+	inc	hl ; player.spratr_color
 	ld	a,CFG_COLOR.PLAYER ; 0Bh
 	ld	(hl),a
-; Sets player direction
-	inc	hl
-	ld	a,$03 ; down (original = 01h up)
-	ld	(hl),a
+	
 ; Put player sprite
-	ld	de,player.spratr_y
+	pop	de ; player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
 	
@@ -994,7 +757,7 @@ GAME_LOOP:
 	jr	z,.L86AC
 	inc	b ; ($64 = current room)
 .L86AC:	ld	a,b
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 	
 ; Sets flag to check wall for player
 	ld	a,0FFh
@@ -1481,10 +1244,10 @@ GAME_LOOP.BULLET_OK:
 	jr	z,.L89B1
 ; (prints the exit)
 	ld	a,$44 ; 50h
-	call	WRTVRM_2x2_CHAR
+	call	PRINT_TILE
 	jr	.L89B4
 ; (clears the exit)
-.L89B1:	call	WRTVRM_2x2_BLANK
+.L89B1:	call	CLEAR_TILE
 
 ; Compares player and exit coordinates
 .L89B4:	ld	hl,player.spratr_y
@@ -1502,13 +1265,12 @@ GAME_LOOP.BULLET_OK:
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a,$51
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 ; Plays exit sound
 	call	PLAY_SOUND_EXIT
 ; Scores 500 points
 	ld	de,0500h
 	call	ADD_SCORE
-	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 ; Starts next room
 	jp	NEW_ROOM
 ; -----------------------------------------------------------------------------
@@ -1578,7 +1340,7 @@ GAME_LOOP.EVERYTHING_OK:
 	dec	hl
 	ld	(game.air_left),hl
 ; Updates HUD
-	ld	de,0E19h
+	ld	de,CFG_HUD.AIR_LEFT_COORDS
 	call	PRINT_AIR_LEFT
 ; If air is 0
 	ld	hl,(game.air_left)
@@ -1603,7 +1365,7 @@ GAME_LOOP.EVERYTHING_OK:
 	srl	a
 	ld	e,a
 	ld	a,b
-	call	WRTVRM_2x2_CHAR
+	call	PRINT_TILE
 	
 ; Does the player has the diamond?
 	ld	a,(exit.has_diamond)
@@ -1682,7 +1444,7 @@ CHECK_SPHYNX_ROOM_BOX:
 ; Prints the sphynx room in the map
 	ld	a,$52 ; ($62 = sphynx room)
 	ld	de,121Ch	; address or value?
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 ; color ,,1
 	ld	b,CFG_COLOR.BG_SPHYNX
 	ld	c,07h
@@ -1693,35 +1455,18 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	de,2000h ; 2000 points (BCD)
 	call	ADD_SCORE
 ; Prints literal
-	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	ld	de,1206h
 	ld	b,0Eh
 	ld	hl,LITERAL.CONGRATULATIONS
-	call	WRTVRM_CHARS
+	call	PRINT
 	ld	hl,LITERAL.TRY_THE_NEXT_PYRAMID
 	ld	de,1403h
 	ld	b,14h
-	call	WRTVRM_CHARS
-	ld	hl,LITERAL.HIT_SPACE_KEY
+	call	PRINT
+	
+; "Hit space key"
 	ld	de,1606h
-	ld	b,0Dh
-	call	WRTVRM_CHARS
-
-; "HIT SPACE KEY" blinking
-.L8B2B:	call	GTTRIG_ANY
-	or	a
-	jr	nz,.L8B4C
-	ld	a,(aux.frame_counter_2)
-	inc	a
-	ld	(aux.frame_counter_2),a
-	ld	hl,LITERAL.HIT_SPACE_KEY
-	and	80h
-	jr	z,.L8B42
-	ld	hl,LITERAL.BLANK_x13
-.L8B42:	ld	de,1606h	; address or value?
-	ld	b,0Dh
-	call	WRTVRM_CHARS
-	jr	.L8B2B
+	call	HIT_SPACE_KEY
 
 ; screen ,2
 .L8B4C:	ld	c,01h
@@ -1896,10 +1641,10 @@ CHECK_WALL:
 	
 ; -----------------------------------------------------------------------------
 ADD_HL_A:
-.L8C27:	add	a,l
+	add	a,l
 	ld	l,a
-	ld	a,00h
 	adc	a,h
+	sub	l
 	ld	h,a
 	ret
 ; -----------------------------------------------------------------------------
@@ -1917,6 +1662,25 @@ RANDOMIZE:
 	add	a,(iy+00h)
 	ret
 ; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param hl: Source data. One of DATA_RANDOMIZE_PYRAMID.FLOOR*
+; param de: Pointer to the room_array
+; param bc: Number of rooms of the current floor
+; ret de: Updated pointer to the room_array
+RANDOMIZE_FLOOR:
+	call	RANDOMIZE
+	and	03h
+	inc	a ; a = 1..4
+; (skips to the right source)
+.LOOP:	add	hl,bc
+	dec	a
+	jr	nz, .LOOP
+; (copies the sequence)
+	ldir
+	ret
+; -----------------------------------------------------------------------------
+
 
 	; Referenced from 869B, 87E8, 8908, 8969, 8C64, 8E22, 89E1, 8C6C, 8EDD, 8A3A
 	; --- START PROC L8C3C ---
@@ -2163,7 +1927,6 @@ CHECK_ENEMY_BULLET_COLLISION:
 ; Scores 30 points
 	ld	de,0030h
 	call	ADD_SCORE
-	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 ; Removes enemy (RAM)
 	xor	a
 	ld	(ix+05h),a ; .status
@@ -2226,24 +1989,13 @@ GAME_OVER:
 	ld	hl,LITERAL.GAME_OVER
 	ld	de,0808h
 	ld	b,09h
-	call	WRTVRM_CHARS
+	call	PRINT
 
-; Blinks "hit space key" message
-.L8DE6:	call	GTTRIG_ANY
-	or	a
-	jr	nz,.L8E07
-	ld	a,(aux.frame_counter_2)
-	inc	a
-	ld	(aux.frame_counter_2),a
-	ld	hl,LITERAL.HIT_SPACE_KEY
-	and	80h
-	jr	z,.L8DFD
-	ld	hl,LITERAL.BLANK_x13
-.L8DFD:	ld	de,0C06h
-	ld	b,0Dh
-	call	WRTVRM_CHARS
-	jr	.L8DE6
-.L8E07:	jp	NEW_GAME
+; "Hit space key"
+	ld	de,0C06h
+	call	HIT_SPACE_KEY
+	
+	jp	NEW_GAME
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 897F, 89E8, 89FD
@@ -2304,7 +2056,7 @@ OPEN_BOX_DIAMOND:
 	ld	(exit.unused2),a
 ; Prints the diamond
 	ld	a,3Ch
-	call	WRTVRM_2x2_CHAR
+	call	PRINT_TILE
 ; Prepares the mark to opening the door (2 "airs" later)
 	ld	hl,(game.air_left)
 	ld	bc,0002h ; number of "airs"
@@ -2313,8 +2065,7 @@ OPEN_BOX_DIAMOND:
 	ld	(game.air_left_copy),hl
 ; Scores 3000 points
 	ld	de,0300h
-	call	ADD_SCORE
-	jp	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+	jp	ADD_SCORE
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8E49
@@ -2326,11 +2077,10 @@ OPEN_BOX_GUN:
 	ld	(player_has_gun),a
 ; Prints the gun
 	ld	a,38h
-	call	WRTVRM_2x2_CHAR
+	call	PRINT_TILE
 ; Scores 100 points
 	ld	de,0100h
-	call	ADD_SCORE
-	jp	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+	jp	ADD_SCORE
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8E39
@@ -2366,7 +2116,6 @@ OPEN_BOX_SKULL:
 ; Scores 200 points
 	ld	de,0200h
 	call	ADD_SCORE
-	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 	pop	de
 ; Immediatly removes box
 	jr	REMOVE_OPEN_BOX
@@ -2405,7 +2154,7 @@ REMOVE_OPEN_BOX:
 	srl	e
 	srl	e
 	srl	e
-	call	WRTVRM_2x2_BLANK
+	call	CLEAR_TILE
 	jp	SHORT_DELAY
 ; -----------------------------------------------------------------------------
 
@@ -2426,44 +2175,6 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 	DB	38h ; gun
 	DB	3Ch ; jewel
 ; -----------------------------------------------------------------------------
-
-	; Referenced from 8425, 89B1, 8EDA
-	; --- START PROC L8EEB ---
-
-; -----------------------------------------------------------------------------
-WRTVRM_2x2_BLANK:
-.L8EEB:	push	de
-	ld	a,0FFh
-	call	WRTVRM_1x1_CHAR
-	pop	de
-	push	de
-	ld	a,0FFh
-	inc	e
-	call	WRTVRM_1x1_CHAR
-	pop	de
-	inc	d
-	push	de
-	ld	a,0FFh
-	call	WRTVRM_1x1_CHAR
-	pop	de
-	inc	e
-	ld	a,0FFh
-	jp	WRTVRM_1x1_CHAR
-; -----------------------------------------------------------------------------
-
-	; Referenced from 838C, 8B07, 8E73, 89DB, 8D96, 8EB2, 8E86
-	; --- START PROC L8F08 ---
-
-; -----------------------------------------------------------------------------
-PRINT_SCORE_AND_UPDATE_HIGH_SCORE:
-.L8F08:	ld	de,0B19h	; address or value?
-	call	PRINT_SCORE
-	ld	de,0819h	; address or value?
-	jp	UPDATE_HIGH_SCORE
-; -----------------------------------------------------------------------------
-
-	; Referenced from 8367
-	; --- START PROC L8F14 ---
 
 ; -----------------------------------------------------------------------------
 PLAY_START_GAME_MUSIC:
@@ -2939,50 +2650,6 @@ LDIRVM_3_BANKS:
 	ret
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8417, 84EB, 8501, 8517, 8529, 859A, 85A3, 85AC, 85B7, 85C0, 85C7, 85D1, 89AC, 8E5E, 8E7D, 8A72
-	; --- START PROC L9231 ---
-
-	; Referenced from 9300, 8364, 83DC, 83EA, 92E5, 92F1, 8EEE, 8EF6, 8EFE, 8F05, 85EE, 86AD, 8AF4, 89CF
-	; --- START PROC L9236 ---
-	
-; -----------------------------------------------------------------------------
-WRTVRM_2x2_CHAR:
-.L9231:	ex	af,af'
-	ld	a,04h
-	jr	WRTVRM_NxN_CHAR
-
-WRTVRM_1x1_CHAR:
-.L9236:	ex	af,af'
-	ld	a,01h
-
-WRTVRM_NxN_CHAR:
-.L9239:	ld	(aux.how_many_bytes),a
-	ex	af,af'
-	ld	hl,1800h	; address or value?
-	ld	bc,0020h	; address or value?
-.L9243: dec	d
-	jp	m,.L924A
-	add	hl,bc
-	jr	.L9243
-.L924A: inc	d
-	add	hl,de
-	ld	c,a
-	ld	a,(aux.how_many_bytes)
-	ld	b,a
-.L9251: ld	a,c
-	call	WRTVRM
-	dec	b
-	ret	z
-	inc	hl
-	inc	c
-	ld	a,02h
-	cp	b
-	jr	nz,.L9251
-	ld	de,001Eh	; address or value?
-	add	hl,de
-	jr	.L9251
-; -----------------------------------------------------------------------------
-
 	; Referenced from 8F46, 8FAD, 9148, 9130, 9142, 9139, 911E, 8FE5, 9127, 906D, 9091, 904C, 9100, 9106
 	; --- START PROC L9264 ---
 	
@@ -3051,11 +2718,14 @@ ADD_SCORE:
 	adc	a,(hl)
 	daa
 	ld	(hl),a
-	ret
-; -----------------------------------------------------------------------------
+; ------VVVV----falls through--------------------------------------------------
 
-	; Referenced from 8F11
-	; --- START PROC L92A9 ---
+; -----------------------------------------------------------------------------
+PRINT_SCORE_AND_UPDATE_HIGH_SCORE:
+	ld	de,CFG_HUD.SCORE_COORDS
+	call	PRINT_SCORE
+	ld	de,CFG_HUD.HIGH_COORDS
+; ------VVVV----falls through--------------------------------------------------
 	
 ; -----------------------------------------------------------------------------
 UPDATE_HIGH_SCORE:
@@ -3087,16 +2757,10 @@ UPDATE_HIGH_SCORE:
 	jr	WRTVRM_6x_BCD
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 82E4, 8F0B
-	; --- START PROC L92D6 ---
-
 ; -----------------------------------------------------------------------------
 PRINT_SCORE:
 .L92D6:	ld	hl,game.score_bcd
 ; ------VVVV----falls through--------------------------------------------------
-
-	; Referenced from 92D4
-	; --- START PROC L92D9 ---
 
 ; -----------------------------------------------------------------------------
 ; Writes 6 BCD characters
@@ -3112,17 +2776,17 @@ WRTVRM_6x_BCD:
 	xor	a
 	rld
 	push	af
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 	pop	af
 	pop	de
 	pop	hl
 ; Next digit
-	push	hl
 	inc	e
+	push	hl
 	push	de
 	rld
 	push	af
-	call	WRTVRM_1x1_CHAR
+	call	PRINT_CHAR
 	pop	af
 	pop	de
 	pop	hl
@@ -3134,53 +2798,238 @@ WRTVRM_6x_BCD:
 	ret
 ; -----------------------------------------------------------------------------
 
+; -----------------------------------------------------------------------------
+; param hl: game.air_left value
+; param de: VRAM destination
+PRINT_AIR_LEFT:
+; Computes air_left_bcd (first digit)
+.L849B:	ld	bc,03E8h ; 1000
+	xor	a
+.L849F:	sbc	hl,bc
+	inc	a
+	jr	nc,.L849F
+	add	hl,bc
+	dec	a
+	ld	(game.air_left_bcd),a
+; (second digit)
+	ld	bc,0064h ; 100
+	xor	a
+.L84AD:	sbc	hl,bc
+	inc	a
+	jr	nc,.L84AD
+	add	hl,bc
+	dec	a
+	ld	(game.air_left_bcd +1),a
+; (third digit)
+	ld	bc,000Ah ; 10
+	xor	a
+.L84BB:	sbc	hl,bc
+	inc	a
+	jr	nc,.L84BB
+	add	hl,bc
+	dec	a
+	ld	(game.air_left_bcd +2),a
+; (last digit)
+	ld	a,l
+	ld	(game.air_left_bcd +3),a
+; Prints air left (BCD)
+	ld	hl,game.air_left_bcd
+	ld	b,04h
+	jp	PRINT
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Translates logical coordinates into NAMTBL and SPRATR coordinates
+; param ix: SPRATR buffer pointer
+; param de: logical coordinates (0..10)
+; return [ix  ]: SPRATR y (16d+8)
+; return [ix+1]: SPRATR x (16e+16)
+; return ix:	ix+2
+; return de:	NAMTBL yx (d=2d+1, e=2e+2)
+TO_VRAM_COORDINATES:
+; [ix++] = 16d+8
+.L8603:	ld	a,d
+	add	a,a
+	inc	a
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	(ix+00h),a
+	inc	ix
+; d = 2d+1
+	ld	a,d
+	add	a,a
+	inc	a
+	ld	d,a
+; [ix++] = 16e+16 
+	ld	a,e
+	inc	a
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	(ix+00h),a
+	inc	ix
+; e = 2e+2
+	ld	a,e
+	inc	a
+	add	a,a
+	ld	e,a
+	ret
+; -----------------------------------------------------------------------------
 	; Referenced from 81C8, 81D3, 81DE, 81E9, 8208, 9308, 822E, 8239, 8244, 824F, 825A, 8265, 8270, 827B, 8286, 8296, 82C0, 82CF, 8350, 8372, 8389, 8DE3, 8E02, 84CE, 8B12, 8B1D, 8B28, 8B47
 	; --- START PROC L92FC ---
 
 ; -----------------------------------------------------------------------------
-; param hl: ROM/RAM source
-; param b: number of chars
-WRTVRM_CHARS:
-; Writes (hl)
-.L92FC:	push	bc
-	push	de
-	push	hl
-	ld	a,(hl)
-	call	WRTVRM_1x1_CHAR
-	pop	hl
+; param de: VRAM destination
+HIT_SPACE_KEY:
+	ld	hl,.LITERAL
+	ld	b,0Dh
+	call	PRINT
+.LOOP:	push	de
+	call	.BLINK
+	call	GTTRIG_ANY
 	pop	de
-	pop	bc
-; Moves source and target pointers forward
-	inc	hl
-	inc	e
-	djnz	WRTVRM_CHARS
+	or	a
+	ret	nz
+	jr	.LOOP
+	
+.LITERAL:
+	DB	$11, $12, $1D, $FF		; HIT_
+	DB	$1C, $19, $0A, $0C, $0E, $FF	; SPACE_
+	DB	$14, $0E, $22			; KEY
+
+.BLINK:
+; (preparation)
+	ld	hl,.LITERAL
+	ld	b,0Dh
+; Increases counter
+	ld	a,(aux.frame_counter_2)
+	inc	a
+	ld	(aux.frame_counter_2),a
+; Prints text
+	and	80h
+	jr	z,PRINT
+; Clears text
+	ld	hl,LITERAL.BLANKS
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param hl: ROM/RAM source
+; param de: VRAM destination ($yyxx)
+; param b: number of chars
+; ret de: VRAM destination
+PRINT:
+; (preserves de and length)
+	push	de
+	ld	a, b
+	ex	af, af'
+	call	TO_NAMTBL
+; (restores length in c; actually, in bc)
+	ex	af,af'
+	ld	c, a
+	call	LDIRVM
+; (restores de)
+	pop	de
 	ret
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-COLOR_A_B_C:
-; color a,b,c
-.L933A:	ld	(FORCLR),a
-	ld	a,b
-	ld	(BAKCLR),a
-	ld	a,c
-	ld	(BDRCLR),a
-	call	CHGCLR
-; FILVRM the CLRTBL with (a << 4 | b)
-	ld	a,(BAKCLR)
-	ld	b,a
-	ld	a,(FORCLR)
-	sla	b
-	rla
-	sla	b
-	rla
-	sla	b
-	rla
-	sla	b
-	rla
-	ld	hl,CLRTBL
-	ld	bc,CLRTBL.SIZE
-	jp	FILVRM
+; param de: VRAM destination ($yyxx)
+CLEAR_TILE:
+	call	TO_NAMTBL
+	ex	de,hl
+; First row, first char
+	call	.CHAR
+; Second char
+	ld	a, c
+	inc	hl
+	call	.CHAR
+; Second row, first char
+	ld	bc, SCR_WIDTH -1
+	add	hl, bc
+	call	.CHAR
+; Second char
+	inc	l
+	jp	WRTVRM
+	
+.CHAR:
+	push	hl
+	ld	a, $ff
+	call	WRTVRM
+	pop	hl
+	ret
+; -----------------------------------------------------------------------------
+	
+; -----------------------------------------------------------------------------
+; param de: VRAM destination ($yyxx)
+; param a: character to put
+PRINT_TILE:
+	ex	af, af'
+	call	TO_NAMTBL
+	ex	de,hl
+	ex	af,af'
+; First row, first char
+	call	.CHAR
+; Second char
+	ld	a, c
+	inc	hl
+	call	.CHAR
+; Second row, first char
+	ld	a, c
+	ld	bc, SCR_WIDTH -1
+	add	hl, bc
+	call	.CHAR
+; Second char
+	ld	a, c
+	inc	l
+	jp	WRTVRM
+
+; param hl: VRAM destination
+; param a: character to print
+; ret hl: VRAM destination
+; ret c: a + 1
+.CHAR:
+	ld	c, a
+	push	hl
+	call	WRTVRM
+	pop	hl
+	inc	c
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param de: VRAM destination ($yyxx)
+; param a: character to put
+PRINT_CHAR:
+; (preserves char)
+	ex	af, af'
+	call	TO_NAMTBL
+	ex	de,hl
+; (restores char)
+	ex	af,af'
+	jp	WRTVRM
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param de: coordinates $yyxx
+; ret b: 0
+; ret c: 32
+; ret de: NAMTBL coordinates
+; destroys: a, bc
+TO_NAMTBL:
+	push	hl
+	ld	hl, NAMTBL
+	ld	bc, SCR_WIDTH
+	inc	d
+.Y:	dec	d
+	jr	z, .Y_OK
+	add	hl, bc
+	jr	.Y
+.Y_OK:	add	hl, de
+	ex	de, hl
+	pop	hl
+	ret
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3198,18 +3047,25 @@ LITERAL:
 .AIR: ; 9C2A
 	DB	$0A, $12, $1B				; AIR
 
-.WALL_x25: ; 9C3B
+; .WALL_x25: ; 9C3B
+	; DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
+	; DB	$31, $30, $31, $30, $31, $30, $31, $30
+	; DB	$31, $30, $31, $30, $31, $30, $31, $30
+	; DB	$31
+.WALL_x25_H: ; 9C3B
 	DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
 	DB	$31, $30, $31, $30, $31, $30, $31, $30
 	DB	$31, $30, $31, $30, $31, $30, $31, $30
-	DB	$31
+.WALL_x25_L: ; 9C3B
+	DB	$31, $32, $33, $32, $33, $32, $33, $32	; 25x wall
+	DB	$33, $32, $33, $32, $33, $32, $33, $32
+	DB	$33, $32, $33, $32, $33, $32, $33, $31
 .ROOMS_x7:	; 9C54
 	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 	
-.BLANK_x13: ; 9C62
-	DB	$FF, $FF, $FF, $FF, $FF, $FF, $FF
-.BLANK_x6: ; 9C71
-	DB	$FF, $FF, $FF, $FF, $FF, $FF
+.BLANKS: ; 9C62
+	DB	$2F, $2F, $2F, $2F, $2F, $2F, $2F
+	DB	$2F, $2F, $2F, $2F, $2F, $2F
 	
 .LIVES_x6: ; 9C77
 	DB	$50, $50, $50, $50, $50, $50		; 6x life
@@ -3221,22 +3077,19 @@ LITERAL:
 	DB	$1D, $1B, $22, $FF			; TRY_
 	DB	$1D, $11, $0E, $FF			; THE_
 	DB	$17, $0E, $21, $1D, $FF			; NEXT_
-.PYRAMID:
 .PYRAMID_WARP:
-	DB	$19, $22, $1B, $0A, $16, $12, $0D, $FF	; PYRAMID_
+.PYRAMID:
+	DB	$19, $22, $1B, $0A, $16, $12, $0D	; PYRAMID
+	DB	$2F					; _
 	DB	$20, $0A, $1B, $19			; WARP
-.HIT_SPACE_KEY: ; 9C9F
-	DB	$11, $12, $1D, $FF			; HIT_
-	DB	$1C, $19, $0A, $0C, $0E, $FF		; SPACE_
-	DB	$14, $0E, $22				; KEY
 .MSX: ; 9CAC
 	DB	$16, $1C, $21				; MSX
 .COPYRIGHT: ; 9CBB
-	DB	$28, $0C, $29, $FF			; (C)_
+	DB	$28, $0C, $29, $2F			; (C)_
 .Y1983:
-	DB	$01, $09, $08, $03, $FF			; 1983_
-	DB	$0B, $22, $FF				; BY_
-	DB	$1D, $24, $0E, $FF			; T&E_
+	DB	$01, $09, $08, $03, $2F			; 1983_
+	DB	$0B, $22, $2F				; BY_
+	DB	$1D, $24, $0E, $2F			; T&E_
 	DB	$1C, $18, $0F, $1D			; SOFT
 .GAME_OVER: ; 9CCF
 	DB	$10, $0A, $16, $0E, $FF			; GAME_
@@ -3288,6 +3141,7 @@ DATA_SPRTBL:
 	ELSE
 		incbin	"asm/original/sprites.pcx.spr"
 	ENDIF
+	.SIZE:	equ $ - DATA_SPRTBL
 
 DATA_CHARSET:
 	.CHR:
