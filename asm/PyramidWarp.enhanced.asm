@@ -49,11 +49,12 @@ CFG_ENHANCEMENTS:	; Uncomment to use enchanced...
 	.SPRITES:	; ...sprites
 	.CHARSET:	; ...graphical charset
 	.ROOMS:		; ...room and pyramid definition
-	
+
 CFG_COLOR:
 	.SKULL:		equ 15	; 15
-	.SCORPION:	equ 14	; 9
+	.SCORPION:	equ 11	; 9
 	.BAT:		equ 1	; 1
+	.OTHER:		equ 7
 	.PLAYER:	equ 14	; 11
 	.PLAYER_GUN:	equ 15	; 15
 	.BULLET:	equ 15	; 15
@@ -61,22 +62,27 @@ CFG_COLOR:
 	.DOOR_0:	equ 15	; 3
 	.DOOR_1:	equ 7	; 7
 	.DOOR_2:	equ 15	; 8
-	
+
 	.BG:		equ 4	; 4
 	.BG_SPHYNX:	equ 1	; 1
 	.BG_DEAD_1:	equ 6	; 6
 	.BG_DEAD_2:	equ 4	; 4
 	.BG_EXIT:	equ 2	; 3
-	
+
 CFG_HUD:			; $yyxx coordinates
 	.HIGH_COORDS:		equ $081A ; 0819h
 	.SCORE_COORDS:		equ $0B1A ; 0B19h
 	.AIR_LEFT_COORDS:	equ $0E1C ; 0E19h
 	.ROOM_COORDS:		equ $101E ; 101Dh
 	.LIVES_COORDS:		equ $171A ; 1719h
-	
+
 CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
+	; .DONT_DECORATE_WARP:	; Uncomment to keep warp as normal walls
+	.CHARSET_3D:		; Uncomment to use "3D" charset
+	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
+	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2
+	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -96,7 +102,7 @@ ROM_START:
 	ld	(BAKCLR),a
 	inc	a
 	ld	(BDRCLR),a
-	
+
 ; screen 2
 	call	INIGRP
 ; screen ,2
@@ -106,13 +112,13 @@ ROM_START:
 ; screen ,,0
 	xor	a
 	ld	[CLIKSW], a
-		
+
 ; CLS (with custom "blank" characteR)
 	ld	hl,NAMTBL
 	ld	bc,NAMTBL.SIZE
 	ld	a,2Fh
 	call	FILVRM
-	
+
 ; init font
 	ld	hl,DATA_FONT
 	ld	de,CHRTBL
@@ -143,7 +149,7 @@ ROM_START:
 	ld	de,SPRTBL
 	ld	bc,DATA_SPRTBL.SIZE
 	call	LDIRVM
-	
+
 ; Init on-screen texts
 	ld	hl,LITERAL.MSX
 	ld	de,080Dh
@@ -157,16 +163,16 @@ ROM_START:
 	ld	de,0C05h
 	ld	b,14h
 	call	PRINT
-	
+
 ; "Hit space key"
 	ld	de, $1008
 	call	HIT_SPACE_KEY
-	
+
 ; color ,,4
 	ld	c,07h
 	ld	b,CFG_COLOR.BG
 	call	WRTVDP
-	
+
 ; Fills in playground
 	ld	de,0001h
 	ld	b,18h
@@ -174,18 +180,10 @@ ROM_START:
 .LOOP:	call	.SUB
 	jr	z, .CONT
 	jr	.LOOP
-	
+
 .SUB:	push	de
 	push	bc
-	ld	hl,LITERAL.WALL_x25_L
-	call	PRINT
-	pop	bc
-	pop	de
-	inc	d
-	dec	c
-	push	de
-	push	bc
-	ld	hl,LITERAL.WALL_x25_H
+	ld	hl,LITERAL.WALL_x25
 	call	PRINT
 	pop	bc
 	pop	de
@@ -237,7 +235,7 @@ ROM_START:
 	ld	bc,0000h
 	ld	(game.high_score_bcd),a
 	ld	(game.high_score_bcd +1),bc
-	
+
 ; Sprite patterns, colors and planes
 	ld	a,CFG_COLOR.SCORPION ; 09h
 	ld	(scorpion1.spratr_color),a
@@ -245,7 +243,7 @@ ROM_START:
 	ld	a,12h
 	ld	(scorpion1.base_pattern),a
 	ld	(scorpion2.base_pattern),a
-	
+
 	ld	a,CFG_COLOR.BAT ; 01h
 	ld	(bat1.spratr_color),a
 	ld	(bat2.spratr_color),a
@@ -253,22 +251,25 @@ ROM_START:
 	ld	(bat1.base_pattern),a
 	ld	(bat2.base_pattern),a
 
-	; ld	a,16h
-	; ld	(unused_enemy_slot1.base_pattern),a
-	; ld	(unused_enemy_slot2.base_pattern),a
-	
+	ld	a,CFG_COLOR.OTHER
+	ld	(unused_enemy_slot1.spratr_color),a
+	ld	(unused_enemy_slot2.spratr_color),a
+	ld	a,16h
+	ld	(unused_enemy_slot1.base_pattern),a
+	ld	(unused_enemy_slot2.base_pattern),a
+
 	ld	a,04h
 	ld	(scorpion1.sprite_plane),a
 	inc	a
 	ld	(bat1.sprite_plane),a ; $05
-	; inc	a
-	; ld	(unused_enemy_slot1.sprite_plane),a ; $06
+	inc	a
+	ld	(unused_enemy_slot1.sprite_plane),a ; $06
 	inc	a
 	ld	(scorpion2.sprite_plane),a ; $07
 	inc	a
 	ld	(bat2.sprite_plane),a ; $08
-	; inc	a
-	; ld	(unused_enemy_slot2.sprite_plane),a ; $09
+	inc	a
+	ld	(unused_enemy_slot2.sprite_plane),a ; $09
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8E07
@@ -287,7 +288,7 @@ NEW_GAME:
 	ld	bc,0000h
 	ld	(game.score_bcd),a
 	ld	(game.score_bcd +1),bc
-	
+
 	ld	de,CFG_HUD.SCORE_COORDS
 	call	PRINT_SCORE
 ; ------VVVV----falls through--------------------------------------------------
@@ -300,7 +301,7 @@ NEW_PYRAMID:
 ; Room 0
 	xor	a
 	ld	(pyramid.room_index),a
-	
+
 ; Builds the pyramid
 	ld	de, pyramid.room_array
 	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR1
@@ -314,7 +315,7 @@ NEW_PYRAMID:
 	call	RANDOMIZE_FLOOR
 	ld	a,10h ; (sphynx room)
 	ld	(de),a
-	
+
 ; Prints the pyramid in the HUD
 	ld	de,1519h
 	ld	b,07h ; 7 rooms
@@ -332,7 +333,7 @@ NEW_PYRAMID:
 ; Prints the sphynx room
 	ld	a,$52 ; ($52 = sphynx room)
 	call	PRINT_CHAR
-	
+
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
 ; ------VVVV----falls through--------------------------------------------------
@@ -361,11 +362,32 @@ DEC_LIVES_AND_NEW_ROOM:
 
 	; Referenced from 8380, 89DE
 	; --- START PROC L838C ---
-	
+
 ; -----------------------------------------------------------------------------
 NEW_ROOM:
 ; Print score and updates high score
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+
+IFDEF CFG_OTHERS.CHARSET_3D
+; Fills in playground
+	ld	de,0001h
+	ld	b,18h
+	ld	c,18h
+.LOOP:	call	.SUB
+	jr	z, .CONT
+	jr	.LOOP
+
+.SUB:	push	de
+	push	bc
+	ld	hl,LITERAL.WALL_x25
+	call	PRINT
+	pop	bc
+	pop	de
+	inc	d
+	dec	c
+	ret
+.CONT:
+ENDIF
 
 ; Hides the sprites (one by one)
 	ld	hl,SPRATR
@@ -377,14 +399,14 @@ NEW_ROOM:
 	inc	hl
 	inc	hl
 	djnz	.L8394
-	
+
 ; Reads the current room index
 	ld	a,(pyramid.room_index)
 	ld	hl,pyramid.room_array
 	call	ADD_HL_A
 	ld	a,(hl)
 	ld	(game.current_room),a
-	
+
 ; Points to the correct map position
 	ld	de,1518h	; address or value?
 ; a < 8?
@@ -412,7 +434,7 @@ NEW_ROOM:
 	ld	e,a
 ; Saves the NAMTBL pointer of the current room
 	ld	(pyramid.room_namtbl_ptr),de
-	
+
 ; Prints the room number
 	ld	a,(game.current_room)
 	add	a,00h
@@ -431,7 +453,7 @@ NEW_ROOM:
 	and	0Fh
 	ld	de,CFG_HUD.ROOM_COORDS +1
 	call	PRINT_CHAR
-	
+
 ; Points to the right room data
 	ld	hl,DATA_ROOMS - $0022
 	ld	de,0022h
@@ -450,8 +472,8 @@ NEW_ROOM:
 	inc	hl
 	ld	b, (hl)
 	inc	hl
-; (preserves data pointer)	
-	push	hl	
+; (preserves data pointer)
+	push	hl
 ; For each column
 	ld	e, $02
 .COLUMN:
@@ -461,13 +483,41 @@ NEW_ROOM:
 	sla	b
 	rl	c
 	push	bc
+IFDEF CFG_OTHERS.CHARSET_3D
+	jr	c,.BIT_OK
+ELSE
 	jr	nc,.EMPTY ; no
 ; (wall)
 	ld	a,30h
 	call	PRINT_TILE
 	jr	.BIT_OK
-.EMPTY:	
+ENDIF
+.EMPTY:
+IFDEF CFG_OTHERS.CHARSET_3D
+	push	de
 	call	CLEAR_TILE
+	pop	de
+	
+; Is there wall over the current tile?
+	dec	d
+	call	TO_NAMTBL
+	ex	de,hl
+	push	hl
+	call	RDVRM
+	pop	hl
+	inc	a
+	jr	z, .BIT_OK ; no
+; Yes: overwrites the lower characters
+	push	hl
+	ld	a, $32
+	call	WRTVRM
+	inc	hl
+	inc	a
+	call	WRTVRM
+	pop	hl
+ELSE
+	call	CLEAR_TILE
+ENDIF
 .BIT_OK:
 
 ; (restores data bytes and target pointer)
@@ -480,7 +530,7 @@ NEW_ROOM:
 	ld	a, 24
 	cp	e
 	jr	nz, .COLUMN
-	
+
 .END_ROW:
 ; (restores data pointer)
 	pop	hl
@@ -508,7 +558,7 @@ PRINT_ROOM_DECORATION:
 	call	NEW_BOX
 	ld	ix,box3
 	call	NEW_BOX
-	
+
 ; Initializes next
 	ld	ix,nest
 	ld	e,(hl)
@@ -521,14 +571,16 @@ PRINT_ROOM_DECORATION:
 	ld	a,$48 ; 54h
 	call	PRINT_TILE
 	pop	hl ; (restore)
-	
+
 ; Initializes doors
 	ld	ix,door1
 	call	NEW_DOOR
 	ld	ix,door2
 	call	NEW_DOOR
-	
+
 ; Prints exit zone
+IFDEF CFG_OTHERS.DONT_DECORATE_WARP
+ELSE
 	ld	de,090Ah
 	ld	a,$40
 	call	PRINT_TILE
@@ -547,10 +599,11 @@ PRINT_ROOM_DECORATION:
 	ld	de,0D0Eh
 	ld	a,$40
 	call	PRINT_TILE
+ENDIF
 
-; Initial player coordinates	
+; Initial player coordinates
 	ld	a,58h
-	
+
 	jp	INIT_GAME_LOOP
 ; -----------------------------------------------------------------------------
 
@@ -563,7 +616,7 @@ NEW_BOX:
 	ld	d,(hl)
 	inc	hl
 	push	hl
-; Initializes coordinates and other values	
+; Initializes coordinates and other values
 	call	TO_VRAM_COORDINATES
 	xor	a
 	ld	(ix+00h),a ; box.is_opening
@@ -574,7 +627,7 @@ NEW_BOX:
 	pop	hl
 	ret
 ; -----------------------------------------------------------------------------
-	
+
 ; -----------------------------------------------------------------------------
 ; param ix:
 NEW_DOOR:
@@ -584,7 +637,7 @@ NEW_DOOR:
 	ld	d,(hl)
 	inc	hl
 	push	hl
-	
+
 ; MSB determines door type  (0 = v, 1 = ^)
 	ld	b,00h ; b = 0 = door down (v)
 	ld	a,e ; (preserves e)
@@ -628,12 +681,12 @@ PRINT_SPHYNX_ROOM_DECORATION:
 	xor	a
 	ld	(door1.spratr_y),a
 	ld	(door2.spratr_y),a
-	
+
 ; ; Prints "6" (for "ROOM 16")
 	; ld	a,06h
 	; ld	de,CFG_HUD.ROOM_COORDS + 1
 	; call	PRINT_CHAR
-	
+
 ; Player initial position
 	ld	a,98h
 ; ------VVVV----falls through--------------------------------------------------
@@ -650,7 +703,7 @@ INIT_GAME_LOOP:
 	ld	(hl),a
 	inc	hl
 	push	hl
-	
+
 ; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
 	ld	hl,0BB8h ; 3000
 	ld	a,(game.first_pyramid)
@@ -677,12 +730,12 @@ INIT_GAME_LOOP:
 	ld	(exit.blink_flag),a
 	ld	(exit.has_diamond),a
 	ld	(player_has_gun),a
-	
+
 ; Sets player direction
 	ld	a,CFG_OTHERS.PLAYER_INITIAL_DIR
 	ld	(new_player_direction),a
 	ld	(player.direction),a
-	
+
 ; Sets player pattern
 	pop	hl ; player.spratr_pat
 	add	a ; a = CFG_OTHERS.PLAYER_INITIAL_DIR *4
@@ -692,12 +745,12 @@ INIT_GAME_LOOP:
 	inc	hl ; player.spratr_color
 	ld	a,CFG_COLOR.PLAYER ; 0Bh
 	ld	(hl),a
-	
+
 ; Put player sprite
 	pop	de ; player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
-	
+
 ; Initializes the box contents
 	ld	hl,DATA_RANDOMIZE_BOX_CONTENTS
 	call	RANDOMIZE
@@ -728,7 +781,7 @@ INIT_GAME_LOOP:
 
 	; Referenced from 8AB4
 	; --- START PROC L867C ---
-	
+
 ; -----------------------------------------------------------------------------
 GAME_LOOP:
 ; Configures game speed according air left
@@ -748,7 +801,7 @@ GAME_LOOP:
 	inc	a
 	ld	(aux.frame_counter),a
 	call	SHORT_DELAY
-	
+
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	b,$53 ; ($63 = non visited room)
@@ -758,7 +811,7 @@ GAME_LOOP:
 	inc	b ; ($64 = current room)
 .L86AC:	ld	a,b
 	call	PRINT_CHAR
-	
+
 ; Sets flag to check wall for player
 	ld	a,0FFh
 	ld	(check_wall_for_player),a
@@ -771,7 +824,7 @@ GAME_LOOP:
 ; Resets flag to check wall for player
 	xor	a
 	ld	(check_wall_for_player),a
-	
+
 ; Reads input
 	call	GTSTCK_ANY
 	or	a
@@ -816,7 +869,7 @@ GAME_LOOP:
 	neg
 .L8707:	add	a,(hl)
 	ld	(hl),a
-	
+
 ; Checks entering door conditions
 	xor	a
 	ld	(player_entering_door),a ; (not entering)
@@ -903,16 +956,16 @@ GAME_LOOP.DOORS_OK:
 	ld	b,CFG_COLOR.PLAYER_GUN ; white (with gun)
 .L878B:	ld	a,b
 	ld	(player.spratr_color),a
-; Prints the player sprite	
+; Prints the player sprite
 	ld	de,player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
-	
+
 ; If not through a door, plays ingame "music"
 	ld	a,(player_entering_door)
 	or	a
 	call	z,PLAY_SOUND_INGAME
-	
+
 ; Carrying gun...
 	ld	a,(player_has_gun)
 	or	a
@@ -957,7 +1010,7 @@ GAME_LOOP.GUN_OK:
 	ld	a,(skull.status)
 	or	a
 	jp	z,GAME_LOOP.SKULL_OK ; no
-	
+
 ; Reads skull coordinates in de
 	ld	hl,skull.spratr_y
 	ld	d,(hl)
@@ -983,7 +1036,7 @@ GAME_LOOP.GUN_OK:
 	call	ADD_HL_A
 	xor	a
 	ld	(hl),a ; (fakes the wall)
-	
+
 ; Compares player and skull coordinates
 .L8815:	ld	a,(player.spratr_x)
 	ld	b,a
@@ -1090,7 +1143,7 @@ GAME_LOOP.GUN_OK:
 
 	; Referenced from 8846, 884B, 8850, 8855, 885A, 885F, 8864, 8877, 887C, 8881, 8886, 888B, 8890, 8895, 88A8, 88AD, 88B2, 88B7, 88BC, 88C1, 88C6
 	; --- START PROC L88C9 ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param a: direction to try (0..3 = left, up, right, down)
 ; ret: if the skull could not be moved in that direction
@@ -1209,7 +1262,7 @@ GAME_LOOP.SKULL_OK:
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 890F, 8912
-	
+
 ; -----------------------------------------------------------------------------
 GAME_LOOP.BULLET_OK:
 .L8969:	call	SHORT_DELAY
@@ -1224,6 +1277,10 @@ GAME_LOOP.BULLET_OK:
 	call	UPDATE_BOX
 	ld	ix,bat1
 	call	UPDATE_ENEMY
+IFDEF CFG_OTHERS.EXTRA_ENEMY_1
+	ld	ix,unused_enemy_slot1
+	call	UPDATE_ENEMY
+ENDIF
 ; Is the exit open?
 	ld	a,(exit.is_enabled)
 	or	a
@@ -1276,7 +1333,7 @@ GAME_LOOP.BULLET_OK:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 898D, 89BA, 89C0
-	
+
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EXIT_OK:
 .L89E1:	call	SHORT_DELAY
@@ -1289,6 +1346,10 @@ GAME_LOOP.EXIT_OK:
 	call	UPDATE_ENEMY
 	ld	ix,box3
 	call	UPDATE_BOX
+IFDEF CFG_OTHERS.EXTRA_ENEMY_2
+	ld	ix,unused_enemy_slot2
+	call	UPDATE_ENEMY
+ENDIF
 ; Updates bullet explosion
 	ld	ix,bullet
 	ld	a,(ix+05h) ; bullet.status
@@ -1331,7 +1392,7 @@ GAME_LOOP.EXIT_OK:
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8A08, 8A0B
-	
+
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EVERYTHING_OK:
 .L8A3A:	call	SHORT_DELAY
@@ -1366,7 +1427,7 @@ GAME_LOOP.EVERYTHING_OK:
 	ld	e,a
 	ld	a,b
 	call	PRINT_TILE
-	
+
 ; Does the player has the diamond?
 	ld	a,(exit.has_diamond)
 	or	a
@@ -1402,9 +1463,9 @@ GAME_LOOP.EVERYTHING_OK:
 	ld	a,01h
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
-	
+
 	; Referenced from 8ABD, 8AC3
-	
+
 ; -----------------------------------------------------------------------------
 GAME_LOOP.NEXT:
 .L8AB4:	jp	GAME_LOOP
@@ -1422,13 +1483,13 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	a,60h
 	cp	(hl)
 	jr	nz,GAME_LOOP.NEXT ; no
-; yes	
+; yes
 	call	PLAY_SOUND_BOX
 ; screen ,3
 	ld	c,01h
 	ld	b,0E3h
 	call	WRTVDP
-; Prints sphynx sprites	
+; Prints sphynx sprites
 	ld	de,DATA_SPHYNX_SPRATR + 0 *4
 	ld	a,00h
 	call	PUT_SPRITE
@@ -1449,7 +1510,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	b,CFG_COLOR.BG_SPHYNX
 	ld	c,07h
 	call	WRTVDP
-; Sphynx sound	
+; Sphynx sound
 	call	PLAY_SOUND_SPHYNX
 ; Increase score
 	ld	de,2000h ; 2000 points (BCD)
@@ -1463,7 +1524,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	de,1403h
 	ld	b,14h
 	call	PRINT
-	
+
 ; "Hit space key"
 	ld	de,1606h
 	call	HIT_SPACE_KEY
@@ -1512,7 +1573,7 @@ CHECK_ALL_WALLS:
 	ld	(ix+00h),a
 	inc	ix
 	pop	de
-	
+
 ; left (upper character)
 	push	de
 	dec	d ; (x--)
@@ -1530,7 +1591,7 @@ CHECK_ALL_WALLS:
 	ld	(ix+00h),a
 	inc	ix
 	pop	de
-	
+
 ; down (left character)
 	push	de
 	ld	a,10h
@@ -1552,7 +1613,7 @@ CHECK_ALL_WALLS:
 	ld	(ix+00h),a
 	inc	ix
 	pop	de
-	
+
 ; right (upper character)
 	push	de
 	ld	a,10h
@@ -1604,7 +1665,7 @@ CHECK_WALL:
 	ld	a,(check_wall_for_player)
 	or	a
 	jr	z,.L8C20 ; no
-	
+
 ; Checks for box (player only)
 	ld	a,$34 -1 ; >= $34?
 	cp	b
@@ -1638,7 +1699,7 @@ CHECK_WALL:
 
 	; Referenced from 83A5, 86D7, 86EA, 8810, 88CD, 8CC7, 8D01
 	; --- START PROC L8C27 ---
-	
+
 ; -----------------------------------------------------------------------------
 ADD_HL_A:
 	add	a,l
@@ -1651,7 +1712,7 @@ ADD_HL_A:
 
 	; Referenced from 82EB, 830A, 8325, 8658, 8CCC, 8C67
 	; --- START PROC L8C2E ---
-	
+
 ; -----------------------------------------------------------------------------
 ; ret a: random value
 RANDOMIZE:
@@ -1687,7 +1748,7 @@ RANDOMIZE_FLOOR:
 
 ; -----------------------------------------------------------------------------
 SHORT_DELAY:
-.L8C3C:	ld	b,04h
+.L8C3C:	ld	b,CFG_OTHERS.SHORT_DELAY_FACTOR
 .L8C3E:	ld	a,(game.short_delay)
 .L8C41:	dec	a
 	jr	nz,.L8C41
@@ -1710,7 +1771,7 @@ LONG_DELAY:
 
 	; Referenced from 8978, 8986, 89EF, 89F6
 	; --- START PROC L8C50 ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param ix: pointer to the enemy
 UPDATE_ENEMY:
@@ -1731,7 +1792,7 @@ UPDATE_ENEMY:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8C5E
-	
+
 ; -----------------------------------------------------------------------------
 SPAWN_NEW_ENEMY:
 ; 50% of the time
@@ -1825,7 +1886,7 @@ UPDATE_ALIVE_ENEMY:
 
 	; Referenced from 8CDC, 8CE1, 8CE6, 8CEB, 8CF0, 8CF5, 8CFA
 	; --- START PROC L8CFD ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param a: direction to try (0..3 = left, up, right, down)
 ; ret: if the enemy could not be moved in that direction
@@ -1871,7 +1932,7 @@ MOVE_ENEMY:
 
 	; Referenced from 8CA2
 	; --- START PROC L8D3C ---
-	
+
 ; -----------------------------------------------------------------------------
 CHECK_ENEMY_BULLET_COLLISION:
 ; Is there any bullet?
@@ -1940,7 +2001,7 @@ CHECK_ENEMY_BULLET_COLLISION:
 
 	; Referenced from 8905, 8D40, 8D57, 8D6A
 	; --- START PROC L8DAC ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param ix: pointer to the enemy
 CHECK_ENEMY_PLAYER_COLLISION:
@@ -1981,7 +2042,7 @@ KILL_PLAYER:
 
 	; Referenced from 837C
 	; --- START PROC L8DD8 ---
-	
+
 ; -----------------------------------------------------------------------------
 GAME_OVER:
 .L8DD8:	call	RESET_SOUND
@@ -1994,13 +2055,13 @@ GAME_OVER:
 ; "Hit space key"
 	ld	de,0C06h
 	call	HIT_SPACE_KEY
-	
+
 	jp	NEW_GAME
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 897F, 89E8, 89FD
 	; --- START PROC L8E0A ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param ix: pointer to the box
 UPDATE_BOX:
@@ -2023,7 +2084,7 @@ UPDATE_BOX:
 	call	SHORT_DELAY
 	ld	a,0FFh
 	ld	(ix+02h),a ; .status
-	
+
 	ld	a,32h		; '2'
 	ld	(ix+03h),a
 	ld	d,(ix+00h)
@@ -2069,7 +2130,7 @@ OPEN_BOX_DIAMOND:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8E49
-	
+
 ; -----------------------------------------------------------------------------
 OPEN_BOX_GUN:
 ; Sets the proper flags
@@ -2084,7 +2145,7 @@ OPEN_BOX_GUN:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8E39
-	
+
 ; -----------------------------------------------------------------------------
 OPEN_BOX_SKULL:
 ; Initializes the skull
@@ -2122,7 +2183,7 @@ OPEN_BOX_SKULL:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8E0E
-	
+
 ; -----------------------------------------------------------------------------
 ; param ix: pointer to the box
 UPDATE_BOX_JUST_OPEN:
@@ -2159,7 +2220,7 @@ REMOVE_OPEN_BOX:
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8ECC
-	
+
 ; -----------------------------------------------------------------------------
 ACTIVATE_SKULL:
 .L8EE0:	ld	a,0FFh
@@ -2204,13 +2265,13 @@ PLAY_START_GAME_MUSIC:
 	or	l
 	jr	nz,.L8F3C
 	djnz	.L8F39
-; Stops music	
+; Stops music
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8F1D, 8F22, 8F27, 8F2C, 8F34
 	; --- START PROC L8F49 ---
-	
+
 PLAY_START_GAME_MUSIC.NOTE:
 ; Prepares the buffer
 .L8F49:	ld	b,0Ah
@@ -2265,7 +2326,7 @@ PLAY_START_GAME_MUSIC.NOTE:
 
 	; Referenced from 8DCB
 	; --- START PROC L8FB3 ---
-	
+
 ; -----------------------------------------------------------------------------
 PLAY_DEAD_MUSIC:
 ; Initializes the "flashing" flag
@@ -2296,13 +2357,13 @@ PLAY_DEAD_MUSIC:
 	ld	c,07h
 	ld	b,CFG_COLOR.BG_DEAD_2
 	call	WRTVDP
-; Stops music	
+; Stops music
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	jp	PLAY_SOUND
 
 	; Referenced from 8FBE
 	; --- START PROC L8FE8 ---
-	
+
 PLAY_DEAD_MUSIC.NOTE:
 ; Prepares the buffer
 .L8FE8:	ld	b,0Ah ; length
@@ -2369,7 +2430,7 @@ PLAY_DEAD_MUSIC.NOTE:
 
 	; Referenced from 8AFE
 	; --- START PROC L9067 ---
-	
+
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_SPHYNX:
 .L9067:	call	RESET_SOUND
@@ -2489,7 +2550,7 @@ PLAY_SOUND_BOX:
 
 	; Referenced from 871D, 874B
 	; --- START PROC L912A ---
-	
+
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_DOOR:
 .L912A:	call	RESET_SOUND
@@ -2563,7 +2624,7 @@ DATA_SOUND:
 	DB	0Ch, 0Ah
 	DB	0Dh, 09h
 
-.DOOR: ; 9184H	
+.DOOR: ; 9184H
 	DB	07h ; length
 	DB	00h, 0E0h
 	DB	01h, 04h
@@ -2582,7 +2643,7 @@ DATA_SOUND:
 	DB	0Bh, 0Bh
 	DB	0Ch, 02h
 	DB	0Dh, 0Fh
-	
+
 .BULLET: ; 91A2H
 	DB	0Ah ; length
 	DB	00h, 0C0h
@@ -2595,7 +2656,7 @@ DATA_SOUND:
 	DB	0Bh, 0Bh
 	DB	0Ch, 06h
 	DB	0Dh, 00h
-	
+
 .RESET: ; 91B7H
 	DB	0Eh ; length
 	DB	00h, 00h
@@ -2612,7 +2673,7 @@ DATA_SOUND:
 	DB	0Ch, 00h
 	DB	0Dh, 00h
 ; -----------------------------------------------------------------------------
-	
+
 ; -----------------------------------------------------------------------------
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
@@ -2652,7 +2713,7 @@ LDIRVM_3_BANKS:
 
 	; Referenced from 8F46, 8FAD, 9148, 9130, 9142, 9139, 911E, 8FE5, 9127, 906D, 9091, 904C, 9100, 9106
 	; --- START PROC L9264 ---
-	
+
 ; -----------------------------------------------------------------------------
 ; param hl: sound data pointer
 PLAY_SOUND:
@@ -2726,7 +2787,7 @@ PRINT_SCORE_AND_UPDATE_HIGH_SCORE:
 	call	PRINT_SCORE
 	ld	de,CFG_HUD.HIGH_COORDS
 ; ------VVVV----falls through--------------------------------------------------
-	
+
 ; -----------------------------------------------------------------------------
 UPDATE_HIGH_SCORE:
 ; Compares score (BCD) with high score (BCD)
@@ -2861,7 +2922,7 @@ TO_VRAM_COORDINATES:
 	add	a,a
 	inc	a
 	ld	d,a
-; [ix++] = 16e+16 
+; [ix++] = 16e+16
 	ld	a,e
 	inc	a
 	add	a,a
@@ -2893,7 +2954,7 @@ HIT_SPACE_KEY:
 	or	a
 	ret	nz
 	jr	.LOOP
-	
+
 .LITERAL:
 	DB	$11, $12, $1D, $FF		; HIT_
 	DB	$1C, $19, $0A, $0C, $0E, $FF	; SPACE_
@@ -2952,7 +3013,7 @@ CLEAR_TILE:
 ; Second char
 	inc	l
 	jp	WRTVRM
-	
+
 .CHAR:
 	push	hl
 	ld	a, $ff
@@ -2960,7 +3021,7 @@ CLEAR_TILE:
 	pop	hl
 	ret
 ; -----------------------------------------------------------------------------
-	
+
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
 ; param a: character to put
@@ -3047,29 +3108,21 @@ LITERAL:
 .AIR: ; 9C2A
 	DB	$0A, $12, $1B				; AIR
 
-; .WALL_x25: ; 9C3B
-	; DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
-	; DB	$31, $30, $31, $30, $31, $30, $31, $30
-	; DB	$31, $30, $31, $30, $31, $30, $31, $30
-	; DB	$31
-.WALL_x25_H: ; 9C3B
+.WALL_x25: ; 9C3B
 	DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
 	DB	$31, $30, $31, $30, $31, $30, $31, $30
 	DB	$31, $30, $31, $30, $31, $30, $31, $30
-.WALL_x25_L: ; 9C3B
-	DB	$31, $32, $33, $32, $33, $32, $33, $32	; 25x wall
-	DB	$33, $32, $33, $32, $33, $32, $33, $32
-	DB	$33, $32, $33, $32, $33, $32, $33, $31
+	DB	$31
 .ROOMS_x7:	; 9C54
 	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
-	
+
 .BLANKS: ; 9C62
 	DB	$2F, $2F, $2F, $2F, $2F, $2F, $2F
 	DB	$2F, $2F, $2F, $2F, $2F, $2F
-	
+
 .LIVES_x6: ; 9C77
 	DB	$50, $50, $50, $50, $50, $50		; 6x life
-	
+
 .CONGRATULATIONS: ; 9C7D
 	DB	$0C, $18, $17, $10, $1B, $0A, $1D, $1E
 	DB	$15, $0A, $1D, $12, $18, $17		; CONGRATULATION
@@ -3108,7 +3161,7 @@ DATA_SPHYNX_SPRATR:
 DATA_SOUND.MUTE_CHANNELS:
 .L9F38:	DB	01h ; length
 	DB	07h, 0BFh
-	
+
 DATA_SOUND.SPHYNX:
 .L9F3B:	DB	0Dh ; length
 	DB	00h, 01h
@@ -3152,7 +3205,7 @@ DATA_CHARSET:
 	ENDIF
 	.CHR_FF:	equ $ - 8
 	.SIZE:	equ $ - DATA_CHARSET
-	
+
 	.CLR:
 	IFDEF CFG_ENHANCEMENTS.CHARSET
 		incbin	"asm/enhanced/charset.pcx.clr"
@@ -3167,7 +3220,7 @@ DATA_ROOMS:
 	ELSE
 		include	"asm/original/rooms.asm"
 	ENDIF
-	
+
 DATA_RANDOMIZE_PYRAMID:
 	IFDEF CFG_ENHANCEMENTS.ROOMS
 		include	"asm/enhanced/pyramids.asm"
@@ -3198,7 +3251,7 @@ debug_rom_end_diff:	equ debug_rom_end_original - debug_rom_end_new
 ; -----------------------------------------------------------------------------
 ; RAM
 	org	$e000, $f380 ; 8KB RAM
-	
+
 box1: ; C000H
 	.y:		rb 1	; C000H
 	.x:		rb 1	; C001H
@@ -3292,7 +3345,7 @@ bullet: ; C056H
 nest: ; C05CH
 	.spratr_y:	rb 1	; C05CH
 	.spratr_x:	rb 1	; C05DH
-player_has_gun:		rb 1	; C05EH	
+player_has_gun:		rb 1	; C05EH
 aux.frame_counter:	rb 1	; C05FH
 new_player_direction:	rb 1	; C060H
 direction_table:	rb 4	; C061H
