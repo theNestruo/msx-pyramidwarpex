@@ -14,7 +14,7 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 * Patcheable room definitions (external assembly code)
 * 5th and 6th enemy slots can be enabled
 
-## Additional enhancementes by Nenefranz
+## Additional enhancements by Nenefranz
 
 * Completely new graphic set
 * Enemies can look in 4 directions
