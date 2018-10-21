@@ -48,13 +48,15 @@ CFG_ENHANCEMENTS:	; Uncomment to use enchanced...
 	.FONT:		; ...font
 	.SPRITES:	; ...sprites
 	.CHARSET:	; ...graphical charset
+	; .CHARSET0:	; ...graphical charset (transparent)
 	.ROOMS:		; ...room and pyramid definition
 
 CFG_COLOR:
 	.SKULL:		equ 15	; 15
-	.SCORPION:	equ 11	; 9
-	.BAT:		equ 1	; 1
-	.OTHER:		equ 7
+	.SCORPION:	equ 9	; 9
+	.BAT_0:		equ 1	; 1
+	.BAT:		equ 5	; 1
+	.OTHER:		equ 3
 	.PLAYER:	equ 14	; 11
 	.PLAYER_GUN:	equ 15	; 15
 	.BULLET:	equ 15	; 15
@@ -65,10 +67,62 @@ CFG_COLOR:
 
 	.BG:		equ 4	; 4
 	.BG_SPHYNX:	equ 1	; 1
-	.BG_DEAD_1:	equ 6	; 6
-	.BG_DEAD_2:	equ 4	; 4
-	.BG_EXIT:	equ 2	; 3
+	.BG_DEAD_1:	equ 8	; 6
+	.BG_DEAD_2:	equ 9	; 4
+	.BG_EXIT:	equ 12	; 3
 
+CFG_BASE_PATTERN:
+	.SKULL:		equ $10
+	.SCORPION:	equ $12
+	.BAT:		equ $14
+	.OTHER:		equ $16
+	
+	.SKULL4:	equ $10
+	.SCORPION4:	equ $28
+	.BAT4:		equ $30
+	.OTHER4:	equ $38
+	
+	.DOOR_0:	equ $18
+	.DOOR_1:	equ $19
+	.DOOR_2:	equ $18
+	.BULLET:	equ $1A
+	.EXPLOSION:	equ $1C
+
+	.EXPLOSION_0:	equ $1C
+	.EXPLOSION_1:	equ $1D
+	.EXPLOSION_2:	equ $1E
+
+CFG_TILES_PATTERN:
+	.TILE_WALL:		equ $30
+	.TILE_BOX:		equ $34
+	.TILE_GUN:		equ $38
+	.TILE_DIAMOND:		equ $3C
+	.TILE_WALL_WARP:	equ $40
+	.TILE_EXIT:		equ $44
+	.TILE_NEST:		equ $48
+	.TILE_NEST1:		equ $48
+	.TILE_NEST2:		equ $4C
+	.TILE_FLOOR:		equ $58 ; $FC
+	
+	.TILE_WALL_END:		equ CFG_TILES_PATTERN.TILE_WALL + 4
+	.TILE_BOX_END:		equ CFG_TILES_PATTERN.TILE_BOX + 4
+	.TILE_GUN_END:		equ CFG_TILES_PATTERN.TILE_GUN + 4
+	.TILE_DIAMOND_END:	equ CFG_TILES_PATTERN.TILE_DIAMOND + 4
+	.TILE_WALL_WARP_END:	equ CFG_TILES_PATTERN.TILE_WALL_WARP + 4
+	.TILE_EXIT_END:		equ CFG_TILES_PATTERN.TILE_EXIT + 4
+	.TILE_NEST_END:		equ CFG_TILES_PATTERN.TILE_NEST + 2*4
+	.TILE_NEST1_END:	equ CFG_TILES_PATTERN.TILE_NEST1 + 4
+	.TILE_NEST2_END:	equ CFG_TILES_PATTERN.TILE_NEST2 + 4
+	.TILE_FLOOR_END:	equ CFG_TILES_PATTERN.TILE_FLOOR + 4
+	
+CFG_EXIT:
+	.BLINK_FRAMES:	equ 10
+		
+CFG_PYRAMID:
+	.ROOM_VISITED:	equ $51
+	.ROOM_NOT_VISITED:	equ $53
+
+	
 CFG_HUD:			; $yyxx coordinates
 	.HIGH_COORDS:		equ $081A ; 0819h
 	.SCORE_COORDS:		equ $0B1A ; 0B19h
@@ -77,17 +131,34 @@ CFG_HUD:			; $yyxx coordinates
 	.LIVES_COORDS:		equ $171A ; 1719h
 
 CFG_OTHERS:
-	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
-	; .DONT_DECORATE_WARP:	; Uncomment to keep warp as normal walls
-	.CHARSET_3D:		; Uncomment to use "3D" charset
-	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
-	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2
-	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
+	.PLAYER_INITIAL_DIR:		equ $03 ; 01h ; Initial player direction (down)
+	; .DONT_DECORATE_WARP:		; Uncomment to keep warp as normal walls
+	; .CHARSET_3D:			; Uncomment to use "3D" charset
+	.EXTRA_ENEMY_1:			; Uncomment to use the unused_enemy_slot1
+	.EXTRA_ENEMY_2:			; Uncomment to use the unused_enemy_slot2
+	.SHORT_DELAY_FACTOR:		equ $03 ; 04h ; Multiplier in short delay routine
+	
+	.ENEMIES_WITH_4_DIRECTION:	; Uncomment to use 4 direction for ENEMIES
+	; .ENEMIES_AS_HUMAN:		; Uncomment to use human form for enemies
+	.PAINT_TILE_FLOOR:		; Uncomment to paint floor tile, no more clear tile
+	.NUMBERS_WITH_COLOR:		; Uncomment to paint number with color
+	.FIX_PLAYGROUND:		; Uncomment to fix first draw of playground
+
+enemy_spratr_y:		equ 0
+enemy_spratr_x:		equ 1
+enemy_spratr_pat:	equ 2
+enemy_spratr_color:	equ 3
+enemy_direction:	equ 4
+enemy_status:		equ 5
+enemy_base_pattern:	equ 6
+enemy_sprite_plane:	equ 7
+	
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; ROM header and entry point
-	org	$8000, $9fff ; 8KB ROM
+;	org	$8000, $9fff ; 8KB ROM
+	org	$8000, $bfff ; 16KB ROM
 ROM_START:
 	db	"AB"		; ID ("AB")
 	dw	.INIT		; INIT
@@ -128,6 +199,21 @@ ROM_START:
 	ld	hl,CLRTBL
 	ld	bc,CLRTBL.SIZE
 	call	FILVRM
+	IFDEF CFG_OTHERS.NUMBERS_WITH_COLOR
+		ld	a, 7 << 4 or 0
+		ld	hl,CLRTBL.BANK_0
+		ld	bc,10*8
+		call	FILVRM
+		ld	a, 7 << 4 or 0
+		ld	hl,CLRTBL.BANK_1
+		ld	bc,10*8
+		call	FILVRM
+		ld	a, 7 << 4 or 0
+		ld	hl,CLRTBL.BANK_2
+		ld	bc,10*8
+		call	FILVRM
+	ENDIF
+	
 ; Init CHRTBL/CLRTBL
 	ld	hl, DATA_CHARSET.CHR
 	ld	de, CHRTBL + $30 * $08
@@ -177,16 +263,32 @@ ROM_START:
 	ld	de,0001h
 	ld	b,18h
 	ld	c,18h
+	xor a ; enhanced
 .LOOP:	call	.SUB
 	jr	z, .CONT
 	jr	.LOOP
 
 .SUB:	push	de
 	push	bc
-	ld	hl,LITERAL.WALL_x25
+	IFDEF CFG_OTHERS.FIX_PLAYGROUND
+		push	af
+		and	1
+		ld	hl,LITERAL.WALL_x24_B
+		jr	z, .PRN
+		ld	hl,LITERAL.WALL_x24_A
+.PRN:
+	ELSE
+		ld	hl,LITERAL.WALL_x25
+	ENDIF
+	
+
 	call	PRINT
+	IFDEF CFG_OTHERS.FIX_PLAYGROUND
+		pop	af
+	ENDIF
 	pop	bc
 	pop	de
+	inc	a
 	inc	d
 	dec	c
 	ret
@@ -240,21 +342,36 @@ ROM_START:
 	ld	a,CFG_COLOR.SCORPION ; 09h
 	ld	(scorpion1.spratr_color),a
 	ld	(scorpion2.spratr_color),a
-	ld	a,12h
+	IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+		ld	a, CFG_BASE_PATTERN.SCORPION4*4 ; 12h
+	ELSE
+		ld	a, CFG_BASE_PATTERN.SCORPION ; 12h
+	ENDIF
 	ld	(scorpion1.base_pattern),a
 	ld	(scorpion2.base_pattern),a
-
-	ld	a,CFG_COLOR.BAT ; 01h
+	IFDEF CFG_ENHANCEMENTS.CHARSET0 
+		ld	a,CFG_COLOR.BAT_0 ; 01h
+	ELSE
+		ld	a,CFG_COLOR.BAT ; 01h
+	ENDIF
 	ld	(bat1.spratr_color),a
 	ld	(bat2.spratr_color),a
-	ld	a,14h
+	IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+		ld	a, CFG_BASE_PATTERN.BAT4*4 ; 14h
+	ELSE
+		ld	a, CFG_BASE_PATTERN.BAT ; 14h
+	ENDIF
 	ld	(bat1.base_pattern),a
 	ld	(bat2.base_pattern),a
 
 	ld	a,CFG_COLOR.OTHER
 	ld	(unused_enemy_slot1.spratr_color),a
 	ld	(unused_enemy_slot2.spratr_color),a
-	ld	a,16h
+	IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+		ld	a, CFG_BASE_PATTERN.OTHER4*4 ; 16h
+	ELSE
+		ld	a, CFG_BASE_PATTERN.OTHER ; 16h
+	ENDIF
 	ld	(unused_enemy_slot1.base_pattern),a
 	ld	(unused_enemy_slot2.base_pattern),a
 
@@ -454,6 +571,8 @@ ENDIF
 	ld	de,CFG_HUD.ROOM_COORDS +1
 	call	PRINT_CHAR
 
+DRAW_ROOM:
+
 ; Points to the right room data
 	ld	hl,DATA_ROOMS - $0022
 	ld	de,0022h
@@ -488,7 +607,7 @@ IFDEF CFG_OTHERS.CHARSET_3D
 ELSE
 	jr	nc,.EMPTY ; no
 ; (wall)
-	ld	a,30h
+	ld	a, CFG_TILES_PATTERN.TILE_WALL ; 30h
 	call	PRINT_TILE
 	jr	.BIT_OK
 ENDIF
@@ -542,6 +661,7 @@ ENDIF
 	cp	d
 	jr	nz, .ROW
 
+	
 ; Is sphynx room?
 	ld	a,(game.current_room)
 	cp	10h
@@ -559,7 +679,7 @@ PRINT_ROOM_DECORATION:
 	ld	ix,box3
 	call	NEW_BOX
 
-; Initializes next
+; Initializes nest
 	ld	ix,nest
 	ld	e,(hl)
 	inc	hl
@@ -568,7 +688,7 @@ PRINT_ROOM_DECORATION:
 	push	hl ; (preserve)
 ; (prints nest)
 	call	TO_VRAM_COORDINATES
-	ld	a,$48 ; 54h
+	ld	a, CFG_TILES_PATTERN.TILE_NEST  ; $48 ; 54h
 	call	PRINT_TILE
 	pop	hl ; (restore)
 
@@ -582,22 +702,22 @@ PRINT_ROOM_DECORATION:
 IFDEF CFG_OTHERS.DONT_DECORATE_WARP
 ELSE
 	ld	de,090Ah
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 	ld	de,090Ch
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 	ld	de,090Eh
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 	ld	de,0D0Ah
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 	ld	de,0D0Ch
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 	ld	de,0D0Eh
-	ld	a,$40
+	ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
 	call	PRINT_TILE
 ENDIF
 
@@ -621,7 +741,7 @@ NEW_BOX:
 	xor	a
 	ld	(ix+00h),a ; box.is_opening
 ; Prints box
-	ld	a,34h ; ($34 = box)
+	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
 	call	PRINT_TILE
 ; (restore data pointer and end)
 	pop	hl
@@ -659,7 +779,7 @@ NEW_DOOR:
 	add	a,a
 	ld	(ix),a ; door.spratr_pat
 ; saves door color
-	ld	a,CFG_COLOR.DOOR_0
+	ld	a, CFG_COLOR.DOOR_0
 	ld	(ix + 1),a ; door.spratr_color
 ; Prints door sprite
 	pop	de ; (restores pointer to spratr_y)
@@ -674,7 +794,7 @@ NEW_DOOR:
 PRINT_SPHYNX_ROOM_DECORATION:
 ; Prints single box
 	ld	de,0B0Ch	; address or value?
-	ld	a,34h ; ($34 = box)
+	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
 	call	PRINT_TILE
 
 ; Do not initialize doors
@@ -804,7 +924,7 @@ GAME_LOOP:
 
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	b,$53 ; ($63 = non visited room)
+	ld	b, CFG_PYRAMID.ROOM_NOT_VISITED ; $53 ; ($63 = non visited room)
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L86AC
@@ -1170,17 +1290,40 @@ MOVE_SKULL:
 .L88E2:	srl	b
 	jr	c,.L88E8
 	neg
-.L88E8:	add	a,(hl)
+.L88E8:	
+	add	a,(hl)
 	ld	(hl),a
+	
+	
+IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+	ld	a,(skull.direction)
+	ld	b,a ; b = 0..3
+; Animates the player sprite each two frames (b += 0/4)
+	ld	a,(aux.frame_counter)
+	and	02h
+	jr	z, .L88F4_
+	ld	a, 04h
+	add	a,b
+	ld	b,a
+; Computes and sets the sprite pattern (a *= 4)
+.L88F4_:	
+	ld	a,b
+	add	a,a
+	add	a,a
+	add	a, CFG_BASE_PATTERN.SKULL4*4
+ELSE
 ; Animates the skull each two frames
 	ld	a,(aux.frame_counter)
 	and	02h
-	ld	a,10h
+	ld	a, CFG_BASE_PATTERN.SKULL ; 10h
 	jr	z,.L88F4
 	inc	a
 ; (computes skull pattern)
-.L88F4:	add	a,a
+.L88F4:	
 	add	a,a
+	add	a,a
+ENDIF
+	
 	ld	(skull.spratr_pat),a
 ; Puts the skull sprite
 	ld	a,03h
@@ -1219,7 +1362,7 @@ GAME_LOOP.SKULL_OK:
 ; Animates the bullet each eight frames
 	ld	a,(aux.frame_counter)
 	and	08h
-	ld	a,1Ah
+	ld	a, CFG_BASE_PATTERN.BULLET ; 1Ah
 	jr	z,.L8934
 	inc	a
 ; (computes bullet pattern)
@@ -1244,7 +1387,7 @@ GAME_LOOP.SKULL_OK:
 	sub	07h ; (aligns the explosion sprite)
 	ld	(hl),a
 	inc	hl ; bullet.spratr_pat
-	ld	a,78h
+	ld	a, CFG_BASE_PATTERN.EXPLOSION_2*4 ; 78h
 	ld	(hl),a
 	inc	hl ; bullet.spratr_color
 	ld	a,CFG_COLOR.EXPLOSION
@@ -1291,7 +1434,7 @@ ENDIF
 	ld	(exit.blink_counter),a
 	jr	nz,.L89B4
 ; (each 10 frames)
-	ld	a,0Ah
+	ld	a, CFG_EXIT.BLINK_FRAMES ; 0Ah
 	ld	(exit.blink_counter),a
 	ld	a,(exit.blink_flag)
 	cpl
@@ -1300,7 +1443,7 @@ ENDIF
 	or	a
 	jr	z,.L89B1
 ; (prints the exit)
-	ld	a,$44 ; 50h
+	ld	a, CFG_TILES_PATTERN.TILE_EXIT ; $44 ; 50h
 	call	PRINT_TILE
 	jr	.L89B4
 ; (clears the exit)
@@ -1321,7 +1464,7 @@ ENDIF
 	ld	(pyramid.room_index),a
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	a,$51
+	ld	a, CFG_PYRAMID.ROOM_VISITED ; $51
 	call	PRINT_CHAR
 ; Plays exit sound
 	call	PLAY_SOUND_EXIT
@@ -1364,7 +1507,7 @@ ENDIF
 ; if 0, removes explosion
 	jr	z,.L8A2D
 ; if < 4, makes explosion smaller
-	ld	b,$1c
+	ld	b, CFG_BASE_PATTERN.EXPLOSION ; $1c
 	cp	04h
 	jr	c,.L8A1B
 	inc	b
@@ -1411,9 +1554,9 @@ GAME_LOOP.EVERYTHING_OK:
 ; Animates the enemies nest each four frames
 	ld	a,(aux.frame_counter)
 	and	04h
-	ld	b,$48 ; 54h
+	ld	b, CFG_TILES_PATTERN.TILE_NEST1 ; $48 ; 54h
 	jr	z,.L8A5D
-	ld	b,$4c ; 58h
+	ld	b, CFG_TILES_PATTERN.TILE_NEST2 ; $4c ; 58h
 ; Prints nest
 .L8A5D:	ld	a,(nest.spratr_y)
 	srl	a
@@ -1661,16 +1804,30 @@ CHECK_WALL:
 ; Reads the character
 	call	RDVRM
 	ld	b,a
+
+	IFDEF CFG_OTHERS.PAINT_TILE_FLOOR
+	; Checks for floor
+		ld	a, CFG_TILES_PATTERN.TILE_FLOOR-1
+		cp	b
+		jr	nc, .L8BFB_ ; no
+		ld	a, CFG_TILES_PATTERN.TILE_FLOOR_END-1
+		cp	b
+		jr	c, .L8BFB_ ; no
+	; yes: wall
+		ld	b, $FF
+.L8BFB_:	
+	ENDIF
+	
 ; Is checking player?
 	ld	a,(check_wall_for_player)
 	or	a
 	jr	z,.L8C20 ; no
 
 ; Checks for box (player only)
-	ld	a,$34 -1 ; >= $34?
+	ld	a, CFG_TILES_PATTERN.TILE_BOX-1 ; $34 -1 ; >= $34?
 	cp	b
 	jr	nc,.L8C13 ; no
-	ld	a,$38 -1 ; and <= $37?
+	ld	a, CFG_TILES_PATTERN.TILE_BOX_END-1 ; $38 -1 ; and <= $37?
 	cp	b
 	jr	c,.L8C13 ; no
 ; yes: box, not a wall
@@ -1678,10 +1835,11 @@ CHECK_WALL:
 	ret
 
 ; Checks for exit (player only)
-.L8C13:	ld	a,$44 -1 ; >= $44?
+.L8C13:	
+	ld	a, CFG_TILES_PATTERN.TILE_EXIT-1 ; $44 -1 ; >= $44?
 	cp	b
 	jr	nc,.L8C20 ; no
-	ld	a,$48 -1 ; and <= $48?
+	ld	a, CFG_TILES_PATTERN.TILE_EXIT_END-1 ; $48 -1 ; and <= $48?
 	cp	b
 	jr	c,.L8C20 ; no
 ; yes: exit, not a wall
@@ -1903,7 +2061,7 @@ MOVE_ENEMY:
 	pop	hl
 ; Moves the enemy
 	ld	hl,(current_enemy_ptr)
-	ld	(ix+04h),b ; .direction
+	ld	(ix+enemy_direction),b ; .direction
 	ld	a,02h ; (two pixels)
 	srl	b
 	jr	c,.L8D15
@@ -1913,9 +2071,33 @@ MOVE_ENEMY:
 	neg
 .L8D1B:	add	a,(hl)
 	ld	(hl),a
+
 ; Animates the enemy each four frames
 	ld	ix,(current_enemy_ptr)
-	ld	b,(ix+06h) ; .base_pattern
+
+IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+	ld	a,(ix+enemy_direction)
+	ld	b,a ; b = 0..3
+; Animates the enemy sprite each four frames (b += 0/4)
+	ld	a,(aux.frame_counter)
+	and	04h
+	jr	z, .L8D2C_
+	ld	a, 04h
+	add	a,b
+	ld	b,a
+; Computes and sets the sprite pattern (a *= 4)
+.L8D2C_:	
+	ld	a,b
+	add	a,a
+	add	a,a
+	IFDEF CFG_OTHERS.ENEMIES_AS_HUMAN
+	;	add	a, (ix+enemy_base_pattern)
+	ELSE
+		add	a, (ix+enemy_base_pattern)
+	ENDIF
+ELSE
+
+	ld	b,(ix+enemy_base_pattern) ; .base_pattern
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L8D2C
@@ -1924,8 +2106,10 @@ MOVE_ENEMY:
 .L8D2C:	ld	a,b
 	add	a,a
 	add	a,a
-	ld	(ix+02h),a ; .spratr_pattern
-	ld	a,(ix+07h) ; .sprite_plane
+ENDIF	
+	
+	ld	(ix+enemy_spratr_pat),a ; .spratr_pattern
+	ld	a,(ix+enemy_sprite_plane) ; .sprite_plane
 	ld	de,(current_enemy_ptr)
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
@@ -2116,7 +2300,7 @@ OPEN_BOX_DIAMOND:
 	xor	a
 	ld	(exit.unused2),a
 ; Prints the diamond
-	ld	a,3Ch
+	ld	a, CFG_TILES_PATTERN.TILE_DIAMOND ; 3Ch
 	call	PRINT_TILE
 ; Prepares the mark to opening the door (2 "airs" later)
 	ld	hl,(game.air_left)
@@ -2137,7 +2321,7 @@ OPEN_BOX_GUN:
 .L8E76:	ld	a,08h
 	ld	(player_has_gun),a
 ; Prints the gun
-	ld	a,38h
+	ld	a, CFG_TILES_PATTERN.TILE_GUN ; 38h
 	call	PRINT_TILE
 ; Scores 100 points
 	ld	de,0100h
@@ -2155,7 +2339,11 @@ OPEN_BOX_SKULL:
 	inc	hl ; skull.spratr_x
 	ld	(hl),e
 	inc	hl ; skull.spratr_pattern
-	ld	a,40h
+	IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+		ld	a, CFG_BASE_PATTERN.SKULL4*4+12 ; 40h
+	ELSE
+		ld	a, CFG_BASE_PATTERN.SKULL*4 ; 40h
+	ENDIF
 	ld	(hl),a
 	inc	hl ; skull.spratr_color
 	ld	a,CFG_COLOR.SKULL
@@ -2165,7 +2353,11 @@ OPEN_BOX_SKULL:
 	ld	(hl),a
 	inc	hl ; skull.status
 	inc	hl ; skull.base_pattern
-	ld	a,10h
+	IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+		ld	a, CFG_BASE_PATTERN.SKULL4 ; 10h
+	ELSE
+		ld	a, CFG_BASE_PATTERN.SKULL ; 10h
+	ENDIF
 	ld	(hl),a
 	inc	hl ; skull.sprite_plane
 	ld	a,03h
@@ -2678,7 +2870,8 @@ DATA_SOUND:
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
 PUT_SPRITE:
-.L91E3:	ld	hl,SPRATR
+.L91E3:	
+	ld	hl,SPRATR
 	ld	bc,4 ; 4b per sprite
 	inc	a
 .L91EA: dec	a
@@ -2687,6 +2880,8 @@ PUT_SPRITE:
 	jr	.L91EA
 .L91F1: ex	de,hl
 	jp	LDIRVM
+	
+	
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2998,6 +3193,10 @@ PRINT:
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
 CLEAR_TILE:
+
+IFDEF CFG_OTHERS.PAINT_TILE_FLOOR
+	ld a, CFG_TILES_PATTERN.TILE_FLOOR
+ELSE
 	call	TO_NAMTBL
 	ex	de,hl
 ; First row, first char
@@ -3020,6 +3219,7 @@ CLEAR_TILE:
 	call	WRTVRM
 	pop	hl
 	ret
+ENDIF	
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3108,11 +3308,26 @@ LITERAL:
 .AIR: ; 9C2A
 	DB	$0A, $12, $1B				; AIR
 
-.WALL_x25: ; 9C3B
-	DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
-	DB	$31, $30, $31, $30, $31, $30, $31, $30
-	DB	$31, $30, $31, $30, $31, $30, $31, $30
-	DB	$31
+	
+IFDEF CFG_OTHERS.FIX_PLAYGROUND
+	.WALL_x24_A:
+		DB	$31, $30, $31, $30, $31, $30, $31, $30	; 24x wall
+		DB	$31, $30, $31, $30, $31, $30, $31, $30
+		DB	$31, $30, $31, $30, $31, $30, $31, $30
+	.WALL_x24_B:
+		DB	$33, $32, $33, $32, $33, $32, $33, $32	; 24x wall
+		DB	$33, $32, $33, $32, $33, $32, $33, $32
+		DB	$33, $32, $33, $32, $33, $32, $33, $32
+ELSE
+	.WALL_x25: ; 9C3B
+		DB	$31, $30, $31, $30, $31, $30, $31, $30	; 25x wall
+		DB	$31, $30, $31, $30, $31, $30, $31, $30
+		DB	$31, $30, $31, $30, $31, $30, $31, $30
+		DB	$31
+ENDIF
+
+
+	
 .ROOMS_x7:	; 9C54
 	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 
@@ -3190,7 +3405,11 @@ DATA_FONT:
 
 DATA_SPRTBL:
 	IFDEF CFG_ENHANCEMENTS.SPRITES
-		incbin	"asm/enhanced/sprites.pcx.spr"
+		IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
+			incbin	"asm/enhanced/sprites4d.pcx.spr"
+		ELSE
+			incbin	"asm/enhanced/sprites.pcx.spr"
+		ENDIF
 	ELSE
 		incbin	"asm/original/sprites.pcx.spr"
 	ENDIF
@@ -3198,19 +3417,27 @@ DATA_SPRTBL:
 
 DATA_CHARSET:
 	.CHR:
-	IFDEF CFG_ENHANCEMENTS.CHARSET
-		incbin	"asm/enhanced/charset.pcx.chr"
+	IFDEF CFG_ENHANCEMENTS.CHARSET0
+		incbin	"asm/enhanced/charset_0.pcx.chr"
 	ELSE
-		incbin	"asm/original/charset.pcx.chr"
+		IFDEF CFG_ENHANCEMENTS.CHARSET
+			incbin	"asm/enhanced/charset.pcx.chr"
+		ELSE
+			incbin	"asm/original/charset.pcx.chr"
+		ENDIF
 	ENDIF
 	.CHR_FF:	equ $ - 8
 	.SIZE:	equ $ - DATA_CHARSET
 
 	.CLR:
-	IFDEF CFG_ENHANCEMENTS.CHARSET
-		incbin	"asm/enhanced/charset.pcx.clr"
+	IFDEF CFG_ENHANCEMENTS.CHARSET0
+		incbin	"asm/enhanced/charset_0.pcx.clr"
 	ELSE
-		incbin	"asm/original/charset.pcx.clr"
+		IFDEF CFG_ENHANCEMENTS.CHARSET
+			incbin	"asm/enhanced/charset.pcx.clr"
+		ELSE
+			incbin	"asm/original/charset.pcx.clr"
+		ENDIF
 	ENDIF
 	.CLR_FF:	equ $ - 8
 
@@ -3220,7 +3447,8 @@ DATA_ROOMS:
 	ELSE
 		include	"asm/original/rooms.asm"
 	ENDIF
-
+	
+	
 DATA_RANDOMIZE_PYRAMID:
 	IFDEF CFG_ENHANCEMENTS.ROOMS
 		include	"asm/enhanced/pyramids.asm"
@@ -3245,7 +3473,8 @@ debug_rom_end_diff:	equ debug_rom_end_original - debug_rom_end_new
 
 ; -----------------------------------------------------------------------------
 ; Padding to a 8kB boundary
-	ds	($ OR $1fff) -$ +1, $00
+;	ds	($ OR $1fff) -$ +1, $00
+	ds	($ OR $3fff) -$ +1, $00
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3382,6 +3611,7 @@ aux.frame_counter_2:	rb 1	; C0D8H
 player_entering_door:	rb 1	; C0DAH
 aux.dying_flashes:	rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
+	
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
 debug_ram_end_new:	equ $ -1

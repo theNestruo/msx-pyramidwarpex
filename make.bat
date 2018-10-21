@@ -23,7 +23,9 @@ REM
 :regenerate_enhanced_data
 bin\pcx2msx.exe -v asm\enhanced\font.pcx -hl 
 bin\pcx2msx.exe -v asm\enhanced\charset.pcx
+bin\pcx2msx.exe -v asm\enhanced\charset_0.pcx
 bin\pcx2spr.exe -v asm\enhanced\sprites.pcx
+bin\pcx2spr.exe -v asm\enhanced\sprites4d.pcx
 shift
 goto parse
 
@@ -34,7 +36,7 @@ REM
 :assemble
 bin\tniasm.exe "asm\PyramidWarp.enhanced.asm" ".\enhanced.rom"
 findstr /b /i "debug_" tniasm.sym | sort
-del tniasm.sym tniasm.tmp
+rem del tniasm.sym tniasm.tmp
 
 
 REM
