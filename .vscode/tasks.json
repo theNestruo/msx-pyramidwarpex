@@ -1,0 +1,38 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"presentation": {
+		"echo": true,
+		"reveal": "never",
+		"focus": false,
+		"panel": "shared",
+		"showReuseMessage": true,
+		"clear": false
+	},
+	"problemMatcher": [
+		"$errmatcher-tniasm",
+		"$errmatcher-tniasm-preprocessor"
+	],
+	"tasks": [
+		{
+			"label": "Assembles and test the enhanced+ remake",
+			"type": "shell",
+			"command": "make.bat testplus",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},{
+			"label": "Re-generates the enhanced+ graphic data, assembles and test the enhanced+ remake",
+			"type": "shell",
+			"command": "make.bat enhancedplus testplus",
+			"group": "build"
+		},{
+			"label": "Re-generates the original and enhanced graphic data, assembles and test the enhanced remake",
+			"type": "shell",
+			"command": "make.bat original enhanced test",
+			"group": "build"
+		}
+	]
+}

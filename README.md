@@ -2,7 +2,24 @@
 
 Disassembly, reverse engineering, and possible enhancement of the MSX game cartridge "Pyramid Warp (1983)"
 
-## Original enhancements by theNestruo
+## Versions:
+
+* `PyramidWarp.annotated.asm`:
+	* The annotated disassembly of Pyramid Warp (1983).
+	* Assembles to the original ROM, verbatim.
+
+* `PyramidWarp.enhanced.asm`:
+	* The original source code, once disassembled, was easy to understand and easy to improve because it used no compression, did no clever tricks, and underused some resources (e.g.: the game looked like SCREEN 1 despite being SCREEN2 already).
+	* This is a patcheable version of the original source code that allows several of those enhancements.
+	* This version keeps most of the original source code untouched and, actually, a pixel-perfect clone of the original game can be assembled from this!
+
+* `PyramidWarp.enhanced+.asm`:
+	* This version break ties with the original source code wherever necessary to accomodate not-so-easy-to-fit enhancements (such as a proper music replayer or a sprite flickering routine)
+	* Work in progress
+
+## Enhancements
+
+### Original enhancements by theNestruo
 
 * Moved RAM start from $C000 to $E000 (RAM requirement is now 8KB)
 * Unused data removed. Data realigned to simplify routines and to free space (+512 bytes freed)
@@ -14,7 +31,7 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 * Patcheable room definitions (external assembly code)
 * 5th and 6th enemy slots can be enabled
 
-## Additional enhancements by Nenefranz
+### Additional enhancements by Nenefranz
 
 * Completely new graphic set
 * Enemies can look in 4 directions
@@ -23,7 +40,7 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 * Numbers in scoreboard in a different color (to improve readability)
 * Fixes the first draw of the playground
 
-## Future enhancements
+### Future enhancements
 
 * Proper music and sounds
 * More room definitions! More randomness!
