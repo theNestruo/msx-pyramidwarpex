@@ -245,15 +245,13 @@ ROM_START:
 	call	HIT_SPACE_KEY
 
 ; color ,,4
-	ld	c,07h
-	ld	b,CFG_COLOR.BG
+	ld	bc,CFG_COLOR.BG << 8 + 07h
 	call	WRTVDP
 
 ; Fills in playground
 	ld	de,0001h
-	ld	b,18h
-	ld	c,18h
-	xor a ; enhanced
+	ld	bc,1818h
+	xor	a ; enhanced
 .LOOP:	call	.SUB
 	jr	z, .CONT
 	jr	.LOOP
@@ -828,106 +826,106 @@ PRINT_WALL_3D:
 	push	de
 
 	; initialize
-	xor		a
-	ld		(room_enhance_tile), a
+	xor	a
+	ld	(room_enhance_tile), a
 
 	; LEFT TILE
-	ld		a, (room_enhance_pos)
-	ld		b, a
-	and		$0F
-	jr		z, .left_set_bit
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$0F
+	jr	z, .left_set_bit
 	; set left pos
-	dec		a
-	ld		c, a
-	ld		a, b
-	and		$F0
-	or		c		; a = new pos
+	dec	a
+	ld	c, a
+	ld	a, b
+	and	$F0
+	or	c		; a = new pos
 	; get map position
 	call	GET_MAP_POSITION
-	jr		z, .left_check_end
+	jr	z, .left_check_end
 .left_set_bit:
 	; set left bit
-	ld		hl, room_enhance_tile
-	set		0, (hl)
+	ld	hl, room_enhance_tile
+	set	0, (hl)
 .left_check_end:
 
 
 	; UP TILE
-	ld		a, (room_enhance_pos)
-	ld		b, a
-	and		$F0
-	jr		z, .up_set_bit
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$F0
+	jr	z, .up_set_bit
 	; set up pos
-	add		a, -16
-	ld		c, a
-	ld		a, b
-	and		$0F
-	or		c		; a = new pos
+	add	a, -16
+	ld	c, a
+	ld	a, b
+	and	$0F
+	or	c		; a = new pos
 	; get map position
 	call	GET_MAP_POSITION
-	jr		z, .up_check_end
+	jr	z, .up_check_end
 .up_set_bit:
 	; set left bit
-	ld		hl, room_enhance_tile
-	set		1, (hl)
+	ld	hl, room_enhance_tile
+	set	1, (hl)
 .up_check_end:
 
 
 	; RIGHT TILE
-	ld		a, (room_enhance_pos)
-	ld		b, a
-	and		$0F
-	cp		10 ; 11
-	jr		nc, .right_set_bit
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$0F
+	cp	10 ; 11
+	jr	nc, .right_set_bit
 	; set left pos
-	inc		a
-	ld		c, a
-	ld		a, b
-	and		$F0
-	or		c		; a = new pos
+	inc	a
+	ld	c, a
+	ld	a, b
+	and	$F0
+	or	c		; a = new pos
 	; get map position
 	call	GET_MAP_POSITION
-	jr		z, .right_check_end
+	jr	z, .right_check_end
 .right_set_bit:
 	; set left bit
-	ld		hl, room_enhance_tile
-	set		2, (hl)
+	ld	hl, room_enhance_tile
+	set	2, (hl)
 .right_check_end:
 
 
 	; DOWN TILE
-	ld		a, (room_enhance_pos)
-	ld		b, a
-	and		$F0
-	cp		10 << 4 ; $B0
-	jr		nc, .down_set_bit
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$F0
+	cp	10 << 4 ; $B0
+	jr	nc, .down_set_bit
 	; set up pos
-	add		a, $10
-	ld		c, a
-	ld		a, b
-	and		$0F
-	or		c		; a = new pos
+	add	a, $10
+	ld	c, a
+	ld	a, b
+	and	$0F
+	or	c		; a = new pos
 	; get map position
 	call	GET_MAP_POSITION
-	jr		z, .down_check_end
+	jr	z, .down_check_end
 .down_set_bit:
 	; set left bit
-	ld		hl, room_enhance_tile
-	set		3, (hl)
+	ld	hl, room_enhance_tile
+	set	3, (hl)
 .down_check_end:
 
 	; calculate actual tile
-	ld		a, (room_enhance_tile)
+	ld	a, (room_enhance_tile)
 	add	a, a
 	add	a, a
-	ld		hl, DATA_WALL_ENHANCE
+	ld	hl, DATA_WALL_ENHANCE
 	call	ADD_HL_A
 	call	PRINT_TILE_SEQ
 
-	pop		de
-	pop		bc
-	pop		af
-	pop		hl
+	pop	de
+	pop	bc
+	pop	af
+	pop	hl
 	ret
 
 
@@ -943,9 +941,9 @@ GET_MAP_POSITION:
 	ld		c, a	; c = byte con 8 pixeles
 
 	ld		a, b	; b = posicion
-	and		$07		; a = posicion x (0..7)
-	neg
-	add		a, 7
+	and		$07	; a = posicion x (0..7)
+	cpl
+	add		a, 7 +1
 	ld		b, a	; b = numero de bits a rotar
 	ld		a, c	; a = byte con 8 pixeles
 	jr		z, @@norotar
@@ -970,8 +968,7 @@ NEW_BOX:
 	push	hl
 ; Initializes coordinates and other values
 	call	TO_VRAM_COORDINATES
-	xor	a
-	ld	(ix+00h),a ; box.is_opening
+	ld	(ix+00h),000h ; box.is_opening
 ; Prints box
 	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
 	call	PRINT_TILE
@@ -1011,8 +1008,7 @@ NEW_DOOR:
 	add	a,a
 	ld	(ix),a ; door.spratr_pat
 ; saves door color
-	ld	a, CFG_COLOR.DOOR_0
-	ld	(ix + 1),a ; door.spratr_color
+	ld	(ix + 1),CFG_COLOR.DOOR_0 ; door.spratr_color
 ; Prints door sprite
 	pop	de ; (restores pointer to spratr_y)
 	ld	a,b ; sprite plane according b
@@ -1051,8 +1047,7 @@ INIT_GAME_LOOP:
 	push	hl
 	ld	(hl),a
 	inc	hl
-	ld	a,60h
-	ld	(hl),a
+	ld	(hl),60h
 	inc	hl
 	push	hl
 
@@ -1095,8 +1090,7 @@ INIT_GAME_LOOP:
 	ld	(hl),a
 ; Sets player color
 	inc	hl ; player.spratr_color
-	ld	a,CFG_COLOR.PLAYER ; 0Bh
-	ld	(hl),a
+	ld	(hl),CFG_COLOR.PLAYER ; 0Bh
 
 ; Put player sprite
 	pop	de ; player.spratr_y
@@ -1339,14 +1333,11 @@ GAME_LOOP.DOORS_OK:
 	ld	a,(ix+01h) ; (x+7 for centering the bullet)
 	add	a,07h
 	ld	(iy+01h),a
-	ld	a,70h ; bullet pattern
-	ld	(iy+02h),a
-	ld	a,CFG_COLOR.BULLET; bullet color
-	ld	(iy+03h),a
+	ld	(iy+02h),70h ; bullet pattern
+	ld	(iy+03h),CFG_COLOR.BULLET; bullet color
 	ld	a,(ix+04h) ; direction
 	ld	(iy+04h),a
-	ld	a,0FFh ; bullet status active
-	ld	(iy+05h),a
+	ld	(iy+05h),0FFh ; bullet status active
 ; Put bullet sprite
 	ld	de,bullet
 	ld	a,0Ah
@@ -1606,15 +1597,12 @@ GAME_LOOP.SKULL_OK:
 	sub	07h ; (aligns the explosion sprite)
 	ld	(hl),a
 	inc	hl ; bullet.spratr_pat
-	ld	a, CFG_BASE_PATTERN.EXPLOSION_2*4 ; 78h
-	ld	(hl),a
+	ld	(hl),CFG_BASE_PATTERN.EXPLOSION_2*4 ; 78h
 	inc	hl ; bullet.spratr_color
-	ld	a,CFG_COLOR.EXPLOSION
-	ld	(hl),a
+	ld	(hl),CFG_COLOR.EXPLOSION
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
-	ld	a,06h
-	ld	(hl),a
+	ld	(hl),06h
 ; Sound
 	call	PLAY_SOUND_BULLET_HIT
 ; Puts the bullet sprite
@@ -1739,13 +1727,11 @@ ENDIF
 	add	a,a
 	add	a,a
 	ld	(ix+02h),a ; bullet.spratr_pat
-	ld	a,CFG_COLOR.EXPLOSION
-	ld	(ix+03h),a ; bullet.spratr_color
+	ld	(ix+03h),CFG_COLOR.EXPLOSION ; bullet.spratr_color
 	jr	.L8A32
 
 ; Removes bullet
-.L8A2D:	ld	a,SPAT_OB
-	ld	(ix+00h),a
+.L8A2D:	ld	(ix+00h),SPAT_OB
 
 ; Puts bullet sprite
 .L8A32:	ld	de,bullet
@@ -1778,14 +1764,16 @@ GAME_LOOP.EVERYTHING_OK:
 	ld	b, CFG_TILES_PATTERN.TILE_NEST2 ; $4c ; 58h
 ; Prints nest
 .L8A5D:	ld	a,(nest.spratr_y)
-	srl	a
-	srl	a
-	srl	a
+	rrca
+	rrca
+	rrca
+	and	$1f
 	ld	d,a
 	ld	a,(nest.spratr_x)
-	srl	a
-	srl	a
-	srl	a
+	rrca
+	rrca
+	rrca
+	and	$1f
 	ld	e,a
 	ld	a,b
 	call	PRINT_TILE
@@ -1807,11 +1795,9 @@ GAME_LOOP.EVERYTHING_OK:
 .L8A8B:	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L8A98
-	ld	b,CFG_COLOR.DOOR_1
-	ld	c,CFG_COLOR.DOOR_2
+	ld	bc,CFG_COLOR.DOOR_1 << 8 + CFG_COLOR.DOOR_2
 	jr	.L8A9C
-.L8A98:	ld	b,CFG_COLOR.DOOR_2
-	ld	c,CFG_COLOR.DOOR_1
+.L8A98:	ld	bc,CFG_COLOR.DOOR_2 << 8 + CFG_COLOR.DOOR_1
 ; Sets door colors (RAM)
 .L8A9C:	ld	a,b
 	ld	(door1.spratr_color),a
@@ -1925,8 +1911,7 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	de,121Ch	; address or value?
 	call	PRINT_CHAR
 ; color ,,1
-	ld	b,CFG_COLOR.BG_SPHYNX
-	ld	c,07h
+	ld	bc,CFG_COLOR.BG_SPHYNX << 8 + 07h
 	call	WRTVDP
 ; Sphynx sound
 	call	PLAY_SOUND_SPHYNX
@@ -1948,17 +1933,14 @@ CHECK_SPHYNX_ROOM_BOX:
 	call	HIT_SPACE_KEY
 
 ; screen ,2
-.L8B4C:	ld	c,01h
-	ld	b,0E2h
+.L8B4C:	ld	bc,0E2h << 8 + 01h
 	call	WRTVDP
 ; color ,,4
-	ld	c,07h
-	ld	b,CFG_COLOR.BG
+	ld	bc,CFG_COLOR.BG << 8 + 07h
 	call	WRTVDP
 ; Extra life
-	ld	a,(game.lives)
-	inc	a
-	ld	(game.lives),a
+	ld	hl, game.lives
+	inc	[hl]
 ; Increases difficulty
 	ld	a,0FFh
 	ld	(game.first_pyramid),a
@@ -2237,10 +2219,8 @@ SPAWN_NEW_ENEMY:
 	ld	bc,(nest)
 	ld	(ix+00h),c ; .spratr_y
 	ld	(ix+01h),b ; .spratr_x
-	ld	a,0FFh
-	ld	(ix+05h),a ; .status
-	xor	a
-	ld	(ix+04h),a ; .direction (0 = left)
+	ld	(ix+05h),0FFh ; .status
+	ld	(ix+04h),000h ; .direction (0 = left)
 ; Reads enemy pattern
 	ld	b,(ix+06h) ; .base_pattern
 	ld	a,(aux.frame_counter)
@@ -2410,15 +2390,12 @@ CHECK_ENEMY_BULLET_COLLISION:
 	ld	a,(ix+01h)
 	ld	(hl),a
 	inc	hl ; bullet.spratr_pat
-	ld	a,78h
-	ld	(hl),a
+	ld	(hl),78h
 	inc	hl ; bullet.spratr_color
-	ld	a,CFG_COLOR.EXPLOSION
-	ld	(hl),a
+	ld	(hl),CFG_COLOR.EXPLOSION
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
-	ld	a,06h
-	ld	(hl),a
+	ld	(hl),06h
 ; Prints explosion sprite
 	ld	de,bullet
 	ld	a,0Ah
@@ -2429,10 +2406,8 @@ CHECK_ENEMY_BULLET_COLLISION:
 	ld	de,0030h
 	call	ADD_SCORE
 ; Removes enemy (RAM)
-	xor	a
-	ld	(ix+05h),a ; .status
-	ld	a,SPAT_OB
-	ld	(ix+00h),a ; .spratr_y
+	ld	(ix+05h),000h ; .status
+	ld	(ix+00h),SPAT_OB ; .spratr_y
 ; Removes enemy (VRAM)
 	ld	de,(current_enemy_ptr)
 	ld	a,(ix+07h) ; .sprite_plane
@@ -2474,8 +2449,7 @@ KILL_PLAYER:
 .L8DCA:	pop	hl
 	call	PLAY_DEAD_MUSIC
 ; color ,,4
-	ld	b,CFG_COLOR.BG
-	ld	c,07h
+	ld	bc,CFG_COLOR.BG << 8 + 07h
 	call	WRTVDP
 	jp	DEC_LIVES_AND_NEW_ROOM
 ; -----------------------------------------------------------------------------
@@ -2522,11 +2496,9 @@ UPDATE_BOX:
 ; Opens the box
 	call	PLAY_SOUND_BOX
 	call	SHORT_DELAY
-	ld	a,0FFh
-	ld	(ix+02h),a ; .status
+	ld	(ix+02h),0FFh ; .status
 
-	ld	a,32h		; '2'
-	ld	(ix+03h),a
+	ld	(ix+03h),32h		; '2'
 	ld	d,(ix+00h)
 	ld	e,(ix+01h)
 ; Checks the contents
@@ -2595,21 +2567,17 @@ OPEN_BOX_SKULL:
 	inc	hl ; skull.spratr_x
 	ld	(hl),e
 	inc	hl ; skull.spratr_pattern
-	ld	a, CFG_BASE_PATTERN.SKULL4*4+12 ; 40h
-	ld	(hl),a
+	ld	(hl),CFG_BASE_PATTERN.SKULL4*4+12 ; 40h
 	inc	hl ; skull.spratr_color
-	ld	a,CFG_COLOR.SKULL
-	ld	(hl),a
+	ld	(hl),CFG_COLOR.SKULL
 	inc	hl ; skull.direction
 	xor	a
 	ld	(hl),a
 	inc	hl ; skull.status
 	inc	hl ; skull.base_pattern
-	ld	a, CFG_BASE_PATTERN.SKULL4 ; 10h
-	ld	(hl),a
+	ld	(hl),CFG_BASE_PATTERN.SKULL4 ; 10h
 	inc	hl ; skull.sprite_plane
-	ld	a,03h
-	ld	(hl),a
+	ld	(hl),03h
 ; Put skull sprite
 	ld	de,skull
 	ld	a,03h
@@ -2714,8 +2682,7 @@ PLAY_START_GAME_MUSIC:
 
 PLAY_START_GAME_MUSIC.NOTE:
 ; Prepares the buffer
-.L8F49:	ld	b,0Ah
-	ld	(ix+00h),b ; length
+.L8F49:	ld	(ix+00h),0Ah ; length
 	ld	c,a
 	ld	b,00h
 	ld	(ix+01h),b
@@ -2782,8 +2749,7 @@ PLAY_DEAD_MUSIC:
 	cp	0E6h ; until x
 	jr	nz,.L8FBD
 ; color ,,6
-	ld	c,07h
-	ld	b,CFG_COLOR.BG_DEAD_1
+	ld	bc,CFG_COLOR.BG_DEAD_1 << 8 + 07h
 	call	WRTVDP
 ; (delay)
 	ld	b,03h
@@ -2794,8 +2760,7 @@ PLAY_DEAD_MUSIC:
 	jr	nz,.L8FD4
 	djnz	.L8FD1
 ; color ,,4
-	ld	c,07h
-	ld	b,CFG_COLOR.BG_DEAD_2
+	ld	bc,CFG_COLOR.BG_DEAD_2 << 8 + 07h
 	call	WRTVDP
 ; Stops music
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
@@ -2806,8 +2771,7 @@ PLAY_DEAD_MUSIC:
 
 PLAY_DEAD_MUSIC.NOTE:
 ; Prepares the buffer
-.L8FE8:	ld	b,0Ah ; length
-	ld	(ix+00h),b
+.L8FE8:	ld	(ix+00h),0Ah ; length
 	ld	c,a
 	ld	b,00h
 	ld	(ix+01h),b
@@ -2885,8 +2849,7 @@ PLAY_SOUND_SPHYNX:
 PLAY_SOUND_EXIT:
 .L9070:	call	RESET_SOUND
 ; color ,,3
-	ld	c,07h
-	ld	b,CFG_COLOR.BG_EXIT
+	ld	bc,CFG_COLOR.BG_EXIT << 8 + 07h
 	call	WRTVDP
 ; Ascending arpegio
 	ld	a,0F0h
@@ -2905,14 +2868,12 @@ PLAY_SOUND_EXIT:
 	ld	hl,DATA_SOUND.MUTE_CHANNELS
 	call	PLAY_SOUND
 ; color ,,4
-	ld	c,07h
-	ld	b,CFG_COLOR.BG
+	ld	bc,CFG_COLOR.BG << 8 + 07h
 	jp	WRTVDP
 
 ; Prepares one note of the arpeggio
 .L909B:	ld	ix,sound_buffer.end
-	ld	b,0Ah ; lenght
-	ld	(ix+00h),b
+	ld	(ix+00h),0Ah ; length
 	ld	b,00h
 	ld	c,a
 	ld	(ix+01h),b
