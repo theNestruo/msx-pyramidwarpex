@@ -75,15 +75,15 @@ test: enhancedplus.rom
 
 original.rom: asm\PyramidWarp.annotated.asm
 	$(ASM) $< $@
-	cmd /c findstr /b /i "dbg_" tniasm.sym | sort
+	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
 enhanced.rom: asm\PyramidWarp.enhanced.asm $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
 	$(ASM) $< $@
-	cmd /c findstr /b /i "dbg_" tniasm.sym | sort
+	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
 enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS)
 	$(ASM) $< $@
-	cmd /c findstr /b /i "dbg_" tniasm.sym | sort
+	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
 #
 # GFXs targets

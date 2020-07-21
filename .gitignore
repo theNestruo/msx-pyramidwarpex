@@ -1,0 +1,6 @@
+**/*.chr
+**/*.clr
+**/*.spr
+*.rom
+tniasm.sym
+tniasm.tmp
