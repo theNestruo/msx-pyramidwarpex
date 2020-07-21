@@ -1,5 +1,8 @@
 ; -----------------------------------------------------------------------------
 ; MSX BIOS
+	MSXID1:	equ $002b ; Frecuency (1b), date format (3b) and charset (4b)
+	DISSCR:	equ $0041 ; Disable screen
+	ENASCR:	equ $0044 ; Enable screen
 	WRTVDP:	equ $0047 ; Write to any VDP register
 	RDVRM:	equ $004a ; Read byte from VRAM
 	WRTVRM:	equ $004d ; Write byte to VRAM
@@ -9,16 +12,21 @@
 	CHGCLR:	equ $0062 ; Change VDP colours
 	CLRSPR:	equ $0069 ; Clear all sprites
 	INIGRP:	equ $0072 ; Initialize VDP to Graphics Mode
+	GICINI:	equ $0090 ; Initialize PSG (GI Chip)
 	GTSTCK:	equ $00d5 ; Get joystick status
 	GTTRIG:	equ $00d8 ; Get trigger status
 
 ; MSX system variables
+	SCNCNT: equ $f3f6 ; Key scan timing
 	CLIKSW:	equ $f3db ; Keyboard click sound
 	RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
 	FORCLR:	equ $f3e9 ; Foreground colour
 	BAKCLR:	equ $f3ea ; Background colour
 	BDRCLR:	equ $f3eb ; Border colour
 	JIFFY: equ $fc9e ; Software clock; each VDP interrupt gets increased by 1
+	INTCNT:	equ $fca2 ; ON INTERVAL counter (counts backwards)
+	HTIMI:	equ $fd9f ; Interrupt handler
+	HOOK_SIZE:	equ 5
 
 ; VRAM addresses
 	CHRTBL:		equ $0000 ; Pattern table
@@ -167,12 +175,39 @@ ROM_START:
 ; screen 2
 	call	INIGRP
 ; screen ,2
-	ld	bc,0E201h	; address or value?
-	call	WRTVDP
-	call	CLRSPR
+	call	DISSCR
+	ld	hl, RG1SAV
+	set	1, [hl] ; (first call to ENASCR will actually apply to the VDP)
 ; screen ,,0
 	xor	a
 	ld	[CLIKSW], a
+
+; Frame rate related variables
+	ld	a, [MSXID1]
+	bit	7, a ; 0=60Hz, 1=50Hz
+	ld	a, 5 ; frames per tenth for 50Hz = 5
+	jr	nz, .A_OK
+	inc	a ; frames per tenth for 60Hz = 6
+.A_OK:
+	ld	[frames_per_tenth], a
+
+; Initializes the replayer
+	call	GICINI
+	call	REPLAYER.RESET
+
+; Installs the H.TIMI hook in the interruption
+; (preserves the existing hook)
+	ld	hl, HTIMI
+	ld	de, old_htimi_hook
+	ld	bc, HOOK_SIZE
+	ldir
+; Install the interrupt routine
+	di
+	ld	a, $c3 ; opcode for "JP nn"
+	ld	[HTIMI], a
+	ld	hl, HOOK
+	ld	[HTIMI +1], hl
+	ei
 
 ; CLS (with custom "blank" characteR)
 	ld	hl,NAMTBL
@@ -240,6 +275,8 @@ ROM_START:
 	ld	b,14h
 	call	PRINT
 
+	call	ENASCR
+
 ; "Hit space key"
 	ld	de, $1008
 	call	HIT_SPACE_KEY
@@ -251,7 +288,7 @@ ROM_START:
 ; Fills in playground
 	ld	de,0001h
 	ld	bc,1818h
-	xor	a ; enhanced
+	xor	a ; enhancedplus
 .LOOP:	call	.SUB
 	jr	z, .CONT
 	jr	.LOOP
@@ -2647,36 +2684,14 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 
 ; -----------------------------------------------------------------------------
 PLAY_START_GAME_MUSIC:
-.L8F14:	ld	ix,sound_buffer.start
+	ld	hl, .SONG -100 ; (headerless)
+	xor	a ; (loop)
+	jp	REPLAYER.PLAY
+.SONG:
+	incbin "asm/enhancedplus/PW_VT2.pt3", 100 ; (headerless)
+; -----------------------------------------------------------------------------
 
-; Three times
-	ld	b,03h
-.L8F1A:	push	bc
-	ld	a,0Ah ; note
-	call	PLAY_START_GAME_MUSIC.NOTE
-	ld	a,14h ; note
-	call	PLAY_START_GAME_MUSIC.NOTE
-	ld	a,1Eh
-	call	PLAY_START_GAME_MUSIC.NOTE
-	ld	a,14h
-	call	PLAY_START_GAME_MUSIC.NOTE
-	pop	bc
-	djnz	.L8F1A ; loops
-; Long last note
-	ld	a,0Ah
-	call	PLAY_START_GAME_MUSIC.NOTE
-; (delay)
-	ld	b,03h
-.L8F39:	ld	hl,0000h
-.L8F3C:	dec	hl
-	ld	a,h
-	or	l
-	jr	nz,.L8F3C
-	djnz	.L8F39
-; Stops music
-	ld	hl,DATA_SOUND.MUTE_CHANNELS
-	jp	PLAY_SOUND
-
+; -----------------------------------------------------------------------------
 	; Referenced from 8F1D, 8F22, 8F27, 8F2C, 8F34
 	; --- START PROC L8F49 ---
 
@@ -3121,13 +3136,13 @@ LDIRVM_3_BANKS:
 ; -----------------------------------------------------------------------------
 ; param hl: sound data pointer
 PLAY_SOUND:
-.L9264:	ld	b,(hl)
-.L9265:	inc	hl
-	ld	a,(hl)
-	inc	hl
-	ld	e,(hl)
-	call	0093h
-	djnz	.L9265
+; .L9264:	ld	b,(hl)
+; .L9265:	inc	hl
+; 	ld	a,(hl)
+; 	inc	hl
+; 	ld	e,(hl)
+; 	call	0093h
+; 	djnz	.L9265
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -3621,26 +3636,25 @@ DATA_SOUND.SPHYNX:
 
 ; -----------------------------------------------------------------------------
 DATA_FONT:
-	incbin	"asm/enhanced+/font.pcx.chr"
+	incbin	"asm/enhancedplus/font.pcx.chr"
 	.SIZE:	equ $ - DATA_FONT
 
 DATA_SPRTBL:
-	incbin	"asm/enhanced+/sprites.pcx.spr"
+	incbin	"asm/enhancedplus/sprites.pcx.spr"
 	.SIZE:	equ $ - DATA_SPRTBL
 
 DATA_CHARSET:
 	.CHR:
-	incbin	"asm/enhanced+/charset.pcx.chr"
+	incbin	"asm/enhancedplus/charset.pcx.chr"
 	.CHR_FF:	equ $ - 8
 	.SIZE:	equ $ - DATA_CHARSET
 
 	.CLR:
-	incbin	"asm/enhanced+/charset.pcx.clr"
+	incbin	"asm/enhancedplus/charset.pcx.clr"
 	.CLR_FF:	equ $ - 8
 
 DATA_ROOMS:
-	include	"asm/enhanced+/rooms.asm"
-
+	include	"asm/enhancedplus/rooms.asm"
 
 DATA_WALL_ENHANCE:
 	DB	$30,	$31,	$32,	$33	; 0
@@ -3660,11 +3674,8 @@ DATA_WALL_ENHANCE:
 	DB	$5E,	$5E,	$5E,	$5E	; 14
 	DB	$5E,	$5E,	$5E,	$5E	; 15
 
-
-
-
 DATA_RANDOMIZE_PYRAMID:
-	include	"asm/enhanced+/pyramids.asm"
+	include	"asm/enhancedplus/pyramids.asm"
 	.FLOOR1:	equ DATA_RANDOMIZE_PYRAMID -7
 	.FLOOR2:	equ DATA_RANDOMIZE_PYRAMID +(7*4) -5
 	.FLOOR3:	equ DATA_RANDOMIZE_PYRAMID +(7*4) +(5*4) -3
@@ -3675,6 +3686,137 @@ DATA_RANDOMIZE_PYRAMID:
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; H.TIMI hook
+; 1. Invokes the replayer
+; 2. Reads the inputs
+; 3. Tricks BIOS' KEYINT to skip keyboard scan, TRGFLG, OLDKEY/NEWKEY, ON STRIG...
+; 4. Invokes the previously existing hook
+HOOK:
+	push	af ; Preserves VDP status register S#0 (a)
+
+; Invokes the replayer
+; Invokes the replayer (with frameskip in 60Hz machines)
+	ld	a, [frames_per_tenth]
+	cp	5
+	jr	z, .NO_FRAMESKIP ; No frameskip (50Hz machine)
+; Checks frameskip (60Hz machine)
+	; ld	a, 6 ; (unnecessary)
+	ld	hl, replayer.frameskip
+	inc	[hl]
+	sub	[hl]
+	jr	nz, .NO_FRAMESKIP ; No framewksip
+; Resets frameskip counter
+	; xor	a ; (unnecessary)
+	ld	[hl], a
+	jr	.FRAMESKIP
+
+.NO_FRAMESKIP:
+; Executes a frame of the replayer
+	call	REPLAYER.FRAME
+.FRAMESKIP:
+
+; Tricks BIOS' KEYINT to skip keyboard scan, TRGFLG, OLDKEY/NEWKEY, ON STRIG...
+	xor	a
+	ld	[SCNCNT], a
+	ld	[INTCNT], a
+
+; Invokes the previously existing hook
+	pop	af ; Restores VDP status register S#0 (a)
+	jp	old_htimi_hook
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; Replayer routines: PT3-based implementation
+
+; Initializes the replayer
+REPLAYER.RESET:	; equ REPLAYER.STOP
+; IFEXIST ayFX_SETUP
+; 	call	REPLAYER.STOP
+; 	ld	hl, SOUND_BANK
+; 	jp	ayFX_SETUP
+; ELSE ; IFEXIST ayFX_SETUP
+	; REPLAYER.RESET: equ REPLAYER.STOP ; falls through
+; ENDIF ; IFEXIST ayFX_SETUP
+
+
+; Stops the replayer
+REPLAYER.STOP:
+; Sets "end of the song" marker and no loop
+	ld	a, $81
+	ld	[PT3_SETUP], a
+; Prepares next frame with silence
+	jp	PT3_MUTE
+
+
+; Starts the replayer
+; param hl: pointer to the song
+; param a: *******l, where l (LSB) is the loop flag (0 = loop),
+REPLAYER.PLAY:
+; Saves the configuration (the loop flag)
+	ld	[PT3_SETUP], a
+; Initializes song
+	jp	PT3_INIT
+
+
+; Processes a frame in the replayer
+REPLAYER.FRAME:
+; Plays the actual frame
+	call	PT3_ROUT
+
+; IFEXIST ayFX_PLAY
+; ; Prepares both PT3 and ayFX next frame
+; 	call	.PT3
+; 	jp	ayFX_PLAY
+; .PT3:
+; ENDIF ; IFEXIST ayFX_PLAY
+
+; Prepares PT3 next frame
+; Checks if the end of the song has been reached
+	ld	a, [PT3_SETUP]
+	bit	7, a ; "bit7 is set each time, when loop point is passed"
+	jp	z, PT3_PLAY ; no: prepares next frame
+; yes: Checks if loop is enabled
+	bit	0, a ; "set bit0 to 1, if you want to play without looping"
+	ret	nz ; no: does nothing
+; yes: reactivates the player and prepares next frame
+	res	7, a
+	ld	[PT3_SETUP], a
+	jp	PT3_PLAY
+
+
+; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
+	include	"asm/libext/PT3-ROM.tniasm.ASM"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Reads a word from a word array (i.e.: "h,l = hl[a+1], hl[a]" in C syntax)
+; param hl: word array address
+; param a: unsigned 0-based index (0, 2, 4...)
+; ret hl: read word
+GET_HL_A_WORD:
+	add	l ; hl += a (inlined)
+	ld	l, a
+	jr	nc, .HL_OK
+	inc	h
+.HL_OK:
+	; jr	LD_HL_HL ; (falls through)
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Emulates the instruction "ld hl, [hl]"
+; param hl: address
+; ret hl: read word
+LD_HL_HL:
+	ld	a, [hl] ; hl = [hl]
+	inc	hl
+	ld	h, [hl]
+	ld	l, a
+	ret
 ; -----------------------------------------------------------------------------
 
 debug_rom_end_original: equ $9f8c
@@ -3820,10 +3962,29 @@ aux.frame_counter_2:	rb 1	; C0D8H
 player_entering_door:	rb 1	; C0DAH
 aux.dying_flashes:	rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
 room_enhance_pos:		rb 1
 room_enhance_ptr:		rb 2
 room_enhance_tile:	rb 1
+; -----------------------------------------------------------------------------
 
+; -----------------------------------------------------------------------------
+; Frames per tenth for 50Hz/60Hz
+frames_per_tenth:
+	rb	1
+
+; Backup of the H.TIMI hook previous to the installation of the replayer hook
+old_htimi_hook:
+	rb	HOOK_SIZE
+
+; 60Hz replayer synchronization
+replayer.frameskip:
+	rb	1
+
+; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
+	include	"asm/libext/PT3-RAM.tniasm.ASM"
+; -----------------------------------------------------------------------------
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
 debug_ram_end_new:	equ $ -1

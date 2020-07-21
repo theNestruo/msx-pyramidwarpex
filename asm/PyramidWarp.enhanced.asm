@@ -262,7 +262,7 @@ ROM_START:
 	ld	de,0001h
 	ld	b,18h
 	ld	c,18h
-	xor a ; enhanced
+	xor a ; enhancedplus
 .LOOP:	call	.SUB
 	jr	z, .CONT
 	jr	.LOOP
@@ -3396,7 +3396,7 @@ DATA_SOUND.SPHYNX:
 ; -----------------------------------------------------------------------------
 DATA_FONT:
 	IFDEF CFG_ENHANCEMENTS.FONT
-		incbin	"asm/enhanced/font.pcx.chr"
+		incbin	"asm/enhancedplus/font.pcx.chr"
 	ELSE
 		incbin	"asm/original/font.pcx.chr"
 	ENDIF
@@ -3405,9 +3405,9 @@ DATA_FONT:
 DATA_SPRTBL:
 	IFDEF CFG_ENHANCEMENTS.SPRITES
 		IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
-			incbin	"asm/enhanced/sprites4d.pcx.spr"
+			incbin	"asm/enhancedplus/sprites4d.pcx.spr"
 		ELSE
-			incbin	"asm/enhanced/sprites.pcx.spr"
+			incbin	"asm/enhancedplus/sprites.pcx.spr"
 		ENDIF
 	ELSE
 		incbin	"asm/original/sprites.pcx.spr"
@@ -3417,10 +3417,10 @@ DATA_SPRTBL:
 DATA_CHARSET:
 	.CHR:
 	IFDEF CFG_ENHANCEMENTS.CHARSET0
-		incbin	"asm/enhanced/charset_0.pcx.chr"
+		incbin	"asm/enhancedplus/charset_0.pcx.chr"
 	ELSE
 		IFDEF CFG_ENHANCEMENTS.CHARSET
-			incbin	"asm/enhanced/charset.pcx.chr"
+			incbin	"asm/enhancedplus/charset.pcx.chr"
 		ELSE
 			incbin	"asm/original/charset.pcx.chr"
 		ENDIF
@@ -3430,10 +3430,10 @@ DATA_CHARSET:
 
 	.CLR:
 	IFDEF CFG_ENHANCEMENTS.CHARSET0
-		incbin	"asm/enhanced/charset_0.pcx.clr"
+		incbin	"asm/enhancedplus/charset_0.pcx.clr"
 	ELSE
 		IFDEF CFG_ENHANCEMENTS.CHARSET
-			incbin	"asm/enhanced/charset.pcx.clr"
+			incbin	"asm/enhancedplus/charset.pcx.clr"
 		ELSE
 			incbin	"asm/original/charset.pcx.clr"
 		ENDIF
