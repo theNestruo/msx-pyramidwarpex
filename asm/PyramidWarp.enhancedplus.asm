@@ -132,7 +132,6 @@ CFG_HUD:			; $yyxx coordinates
 	.LIVES_COORDS:		equ $171A ; 1719h
 
 
-
 CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.CHARSET_3D:		; Uncomment to use "3D" charset
@@ -359,9 +358,9 @@ ROM_START:
 
 ; High score = 0
 	xor	a
-	ld	bc,0000h
 	ld	(game.high_score_bcd),a
-	ld	(game.high_score_bcd +1),bc
+	ld	(game.high_score_bcd +1),a
+	ld	(game.high_score_bcd +2),a
 
 ; Sprite patterns, colors and planes
 	ld	a,CFG_COLOR.SCORPION ; 09h
@@ -2852,9 +2851,12 @@ PLAY_DEAD_MUSIC.NOTE:
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_SPHYNX:
-.L9067:	call	RESET_SOUND
-	ld	hl,DATA_SOUND.SPHYNX
-	jp	PLAY_SOUND
+	ld	a, CFG_SOUND.SPHYNX
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
+; .L9067:	call	RESET_SOUND
+; 	ld	hl,DATA_SOUND.SPHYNX
+; 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 89D2
@@ -2959,9 +2961,12 @@ PLAY_SOUND_INGAME:
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BOX:
-.L9121:	call	RESET_SOUND
-	ld	hl,DATA_SOUND.BOX
-	jp	PLAY_SOUND
+	ld	a, CFG_SOUND.BOX
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
+; .L9121:	call	RESET_SOUND
+; 	ld	hl,DATA_SOUND.BOX
+; 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 871D, 874B
@@ -2969,9 +2974,12 @@ PLAY_SOUND_BOX:
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_DOOR:
-.L912A:	call	RESET_SOUND
-	ld	hl,DATA_SOUND.DOOR
-	jp	PLAY_SOUND
+	ld	a, CFG_SOUND.DOOR
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
+; .L912A:	call	RESET_SOUND
+; 	ld	hl,DATA_SOUND.DOOR
+; 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 895E, 8D8D
@@ -2979,9 +2987,12 @@ PLAY_SOUND_DOOR:
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET_HIT:
-.L9133:	call	RESET_SOUND
-	ld	hl,DATA_SOUND.BULLET_HIT
-	jp	PLAY_SOUND
+	ld	a, CFG_SOUND.BULLET_HIT
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
+; .L9133:	call	RESET_SOUND
+; 	ld	hl,DATA_SOUND.BULLET_HIT
+; 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 87E5
@@ -2989,9 +3000,12 @@ PLAY_SOUND_BULLET_HIT:
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET:
-.L913C:	call	RESET_SOUND
-	ld	hl,DATA_SOUND.BULLET
-	jp	PLAY_SOUND
+	ld	a, CFG_SOUND.BULLET
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
+; .L913C:	call	RESET_SOUND
+; 	ld	hl,DATA_SOUND.BULLET
+; 	jp	PLAY_SOUND
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8DD8, 8FA7, 912A, 910C, 913C, 9133, 9121, 9067, 9070, 9046
@@ -3089,6 +3103,22 @@ DATA_SOUND:
 	DB	0Ch, 00h
 	DB	0Dh, 00h
 ; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; ayFX sound bank
+SOUND_BANK:
+	incbin "asm/enhancedplus/test.afb"
+
+CFG_SOUND:
+						; valid sounds in <test.afb>:
+	.SPHYNX:		equ 11 -1	; 6, 11
+	.BOX:			equ  8 -1	; 3, 4, 8, 15
+	.DOOR:			equ 13 -1	; 10, 11, 12, 13, 17
+	.BULLET:		equ  5 -1	; 2, 5, 7
+	.BULLET_HIT:		equ 14 -1	; 2, 5, 7, 9, 14
+; -----------------------------------------------------------------------------
+
 
 ; -----------------------------------------------------------------------------
 ; param a: sprite index
@@ -3734,15 +3764,12 @@ HOOK:
 ; Replayer routines: PT3-based implementation
 
 ; Initializes the replayer
-REPLAYER.RESET:	; equ REPLAYER.STOP
-; IFEXIST ayFX_SETUP
-; 	call	REPLAYER.STOP
-; 	ld	hl, SOUND_BANK
-; 	jp	ayFX_SETUP
-; ELSE ; IFEXIST ayFX_SETUP
-	; REPLAYER.RESET: equ REPLAYER.STOP ; falls through
-; ENDIF ; IFEXIST ayFX_SETUP
-
+REPLAYER.RESET:
+; Initializes the PT3 replayer
+	call	REPLAYER.STOP
+; Initializes the ayFX replayer
+	ld	hl, SOUND_BANK
+	jp	ayFX_SETUP
 
 ; Stops the replayer
 REPLAYER.STOP:
@@ -3768,56 +3795,29 @@ REPLAYER.FRAME:
 ; Plays the actual frame
 	call	PT3_ROUT
 
-; IFEXIST ayFX_PLAY
-; ; Prepares both PT3 and ayFX next frame
-; 	call	.PT3
-; 	jp	ayFX_PLAY
-; .PT3:
-; ENDIF ; IFEXIST ayFX_PLAY
-
 ; Prepares PT3 next frame
 ; Checks if the end of the song has been reached
 	ld	a, [PT3_SETUP]
 	bit	7, a ; "bit7 is set each time, when loop point is passed"
-	jp	z, PT3_PLAY ; no: prepares next frame
+	jp	z, .PLAY ; no: prepares next frame
 ; yes: Checks if loop is enabled
 	bit	0, a ; "set bit0 to 1, if you want to play without looping"
 	ret	nz ; no: does nothing
 ; yes: reactivates the player and prepares next frame
 	res	7, a
 	ld	[PT3_SETUP], a
-	jp	PT3_PLAY
+.PLAY:
+; Prepares both PT3 and ayFX next frame
+	call	PT3_PLAY
+	jp	ayFX_PLAY
 
 
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-ROM.tniasm.ASM"
+; ayFX REPLAYER v1.31
+	include	"asm/libext/ayFX-ROM.tniasm.asm"
 ; -----------------------------------------------------------------------------
 
-; -----------------------------------------------------------------------------
-; Reads a word from a word array (i.e.: "h,l = hl[a+1], hl[a]" in C syntax)
-; param hl: word array address
-; param a: unsigned 0-based index (0, 2, 4...)
-; ret hl: read word
-GET_HL_A_WORD:
-	add	l ; hl += a (inlined)
-	ld	l, a
-	jr	nc, .HL_OK
-	inc	h
-.HL_OK:
-	; jr	LD_HL_HL ; (falls through)
-; ------VVVV----falls through--------------------------------------------------
-
-; -----------------------------------------------------------------------------
-; Emulates the instruction "ld hl, [hl]"
-; param hl: address
-; ret hl: read word
-LD_HL_HL:
-	ld	a, [hl] ; hl = [hl]
-	inc	hl
-	ld	h, [hl]
-	ld	l, a
-	ret
-; -----------------------------------------------------------------------------
 
 debug_rom_end_original: equ $9f8c
 debug_rom_end_new:	equ $
@@ -3984,6 +3984,8 @@ replayer.frameskip:
 
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-RAM.tniasm.ASM"
+; ayFX REPLAYER v1.31
+	include	"asm/libext/ayFX-RAM.tniasm.asm"
 ; -----------------------------------------------------------------------------
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)

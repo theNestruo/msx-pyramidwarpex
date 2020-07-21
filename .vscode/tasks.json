@@ -15,14 +15,14 @@
 		"$errmatcher-tniasm-preprocessor"
 	],
 	"tasks": [{
-		"label": "make clean build",
+		"label": "make clean enhanced+",
 		"type": "shell",
 		"command": "mingw32-make clean compile",
 		"group": "build"
 	}, {
-		"label": "make (default)",
+		"label": "make enhanced+ and test (default)",
 		"type": "shell",
-		"command": "mingw32-make",
+		"command": "mingw32-make test",
 		"group": {
 			"kind": "build",
 			"isDefault": true

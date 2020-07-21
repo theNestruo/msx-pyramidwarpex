@@ -47,6 +47,10 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\font.pcx.clr \
 	asm\enhancedplus\sprites.pcx.spr
 
+ENHANCEDPLUS_STATIC_DATAS=\
+	asm\enhancedplus\PW_VT2.pt3 \
+	asm\enhancedplus\test.afb
+
 #
 # phony targets
 #
@@ -81,7 +85,7 @@ enhanced.rom: asm\PyramidWarp.enhanced.asm $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
-enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS)
+enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS) $(ENHANCEDPLUS_STATIC_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
