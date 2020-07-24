@@ -461,6 +461,8 @@ NEW_PYRAMID:
 
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
+; Plays "Ingame" music
+	call	PLAY_INGAME_MUSIC
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8DD5
@@ -2684,65 +2686,27 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 ; -----------------------------------------------------------------------------
 PLAY_START_GAME_MUSIC:
 	ld	hl, .SONG -100 ; (headerless)
+	ld	a, 1 ; (not a loop)
+	call	REPLAYER.PLAY
+; Waits for the jingle to end
+.WAIT:
+	halt
+	ld	a, [PT3_SETUP]
+	bit	7, a ; "bit7 is set each time, when loop point is passed"
+	ret	nz
+	jr	.WAIT
+.SONG:
+	incbin "asm/enhancedplus/PW_NewGame.pt3", 100 ; (headerless)
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+PLAY_INGAME_MUSIC:
+	ld	hl, .SONG -100 ; (headerless)
 	xor	a ; (loop)
 	jp	REPLAYER.PLAY
 .SONG:
-	incbin "asm/enhancedplus/PW_VT2.pt3", 100 ; (headerless)
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-	; Referenced from 8F1D, 8F22, 8F27, 8F2C, 8F34
-	; --- START PROC L8F49 ---
-
-PLAY_START_GAME_MUSIC.NOTE:
-; Prepares the buffer
-.L8F49:	ld	(ix+00h),0Ah ; length
-	ld	c,a
-	ld	b,00h
-	ld	(ix+01h),b
-	ld	(ix+02h),a
-	inc	b
-	ld	a,01h
-	ld	(ix+03h),b
-	ld	(ix+04h),a
-	inc	b
-	ld	a,05h
-	add	a,c
-	ld	(ix+05h),b
-	ld	(ix+06h),a
-	inc	b
-	ld	a,02h
-	ld	(ix+07h),b
-	ld	(ix+08h),a
-	inc	b
-	ld	a,0Ah
-	add	a,c
-	ld	(ix+09h),b
-	ld	(ix+0Ah),a
-	ld	a,03h
-	inc	b
-	ld	(ix+0Bh),b
-	ld	(ix+0Ch),a
-	inc	b
-	inc	b
-	ld	a,0B8h
-	ld	(ix+0Dh),b
-	ld	(ix+0Eh),a
-	inc	b
-	ld	a,0Ch
-	ld	(ix+0Fh),b
-	ld	(ix+10h),a
-	inc	b
-	ld	(ix+11h),b
-	ld	(ix+12h),a
-	inc	b
-	ld	(ix+13h),b
-	ld	(ix+14h),a
-; Plays the note
-	call	RESET_SOUND
-	ld	hl,sound_buffer.start
-	call	PLAY_SOUND
-	jp	LONG_DELAY
+	incbin "asm/enhancedplus/PW_VT2_3chan.pt3", 100 ; (headerless)
+	; incbin "asm/enhancedplus/PW_VT2.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8DCB
