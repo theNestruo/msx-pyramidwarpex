@@ -461,8 +461,6 @@ NEW_PYRAMID:
 
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
-; Plays "Ingame" music
-	call	PLAY_INGAME_MUSIC
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8DD5
@@ -487,11 +485,10 @@ DEC_LIVES_AND_NEW_ROOM:
 	call	PRINT
 ; ------VVVV----falls through--------------------------------------------------
 
-	; Referenced from 8380, 89DE
-	; --- START PROC L838C ---
-
 ; -----------------------------------------------------------------------------
 NEW_ROOM:
+; Plays "Ingame" music
+	call	PLAY_INGAME_MUSIC
 ; Print score and updates high score
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
@@ -1344,11 +1341,6 @@ GAME_LOOP.DOORS_OK:
 	ld	de,player.spratr_y
 	ld	a,02h
 	call	PUT_SPRITE
-
-; If not through a door, plays ingame "music"
-	ld	a,(player_entering_door)
-	or	a
-	call	z,PLAY_SOUND_INGAME
 
 ; Carrying gun...
 	ld	a,(player_has_gun)
@@ -2497,7 +2489,7 @@ KILL_PLAYER:
 
 ; -----------------------------------------------------------------------------
 GAME_OVER:
-.L8DD8:	call	RESET_SOUND
+.L8DD8:	call	REPLAYER.STOP ; was: call RESET_SOUND
 ; Prints GAME OVER message
 	ld	hl,LITERAL.GAME_OVER
 	ld	de,0808h
@@ -2706,11 +2698,7 @@ PLAY_INGAME_MUSIC:
 	jp	REPLAYER.PLAY
 .SONG:
 	incbin "asm/enhancedplus/PW_VT2_3chan.pt3", 100 ; (headerless)
-	; incbin "asm/enhancedplus/PW_VT2.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
-
-	; Referenced from 8DCB
-	; --- START PROC L8FB3 ---
 
 ; -----------------------------------------------------------------------------
 PLAY_DEAD_MUSIC:
@@ -2741,60 +2729,9 @@ PLAY_DEAD_MUSIC:
 	ld	bc,CFG_COLOR.BG_DEAD_2 << 8 + 07h
 	call	WRTVDP
 ; Stops music
-	ld	hl,DATA_SOUND.MUTE_CHANNELS
-	jp	PLAY_SOUND
-
-	; Referenced from 8FBE
-	; --- START PROC L8FE8 ---
+	jp	REPLAYER.STOP
 
 PLAY_DEAD_MUSIC.NOTE:
-; Prepares the buffer
-.L8FE8:	ld	(ix+00h),0Ah ; length
-	ld	c,a
-	ld	b,00h
-	ld	(ix+01h),b
-	ld	(ix+02h),a
-	inc	b
-	ld	a,01h
-	ld	(ix+03h),b
-	ld	(ix+04h),a
-	inc	b
-	ld	a,0Ah
-	add	a,c
-	ld	(ix+05h),b
-	ld	(ix+06h),a
-	inc	b
-	ld	a,02h
-	ld	(ix+07h),b
-	ld	(ix+08h),a
-	inc	b
-	ld	a,14h
-	add	a,c
-	ld	(ix+09h),b
-	ld	(ix+0Ah),a
-	inc	b
-	ld	a,03h
-	ld	(ix+0Bh),b
-	ld	(ix+0Ch),a
-	inc	b
-	inc	b
-	ld	a,0B8h
-	ld	(ix+0Dh),b
-	ld	(ix+0Eh),a
-	inc	b
-	ld	a,0Ch
-	ld	(ix+0Fh),b
-	ld	(ix+10h),a
-	inc	b
-	ld	(ix+11h),b
-	ld	(ix+12h),a
-	inc	b
-	ld	(ix+13h),b
-	ld	(ix+14h),a
-; Plays the note
-	call	RESET_SOUND
-	ld	hl,sound_buffer.dead
-	call	PLAY_SOUND
 ; Flashes the background color
 	ld	a,(aux.dying_flashes)
 	cpl
@@ -2810,32 +2747,15 @@ PLAY_DEAD_MUSIC.NOTE:
 	jp	LONG_DELAY
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8AFE
-	; --- START PROC L9067 ---
-
-; -----------------------------------------------------------------------------
-PLAY_SOUND_SPHYNX:
-	ld	a, CFG_SOUND.SPHYNX
-	ld	c, 9 ; default-low priority
-	jp	ayFX_INIT
-; .L9067:	call	RESET_SOUND
-; 	ld	hl,DATA_SOUND.SPHYNX
-; 	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
-
-	; Referenced from 89D2
-	; --- START PROC L9070 ---
-
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_EXIT:
-.L9070:	call	RESET_SOUND
 ; color ,,3
 	ld	bc,CFG_COLOR.BG_EXIT << 8 + 07h
 	call	WRTVDP
 ; Ascending arpegio
 	ld	a,0F0h
 .L907C:	push	af
-	call	.L909B
+	call	LONG_DELAY ; was: call .L909B
 	pop	af
 	sub	14h
 	jr	nz,.L907C
@@ -2846,226 +2766,37 @@ PLAY_SOUND_EXIT:
 	pop	bc
 	djnz	.L9087
 ; mute
-	ld	hl,DATA_SOUND.MUTE_CHANNELS
-	call	PLAY_SOUND
+	call	REPLAYER.STOP
 ; color ,,4
 	ld	bc,CFG_COLOR.BG << 8 + 07h
 	jp	WRTVDP
-
-; Prepares one note of the arpeggio
-.L909B:	ld	ix,sound_buffer.end
-	ld	(ix+00h),0Ah ; length
-	ld	b,00h
-	ld	c,a
-	ld	(ix+01h),b
-	ld	(ix+02h),a
-	inc	b
-	ld	a,01h
-	ld	(ix+03h),b
-	ld	(ix+04h),a
-	inc	b
-	ld	a,05h
-	add	a,c
-	ld	(ix+05h),b
-	ld	(ix+06h),a
-	inc	b
-	ld	a,01h
-	ld	(ix+07h),b
-	ld	(ix+08h),a
-	inc	b
-	ld	a,0Ah
-	add	a,c
-	ld	(ix+09h),b
-	ld	(ix+0Ah),a
-	inc	b
-	ld	a,01h
-	ld	(ix+0Bh),b
-	ld	(ix+0Ch),a
-	inc	b
-	inc	b
-	ld	a,0B8h
-	ld	(ix+0Dh),b
-	ld	(ix+0Eh),a
-	inc	b
-	ld	a,0Ch
-	ld	(ix+0Fh),b
-	ld	(ix+10h),a
-	inc	b
-	ld	(ix+11h),b
-	ld	(ix+12h),a
-	inc	b
-	ld	(ix+13h),b
-	ld	(ix+14h),a
-; mute
-	ld	hl,DATA_SOUND.MUTE_CHANNELS
-	call	PLAY_SOUND
-; Plays the one note of the arpeggio
-	ld	hl,sound_buffer.end
-	call	PLAY_SOUND
-	jp	LONG_DELAY
 ; -----------------------------------------------------------------------------
-
-	; Referenced from 879B
-	; --- START PROC L910C ---
-
-; -----------------------------------------------------------------------------
-PLAY_SOUND_INGAME:
-.L910C:	call	RESET_SOUND
-	ld	a,(aux.frame_counter)
-	and	04h
-	jr	nz,.L911B
-	ld	hl,DATA_SOUND.INGAME_A
-	jr	.L911E
-.L911B:	ld	hl,DATA_SOUND.INGAME_B
-.L911E:	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
-
-	; Referenced from 8AC5, 8E1F
-	; --- START PROC L9121 ---
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_BOX:
 	ld	a, CFG_SOUND.BOX
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
-; .L9121:	call	RESET_SOUND
-; 	ld	hl,DATA_SOUND.BOX
-; 	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
 
-	; Referenced from 871D, 874B
-	; --- START PROC L912A ---
-
-; -----------------------------------------------------------------------------
 PLAY_SOUND_DOOR:
 	ld	a, CFG_SOUND.DOOR
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
-; .L912A:	call	RESET_SOUND
-; 	ld	hl,DATA_SOUND.DOOR
-; 	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
 
-	; Referenced from 895E, 8D8D
-	; --- START PROC L9133 ---
-
-; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET_HIT:
 	ld	a, CFG_SOUND.BULLET_HIT
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
-; .L9133:	call	RESET_SOUND
-; 	ld	hl,DATA_SOUND.BULLET_HIT
-; 	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
 
-	; Referenced from 87E5
-	; --- START PROC L913C ---
-
-; -----------------------------------------------------------------------------
 PLAY_SOUND_BULLET:
 	ld	a, CFG_SOUND.BULLET
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
-; .L913C:	call	RESET_SOUND
-; 	ld	hl,DATA_SOUND.BULLET
-; 	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
 
-	; Referenced from 8DD8, 8FA7, 912A, 910C, 913C, 9133, 9121, 9067, 9070, 9046
-	; --- START PROC L9145 ---
-
-; -----------------------------------------------------------------------------
-RESET_SOUND:
-.L9145:	ld	hl,DATA_SOUND.RESET
-	jp	PLAY_SOUND
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_SOUND:
-.INGAME_A: ; 914BH
-	DB	07h ; length
-	DB	00h, 0FDh
-	DB	01h, 00h
-	DB	07h, 0B8h
-	DB	08h, 08h
-	DB	0Bh, 22h
-	DB	0Ch, 02h
-	DB	0Dh, 0Fh
-.INGAME_B: ; 915AH
-	DB	07h ; length
-	DB	00h, 3Fh
-	DB	01h, 01h
-	DB	07h, 0B8h
-	DB	08h, 08h
-	DB	0Bh, 22h
-	DB	0Ch, 05h
-	DB	0Dh, 09h
-
-.BOX: ; 9169H
-	DB	0Dh ; length
-	DB	00h, 0FDh
-	DB	01h, 00h
-	DB	02h, 0D5h
-	DB	03h, 00h
-	DB	04h, 3Fh
-	DB	05h, 00h
-	DB	07h, 0B8h
-	DB	08h, 10h
-	DB	09h, 10h
-	DB	0Ah, 10h
-	DB	0Bh, 9Eh
-	DB	0Ch, 0Ah
-	DB	0Dh, 09h
-
-.DOOR: ; 9184H
-	DB	07h ; length
-	DB	00h, 0E0h
-	DB	01h, 04h
-	DB	07h, 0B8h
-	DB	08h, 0Fh
-	DB	0Bh, 92h
-	DB	0Ch, 05h
-	DB	0Dh, 05h
-
-.BULLET_HIT: ; 9193H
-	DB	07h ; length
-	DB	06h, 1Fh
-	DB	07h, 87h
-	DB	08h, 0Fh
-	DB	09h, 0Fh
-	DB	0Bh, 0Bh
-	DB	0Ch, 02h
-	DB	0Dh, 0Fh
-
-.BULLET: ; 91A2H
-	DB	0Ah ; length
-	DB	00h, 0C0h
-	DB	01h, 09h
-	DB	06h, 1Fh
-	DB	07h, 80h
-	DB	08h, 0Ch
-	DB	09h, 0Ch
-	DB	0Ah, 10h
-	DB	0Bh, 0Bh
-	DB	0Ch, 06h
-	DB	0Dh, 00h
-
-.RESET: ; 91B7H
-	DB	0Eh ; length
-	DB	00h, 00h
-	DB	01h, 00h
-	DB	02h, 00h
-	DB	03h, 00h
-	DB	05h, 00h
-	DB	06h, 00h
-	DB	07h, 80h
-	DB	08h, 00h
-	DB	09h, 00h
-	DB	0Ah, 00h
-	DB	0Bh, 00h
-	DB	0Ch, 00h
-	DB	0Dh, 00h
+PLAY_SOUND_SPHYNX:
+	ld	a, CFG_SOUND.SPHYNX
+	ld	c, 9 ; default-low priority
+	jp	ayFX_INIT
 ; -----------------------------------------------------------------------------
 
 
@@ -3076,11 +2807,11 @@ SOUND_BANK:
 
 CFG_SOUND:
 						; valid sounds in <test.afb>:
-	.SPHYNX:		equ 11 -1	; 6, 11
 	.BOX:			equ  8 -1	; 3, 4, 8, 15
 	.DOOR:			equ 13 -1	; 10, 11, 12, 13, 17
 	.BULLET:		equ  5 -1	; 2, 5, 7
 	.BULLET_HIT:		equ 14 -1	; 2, 5, 7, 9, 14
+	.SPHYNX:		equ 11 -1	; 6, 11
 ; -----------------------------------------------------------------------------
 
 
