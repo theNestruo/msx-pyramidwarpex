@@ -20,6 +20,7 @@
 	SCNCNT: equ $f3f6 ; Key scan timing
 	CLIKSW:	equ $f3db ; Keyboard click sound
 	RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
+	STATFL: equ $f3e7 ; Content of VDP status register (S#0)
 	FORCLR:	equ $f3e9 ; Foreground colour
 	BAKCLR:	equ $f3ea ; Background colour
 	BDRCLR:	equ $f3eb ; Border colour
@@ -44,10 +45,12 @@
 	.BANK_2:	equ CLRTBL + 2 * CLRTBL.BANK_SIZE
 	.SIZE:		equ 3 * .BANK_SIZE
 	SPRATR:		equ $1B00 ; Sprite attributes table
+	SPRATR_SIZE:	equ 32 * 4
 	SPRTBL:		equ $3800 ; Sprite pattern table
 
 ; VDP symbolic constants
 	SCR_WIDTH:	equ 32
+	SPAT_END:	equ $d0 ; Sprite attribute table end marker
 	SPAT_OB:	equ $d1 ; Sprite out of bounds marker (not standard)
 ; -----------------------------------------------------------------------------
 
@@ -493,15 +496,18 @@ NEW_ROOM:
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
 ; Hides the sprites (one by one)
-	ld	hl,SPRATR
-	ld	a,SPAT_OB
-	ld	b, $20
-.L8394:	call	WRTVRM
-	inc	hl
-	inc	hl
-	inc	hl
-	inc	hl
-	djnz	.L8394
+; 	ld	hl,spratr_buffer ; was: SPRATR
+; 	ld	a,SPAT_OB
+; 	ld	b, $20
+; .L8394:	ld	(hl),a ; was: call	WRTVRM
+; 	inc	hl
+; 	inc	hl
+; 	inc	hl
+; 	inc	hl
+; 	djnz	.L8394
+	xor	a
+	ld	(spratr_buffer.flicker_offset), a
+	call	RESET_SPRITES
 
 ; Reads the current room index
 	ld	a,(pyramid.room_index)
@@ -1151,6 +1157,10 @@ INIT_GAME_LOOP:
 	ld	a,(hl)
 	ld	(box3.content),a
 
+	halt
+	call	LDIRVM_SPRATR
+	call	RESET_SPRITES
+
 ; Initial pause
 	ld	b,0Ah
 	; Referenced from 867A
@@ -1165,6 +1175,9 @@ INIT_GAME_LOOP:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP:
+	call	LDIRVM_SPRATR
+	call	RESET_SPRITES
+
 ; Configures game speed according air left
 .L867C:	ld	hl,(game.air_left)
 	ld	a,40h ; speed = 40
@@ -1940,6 +1953,11 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	a,$52 ; ($62 = sphynx room)
 	ld	de,121Ch	; address or value?
 	call	PRINT_CHAR
+
+	halt
+	call	LDIRVM_SPRATR
+	call	RESET_SPRITES
+
 ; color ,,1
 	ld	bc,CFG_COLOR.BG_SPHYNX << 8 + 07h
 	call	WRTVDP
@@ -2819,18 +2837,177 @@ CFG_SOUND:
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
 PUT_SPRITE:
-.L91E3:
-	ld	hl,SPRATR
-	ld	bc,4 ; 4b per sprite
-	inc	a
-.L91EA: dec	a
-	jp	z,.L91F1
-	add	hl,bc
-	jr	.L91EA
-.L91F1: ex	de,hl
+; .L91E3:
+; 	ld	hl,spratr_buffer ; was: SPRATR
+; 	ld	bc,4 ; 4b per sprite
+; 	inc	a
+; .L91EA: dec	a
+; 	jp	z,.L91F1
+; 	add	hl,bc
+; 	jr	.L91EA
+; .L91F1: ex	de,hl
+; 	; jp	LDIRVM
+; 	ldir
+; 	ret
+; Locates the SPAT_END
+	ld	hl, spratr_buffer
+	ld	a, SPAT_END
+.LOOP:
+	cp	[hl]
+	jr	z, .HL_OK
+; Skip to the next sprite
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	jr	.LOOP
+.HL_OK:
+
+; Saves the values in the SPRATR buffer
+	ex	de, hl
+	ldi
+	ldi
+	ldi
+	ldi
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Resets the sprites (adapted from MSXlib)
+RESET_SPRITES:
+; Fills with Y = SPAT_END
+	ld	hl, spratr_buffer
+	ld	de, 4
+	ld	b, (spratr_buffer.end - spratr_buffer) /4
+.LOOP:
+	ld	[hl], SPAT_END
+; Skip to the next sprite
+	add	hl, de
+	djnz	.LOOP
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; LDIRVM the SPRATR buffer (adapted from MSXlib)
+CFG_SPRITES_FLICKER:
+CFG_SPRITES_NO_FLICKER:	equ 1
+
+LDIRVM_SPRATR:
+IFDEF CFG_SPRITES_FLICKER
+; Has the VDP reported a 5th sprite?
+	ld	a, [STATFL]
+	bit	6, a
+	jr	z, .NO_FLICKER ; no: non-flickering LDIRVM
+IF CFG_SPRITES_NO_FLICKER != 0
+; yes: Is the 5th sprite one of the no-flicker ones?
+	and	$0f
+	sub	CFG_SPRITES_NO_FLICKER
+	jr	c, .NO_FLICKER ; yes: non-flickering LDIRVM
+ENDIF
+
+; Counts how many actual sprites are in the buffer
+	ld	hl, spratr_buffer + CFG_SPRITES_NO_FLICKER *4
+	ld	a, SPAT_END
+	ld	c, CFG_SPRITES_NO_FLICKER
+.LOOP:
+	cp	[hl]
+	jr	z, .C_OK
+	inc	c
+; Skips to the next sprite
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	jr	.LOOP
+.C_OK:
+; Enough sprites in this frame to apply the flickering routine?
+IF CFG_SPRITES_NO_FLICKER < 4
+	ld	a, 4 ; (at least five sprites)
+ELSE
+	ld	a, CFG_SPRITES_NO_FLICKER + 1 ; (at least 2 flickering sprites)
+ENDIF
+	cp	c
+	jr	nc, .NO_FLICKER ; no: non-flickering LDIRVM
+; yes
+	push	hl ; (preserves actual spratr buffer end)
+
+; Calculates flicker size (in bytes)
+IF CFG_SPRITES_NO_FLICKER != 0
+	ld	a, -CFG_SPRITES_NO_FLICKER ; c (size, bytes) = (c -CFG_SPRITES_NO_FLICKER) * 4
+	add	c
+	add	a
+	add	a
+	ld	c, a
+ELSE
+	sla	c ; c (size, bytes) = c * 4
+	sla	c
+ENDIF
+
+; Reads the 5th sprite plane
+	ld	a, [STATFL]
+	and	$0f
+; Computes the new flickering offset
+	sub	CFG_SPRITES_NO_FLICKER
+	add	a ; a (offset, bytes) = a *4
+	add	a
+	ld	hl, spratr_buffer.flicker_offset
+	add	[hl]
+; Is the offset beyond the actual flickering size?
+	cp	c ; (size, bytes)
+	jr	c, .OFFSET_OK ; no
+; yes: tries to loop around
+	sub	c ; (size, bytes)
+	jr	z, .OFFSET_ZERO ; (the offset got reset)
+; Is the offset still beyond the actual flickering size?
+	cp	c ; (size, bytes)
+	jr	c, .OFFSET_OK ; no
+; yes: The flickering size has changed between frames; resets the offset
+	xor	a
+.OFFSET_ZERO:
+; Preserves the offset for the next frame
+	ld	[hl], a
+	jr	.POP_AND_NO_FLICKER ; non-flickering LDIRVM
+
+.OFFSET_OK:
+; Preserves the offset for the next frame
+	ld	[hl], a
+
+; Copies the sprites before the offset at the actual end of the spratr buffer
+	ld	hl, spratr_buffer + CFG_SPRITES_NO_FLICKER *4
+	pop	de ; de = actual spratr buffer end
+	ld	b, 0 ; bc = offset
+	ld	c, a
+	push	bc ; (preserves offset)
+	ldir
+; Appends a SPAT_END (just in case)
+	ld	a, SPAT_END
+	ld	[de], a
+
+IF CFG_SPRITES_NO_FLICKER != 0
+; LDIRVM the non-flickering sprites
+	ld	hl, spratr_buffer
+	ld	de, SPRATR
+	ld	bc, CFG_SPRITES_NO_FLICKER *4
+	call	LDIRVM
+ENDIF
+; LDIRVM the sprites, starting from the offset
+	ld	hl, spratr_buffer + CFG_SPRITES_NO_FLICKER *4
+	pop	bc ; (restores offset)
+	add	hl, bc
+	ld	de, SPRATR + CFG_SPRITES_NO_FLICKER *4
+	ld	bc, SPRATR_SIZE - CFG_SPRITES_NO_FLICKER *4
 	jp	LDIRVM
 
+.POP_AND_NO_FLICKER:
+	pop	hl ; (restores stack status)
+.NO_FLICKER:
+ENDIF ; IFDEF CFG_SPRITES_FLICKER
 
+; LDIRVM the actual SPRATR buffer
+	ld	hl, spratr_buffer
+	ld	de, SPRATR
+	ld	bc, SPRATR_SIZE
+	jp	LDIRVM
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3676,6 +3853,19 @@ old_htimi_hook:
 ; 60Hz replayer synchronization
 replayer.frameskip:
 	rb	1
+
+; SPRATR buffer in RAM
+spratr_buffer:
+	rb	SPRATR_SIZE
+.end:
+	rb	1 ; to store one SPAT_END when the buffer is full
+IFDEF CFG_SPRITES_FLICKER
+; (extra space for the flickering routine)
+	rb	SPRATR_SIZE -CFG_SPRITES_NO_FLICKER *4 -16
+; Offset used by the flickering routine
+.flicker_offset:
+	rb	1
+ENDIF ; IFDEF CFG_SPRITES_FLICKER
 
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-RAM.tniasm.ASM"
