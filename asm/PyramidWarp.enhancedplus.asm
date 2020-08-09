@@ -1,5 +1,6 @@
 ; -----------------------------------------------------------------------------
 ; MSX BIOS
+	VDP_DW:	equ $0007 ; One byte, VDP Data Port number (write)
 	MSXID1:	equ $002b ; Frecuency (1b), date format (3b) and charset (4b)
 	DISSCR:	equ $0041 ; Disable screen
 	ENASCR:	equ $0044 ; Enable screen
@@ -20,6 +21,7 @@
 	SCNCNT: equ $f3f6 ; Key scan timing
 	CLIKSW:	equ $f3db ; Keyboard click sound
 	RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
+	STATFL: equ $f3e7 ; Content of VDP status register (S#0)
 	FORCLR:	equ $f3e9 ; Foreground colour
 	BAKCLR:	equ $f3ea ; Background colour
 	BDRCLR:	equ $f3eb ; Border colour
@@ -44,10 +46,12 @@
 	.BANK_2:	equ CLRTBL + 2 * CLRTBL.BANK_SIZE
 	.SIZE:		equ 3 * .BANK_SIZE
 	SPRATR:		equ $1B00 ; Sprite attributes table
+	.SIZE:		equ 4 * 32
 	SPRTBL:		equ $3800 ; Sprite pattern table
 
 ; VDP symbolic constants
 	SCR_WIDTH:	equ 32
+	SPAT_END:	equ $d0 ; Sprite attribute table end marker
 	SPAT_OB:	equ $d1 ; Sprite out of bounds marker (not standard)
 ; -----------------------------------------------------------------------------
 
@@ -70,6 +74,7 @@ CFG_COLOR:
 	.BG_SPHYNX:	equ 1	; 1
 	.BG_DEAD_1:	equ 8	; 6
 	.BG_DEAD_2:	equ 9	; 4
+	.BG_DEAD_3:	equ 6
 	.BG_EXIT:	equ 12	; 3
 
 CFG_BASE_PATTERN:
@@ -140,6 +145,7 @@ CFG_OTHERS:
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphynx room!!
+	.DEAD_PLAYER_COLOR:	equ 9 ; Uncomment to change player color when dead
 
 enemy_spratr_y:			equ 0
 enemy_spratr_x:			equ 1
@@ -189,6 +195,10 @@ ROM_START:
 	inc	a ; frames per tenth for 60Hz = 6
 .A_OK:
 	ld	[frames_per_tenth], a
+
+; Hides the sprites
+	call	CLEAR_SPRITES
+	call	LDIRVM_SPRITES
 
 ; Initializes the replayer
 	call	GICINI
@@ -383,18 +393,18 @@ ROM_START:
 	ld	(unused_enemy_slot1.base_pattern),a
 	ld	(unused_enemy_slot2.base_pattern),a
 
-	ld	a,04h
-	ld	(scorpion1.sprite_plane),a
+	ld	a, 2
+	ld	(scorpion1.sprite_plane), a
 	inc	a
-	ld	(bat1.sprite_plane),a ; $05
+	ld	(bat1.sprite_plane), a ; 3
 	inc	a
-	ld	(unused_enemy_slot1.sprite_plane),a ; $06
+	ld	(unused_enemy_slot1.sprite_plane), a ; 4
 	inc	a
-	ld	(scorpion2.sprite_plane),a ; $07
+	ld	(scorpion2.sprite_plane), a ; 5
 	inc	a
-	ld	(bat2.sprite_plane),a ; $08
+	ld	(bat2.sprite_plane), a ; 6
 	inc	a
-	ld	(unused_enemy_slot2.sprite_plane),a ; $09
+	ld	(unused_enemy_slot2.sprite_plane), a ; 7
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8E07
@@ -492,16 +502,8 @@ NEW_ROOM:
 ; Print score and updates high score
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
-; Hides the sprites (one by one)
-	ld	hl,SPRATR
-	ld	a,SPAT_OB
-	ld	b, $20
-.L8394:	call	WRTVRM
-	inc	hl
-	inc	hl
-	inc	hl
-	inc	hl
-	djnz	.L8394
+; Hides the sprites
+	call	CLEAR_SPRITES
 
 ; Reads the current room index
 	ld	a,(pyramid.room_index)
@@ -1046,7 +1048,8 @@ NEW_DOOR:
 	ld	(ix + 1),CFG_COLOR.DOOR_0 ; door.spratr_color
 ; Prints door sprite
 	pop	de ; (restores pointer to spratr_y)
-	ld	a,b ; sprite plane according b
+	ld	a, 9
+	add	b ; sprite plane according b: 10, 11
 	call	PUT_SPRITE
 ; (restore data pointer and end)
 	pop	hl
@@ -1129,7 +1132,7 @@ INIT_GAME_LOOP:
 
 ; Put player sprite
 	pop	de ; player.spratr_y
-	ld	a,02h
+	xor	a
 	call	PUT_SPRITE
 
 ; Initializes the box contents
@@ -1151,6 +1154,8 @@ INIT_GAME_LOOP:
 	ld	a,(hl)
 	ld	(box3.content),a
 
+	call	LDIRVM_SPRITES
+
 ; Initial pause
 	ld	b,0Ah
 	; Referenced from 867A
@@ -1165,6 +1170,8 @@ INIT_GAME_LOOP:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP:
+	call	LDIRVM_SPRITES
+
 ; Configures game speed according air left
 .L867C:	ld	hl,(game.air_left)
 	ld	a,40h ; speed = 40
@@ -1175,7 +1182,7 @@ GAME_LOOP:
 	or	a
 	sbc	hl,de
 	jr	c,.L8691 ; air left < 2000
-	add	a,60h ; speed += 60
+	add	a,50h ; speed += 60
 .L8691: ld	(game.short_delay),a
 ; Next frame
 	ld	a,(aux.frame_counter)
@@ -1338,8 +1345,8 @@ GAME_LOOP.DOORS_OK:
 .L878B:	ld	a,b
 	ld	(player.spratr_color),a
 ; Prints the player sprite
-	ld	de,player.spratr_y
-	ld	a,02h
+	ld	de, player.spratr_y
+	xor	a
 	call	PUT_SPRITE
 
 ; Carrying gun...
@@ -1369,8 +1376,8 @@ GAME_LOOP.DOORS_OK:
 	ld	(iy+04h),a
 	ld	(iy+05h),0FFh ; bullet status active
 ; Put bullet sprite
-	ld	de,bullet
-	ld	a,0Ah
+	ld	de, bullet
+	ld	a, 8
 	call	PUT_SPRITE
 	call	PLAY_SOUND_BULLET
 ; ------VVVV----falls through--------------------------------------------------
@@ -1566,8 +1573,8 @@ MOVE_SKULL:
 
 	ld	(skull.spratr_pat),a
 ; Puts the skull sprite
-	ld	a,03h
-	ld	de,skull
+	ld	de, skull
+	ld	a, 1
 	call	PUT_SPRITE
 ; Checks collision between the skull and the player
 	ld	ix,skull
@@ -1636,8 +1643,8 @@ GAME_LOOP.SKULL_OK:
 ; Sound
 	call	PLAY_SOUND_BULLET_HIT
 ; Puts the bullet sprite
-.L8961:	ld	de,bullet
-	ld	a,0Ah
+.L8961:	ld	de, bullet
+	ld	a, 8
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
 
@@ -1764,8 +1771,8 @@ ENDIF
 .L8A2D:	ld	(ix+00h),SPAT_OB
 
 ; Puts bullet sprite
-.L8A32:	ld	de,bullet
-	ld	a,0Ah
+.L8A32:	ld	de, bullet
+	ld	a, 8
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
 
@@ -1834,11 +1841,11 @@ GAME_LOOP.EVERYTHING_OK:
 	ld	a,c
 	ld	(door2.spratr_color),a
 ; Sets door colors (VRAM)
-	ld	de,door1.spratr_y
-	ld	a,00h
+	ld	de, door1.spratr_y
+	ld	a, 9
 	call	PUT_SPRITE
-	ld	de,door2.spratr_y
-	ld	a,01h
+	ld	de, door2.spratr_y
+	ld	a, 10
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
 
@@ -1871,38 +1878,10 @@ CHECK_SPHYNX_ROOM_BOX:
 ;	call	WRTVDP
 
 ; Prints sphynx sprites
-	ld	de,DATA_SPHYNX_SPRATR + 0 *4
-	ld	a,00h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 1 *4
-	ld	a,01h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 2 *4
-	ld	a,02h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 3 *4
-	ld	a,03h
-	call	PUT_SPRITE
-
-	ld	de,DATA_SPHYNX_SPRATR + 4 *4
-	ld	a,04h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 5 *4
-	ld	a,05h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 6 *4
-	ld	a,06h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 7 *4
-	ld	a,07h
-	call	PUT_SPRITE
-	ld	de,DATA_SPHYNX_SPRATR + 8 *4
-	ld	a,08h
-	call	PUT_SPRITE
-
-	ld	de,DATA_SPHYNX_SPRATR + 9 *4
-	ld	a,09h
-	call	PUT_SPRITE
+	ld	hl, DATA_SPHYNX_SPRATR + 0 *4
+	ld	de, spratr_buffer
+	ld	bc, 9 * 4
+	ldir
 
 	; Prints sphynx tiles
 	ld	de, 030Ah
@@ -2263,8 +2242,8 @@ SPAWN_NEW_ENEMY:
 	add	a,a
 	ld	(ix+02h),a ; .spratr_pattern
 ; Puts sprite
-	ld	a,(ix+07h) ; .sprite_plane
-	ld	de,(current_enemy_ptr)
+	ld	de, (current_enemy_ptr)
+	ld	a, (ix + enemy_sprite_plane) ; .sprite_plane
 	call	PUT_SPRITE
 ; Checks enemy and bullet collision
 	jp	CHECK_ENEMY_BULLET_COLLISION
@@ -2375,8 +2354,8 @@ MOVE_ENEMY:
 	add	a, (ix+enemy_base_pattern)
 
 	ld	(ix+enemy_spratr_pat),a ; .spratr_pattern
-	ld	a,(ix+enemy_sprite_plane) ; .sprite_plane
-	ld	de,(current_enemy_ptr)
+	ld	de, (current_enemy_ptr)
+	ld	a, (ix + enemy_sprite_plane) ; .sprite_plane
 	call	PUT_SPRITE
 ; ------VVVV----falls through--------------------------------------------------
 
@@ -2427,8 +2406,8 @@ CHECK_ENEMY_BULLET_COLLISION:
 	inc	hl ; bullet.status
 	ld	(hl),06h
 ; Prints explosion sprite
-	ld	de,bullet
-	ld	a,0Ah
+	ld	de, bullet
+	ld	a, 9
 	call	PUT_SPRITE
 ; Play sound
 	call	PLAY_SOUND_BULLET_HIT
@@ -2439,8 +2418,8 @@ CHECK_ENEMY_BULLET_COLLISION:
 	ld	(ix+05h),000h ; .status
 	ld	(ix+00h),SPAT_OB ; .spratr_y
 ; Removes enemy (VRAM)
-	ld	de,(current_enemy_ptr)
-	ld	a,(ix+07h) ; .sprite_plane
+	ld	de, (current_enemy_ptr)
+	ld	a, (ix + enemy_sprite_plane) ; .sprite_plane
 	jp	PUT_SPRITE
 ; -----------------------------------------------------------------------------
 
@@ -2609,8 +2588,8 @@ OPEN_BOX_SKULL:
 	inc	hl ; skull.sprite_plane
 	ld	(hl),03h
 ; Put skull sprite
-	ld	de,skull
-	ld	a,03h
+	ld	de, skull
+	ld	a, 1
 	call	PUT_SPRITE
 ; Scores 200 points
 	ld	de,0200h
@@ -2677,16 +2656,9 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 
 ; -----------------------------------------------------------------------------
 PLAY_START_GAME_MUSIC:
+; Plays the jingle
 	ld	hl, .SONG -100 ; (headerless)
-	ld	a, 1 ; (not a loop)
-	call	REPLAYER.PLAY
-; Waits for the jingle to end
-.WAIT:
-	halt
-	ld	a, [PT3_SETUP]
-	bit	7, a ; "bit7 is set each time, when loop point is passed"
-	ret	nz
-	jr	.WAIT
+	jp	REPLAYER.PLAY_JINGLE
 .SONG:
 	incbin "asm/enhancedplus/PW_NewGame.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
@@ -2702,74 +2674,68 @@ PLAY_INGAME_MUSIC:
 
 ; -----------------------------------------------------------------------------
 PLAY_DEAD_MUSIC:
+; Changes the player color
+IFDEF CFG_OTHERS.DEAD_PLAYER_COLOR
+	ld	a, CFG_OTHERS.DEAD_PLAYER_COLOR
+	ld	(spratr_buffer + 3),a
+	call	LDIRVM_SPRITES
+ENDIF
+
+; Plays the jingle
+	ld	hl, .SONG -100 ; (headerless)
+	inc	a ; (not a loop)
+	call	REPLAYER.PLAY
+
 ; Initializes the "flashing" flag
-.L8FB3:	xor	a
+	xor	a
 	ld	(aux.dying_flashes),a
-; (descending notes)
-	ld	a,0Ah ; initial tone
-	ld	ix,sound_buffer.dead
+; (mimics the timing of the original descending notes)
+	ld 	a, 12
 .L8FBD:	push	af
-	call	PLAY_DEAD_MUSIC.NOTE
+	call	.FLASH
 	pop	af
-	add	a,14h ; decreases tone
-	cp	0E6h ; until x
+	dec	a
 	jr	nz,.L8FBD
 ; color ,,6
-	ld	bc,CFG_COLOR.BG_DEAD_1 << 8 + 07h
+	ld	bc,CFG_COLOR.BG_DEAD_3 << 8 + 07h
 	call	WRTVDP
 ; (delay)
-	ld	b,03h
-.L8FD1:	ld	hl,0000h
-.L8FD4:	dec	hl
-	ld	a,h
-	or	l
-	jr	nz,.L8FD4
-	djnz	.L8FD1
+	call	REPLAYER.WAIT
 ; color ,,4
-	ld	bc,CFG_COLOR.BG_DEAD_2 << 8 + 07h
-	call	WRTVDP
-; Stops music
-	jp	REPLAYER.STOP
+	ld	bc, CFG_COLOR.BG << 8 + 07h
+	jp	WRTVDP
 
-PLAY_DEAD_MUSIC.NOTE:
+.FLASH:
 ; Flashes the background color
 	ld	a,(aux.dying_flashes)
 	cpl
-	or	a
 	ld	(aux.dying_flashes),a
-	jr	z,.L905D
 	ld	b,CFG_COLOR.BG_DEAD_2
-	jr	.L905F
-.L905D:	ld	b,CFG_COLOR.BG_DEAD_1
+	or	a
+	jr	nz,.L905F
+	ld	b,CFG_COLOR.BG_DEAD_1
 ; color ,,b
 .L905F:	ld	c,07h
 	call	WRTVDP
 	jp	LONG_DELAY
+
+.SONG:
+	incbin "asm/enhancedplus/PW_Dead2.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_EXIT:
 ; color ,,3
-	ld	bc,CFG_COLOR.BG_EXIT << 8 + 07h
+	ld	bc, CFG_COLOR.BG_EXIT << 8 + 07h
 	call	WRTVDP
-; Ascending arpegio
-	ld	a,0F0h
-.L907C:	push	af
-	call	LONG_DELAY ; was: call .L909B
-	pop	af
-	sub	14h
-	jr	nz,.L907C
-	ld	b,0Ch
-; Keeps last note a little longer
-.L9087:	push	bc
-	call	LONG_DELAY
-	pop	bc
-	djnz	.L9087
-; mute
-	call	REPLAYER.STOP
+; Plays the jingle
+	ld	hl, .SONG -100 ; (headerless)
+	call	REPLAYER.PLAY_JINGLE
 ; color ,,4
-	ld	bc,CFG_COLOR.BG << 8 + 07h
+	ld	bc, CFG_COLOR.BG << 8 + 07h
 	jp	WRTVDP
+.SONG:
+	incbin "asm/enhancedplus/PW_LevelFinished.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2814,13 +2780,29 @@ CFG_SOUND:
 	.SPHYNX:		equ 11 -1	; 6, 11
 ; -----------------------------------------------------------------------------
 
+; -----------------------------------------------------------------------------
+; Hides the sprites (one by one)
+CLEAR_SPRITES:
+	ld	hl, spratr_buffer
+	ld	a, SPAT_OB
+	ld	b, 11
+.L8394:	ld	(hl), a
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	djnz	.L8394
+	ld	a, SPAT_END
+	ld	(hl), a
+	ret
+; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; param a: sprite index
 ; param de: ROM/RAM source SPRATR data
 PUT_SPRITE:
 .L91E3:
-	ld	hl,SPRATR
+	ld	hl,spratr_buffer
 	ld	bc,4 ; 4b per sprite
 	inc	a
 .L91EA: dec	a
@@ -2828,9 +2810,75 @@ PUT_SPRITE:
 	add	hl,bc
 	jr	.L91EA
 .L91F1: ex	de,hl
+	ldir
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+LDIRVM_SPRITES:
+; ; Has the VDP reported a 5th sprite?
+; 	ld	a, [STATFL]
+; 	bit	6, a
+; 	jr	z, .NO_FLICKER ; no: non-flickering LDIRVM
+; ; Reads the 5th sprite plane
+; 	and	$0f
+; ; Computes the new flickering offset
+; 	sub	2 ; (player and skull don't flicker)
+; 	add	a ; a (offset, bytes) = a *4
+; 	add	a
+; 	ld	hl, spratr_buffer.flicker_offset
+; 	add	[hl]
+; ; Is the offset beyond the actual flickering size?
+; 	cp	11 * 4 ; (size, bytes)
+; 	jr	c, .OFFSET_OK ; no
+; ; yes: tries to loop around
+; 	sub	11 * 4 ; (size, bytes)
+; 	jr	z, .OFFSET_ZERO ; (the offset got reset)
+; ; Is the offset still beyond the actual flickering size?
+; 	cp	11 * 4 ; (size, bytes)
+; 	jr	c, .OFFSET_OK ; no
+; ; yes: The flickering size has changed between frames; resets the offset
+; 	xor	a
+; .OFFSET_ZERO:
+; ; Preserves the offset for the next frame
+; 	ld	[hl], a
+; 	jr	.NO_FLICKER ; non-flickering LDIRVM
+
+; .OFFSET_OK:
+; ; Preserves the offset for the next frame
+; 	ld	[hl], a
+
+; ; Copies the sprites before the offset at the actual end of the spratr buffer
+; 	ld	hl, spratr_buffer + 2 *4
+; 	ld	de, spratr_buffer.end
+; 	ld	b, 0 ; bc = offset
+; 	ld	c, a
+; 	push	bc ; (preserves offset)
+; 	ldir
+; ; Appends a SPAT_END (just in case)
+; 	ld	a, SPAT_END
+; 	ld	[de], a
+
+; ; LDIRVM the non-flickering sprites
+; 	ld	hl, spratr_buffer
+; 	ld	de, SPRATR
+; 	ld	bc, 2 *4
+; 	call	LDIRVM
+
+; ; LDIRVM the sprites, starting from the offset
+; 	ld	hl, spratr_buffer + 2 *4
+; 	pop	bc ; (restores offset)
+; 	add	hl, bc
+; 	ld	de, SPRATR + 2 *4
+; 	ld	bc, spratr_buffer.size - 2 *4
+; 	jp	LDIRVM
+
+; LDIRVM the actual SPRATR buffer
+.NO_FLICKER:
+	ld	hl, spratr_buffer
+	ld	de, SPRATR
+	ld	bc, spratr_buffer.size
 	jp	LDIRVM
-
-
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3454,7 +3502,6 @@ HOOK:
 	jp	old_htimi_hook
 ; -----------------------------------------------------------------------------
 
-
 ; -----------------------------------------------------------------------------
 ; Replayer routines: PT3-based implementation
 
@@ -3483,6 +3530,20 @@ REPLAYER.PLAY:
 	ld	[PT3_SETUP], a
 ; Initializes song
 	jp	PT3_INIT
+
+
+; Starts the replayer and waits for a jingle to end
+; param hl: pointer to the song
+REPLAYER.PLAY_JINGLE:
+	ld	a, 1 ; (not a loop)
+	call	REPLAYER.PLAY
+; Waits for the jingle to end
+REPLAYER.WAIT:
+	halt
+	ld	a, [PT3_SETUP]
+	bit	7, a ; "bit7 is set each time, when loop point is passed"
+	ret	nz
+	jr	REPLAYER.WAIT
 
 
 ; Processes a frame in the replayer
@@ -3676,6 +3737,18 @@ old_htimi_hook:
 ; 60Hz replayer synchronization
 replayer.frameskip:
 	rb	1
+
+spratr_buffer:
+	rb	11 * 4
+.end:
+	rb	1 ; to store one SPAT_END when the buffer is full
+	.size:	equ $ - spratr_buffer
+; (extra space for the flickering routine)
+	rb	11 * 4
+
+.flicker_offset:
+	rw	1 ; Offset used by the flickering routine
+
 
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-RAM.tniasm.ASM"
