@@ -145,7 +145,8 @@ CFG_OTHERS:
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphynx room!!
-	.DEAD_PLAYER_COLOR:	equ 9 ; Uncomment to change player color when dead
+	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
+	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
 
 enemy_spratr_y:			equ 0
 enemy_spratr_x:			equ 1
@@ -190,11 +191,11 @@ ROM_START:
 ; Frame rate related variables
 	ld	a, [MSXID1]
 	bit	7, a ; 0=60Hz, 1=50Hz
-	ld	a, 5 ; frames per tenth for 50Hz = 5
-	jr	nz, .A_OK
-	inc	a ; frames per tenth for 60Hz = 6
-.A_OK:
-	ld	[frames_per_tenth], a
+	ld	hl, 5 << 8 + 50 ; frame rate and frames per tenth for 50Hz
+	jr	nz, .HL_OK
+	ld	hl, 6 << 8 + 60 ; frame rate and frames per tenth for 60Hz
+.HL_OK:
+	ld	[frame_rate], hl
 
 ; Hides the sprites
 	call	CLEAR_SPRITES
@@ -1157,12 +1158,7 @@ INIT_GAME_LOOP:
 	call	LDIRVM_SPRITES
 
 ; Initial pause
-	ld	b,0Ah
-	; Referenced from 867A
-.L8675:	push	bc
-	call	LONG_DELAY
-	pop	bc
-	djnz	.L8675
+	call	DELAY.ONE_SECOND
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8AB4
@@ -2182,12 +2178,26 @@ SHORT_DELAY:
 	; --- START PROC L8C47 ---
 
 ; -----------------------------------------------------------------------------
-LONG_DELAY:
-.L8C47:	ld	hl,3000h	; address or value?
-.L8C4A:	dec	hl
-	ld	a,h
-	or	l
-	jr	nz,.L8C4A
+; Synchronization routines (modified to use halt instead of loops)
+DELAY:
+
+.ONE_SECOND:
+	ld	hl, frame_rate
+	ld	b, (hl)
+	jr	.LOOP
+
+.ONE_TENTH:
+	ld	hl, frames_per_tenth
+	ld	b, (hl)
+	; inc	b ; (the original delay was ~7 frames in 60Hz)
+	; jr	.LOOP ; falls through
+
+.LOOP:
+	push	bc ; preserves b
+	halt
+	call	LDIRVM_SPRITES ; (keeps the flickering during the wait)
+	pop	bc ; restores b
+	djnz	.LOOP
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -2658,7 +2668,8 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 PLAY_START_GAME_MUSIC:
 ; Plays the jingle
 	ld	hl, .SONG -100 ; (headerless)
-	jp	REPLAYER.PLAY_JINGLE
+	call	REPLAYER.PLAY_JINGLE
+	jp	DELAY.ONE_SECOND
 .SONG:
 	incbin "asm/enhancedplus/PW_NewGame.pt3", 100 ; (headerless)
 ; -----------------------------------------------------------------------------
@@ -2678,7 +2689,7 @@ PLAY_DEAD_MUSIC:
 IFDEF CFG_OTHERS.DEAD_PLAYER_COLOR
 	ld	a, CFG_OTHERS.DEAD_PLAYER_COLOR
 	ld	(spratr_buffer + 3),a
-	call	LDIRVM_SPRITES
+	; call	LDIRVM_SPRITES ; (embedded in the delay)
 ENDIF
 
 ; Plays the jingle
@@ -2701,9 +2712,7 @@ ENDIF
 	call	WRTVDP
 ; (delay)
 	call	REPLAYER.WAIT
-; color ,,4
-	ld	bc, CFG_COLOR.BG << 8 + 07h
-	jp	WRTVDP
+	jp	DELAY.ONE_SECOND
 
 .FLASH:
 ; Flashes the background color
@@ -2717,7 +2726,22 @@ ENDIF
 ; color ,,b
 .L905F:	ld	c,07h
 	call	WRTVDP
-	jp	LONG_DELAY
+
+; Changes the player direction without touching any other attribute
+IFDEF CFG_OTHERS.DEAD_PLAYER_DIZZY
+	ld	hl, spratr_buffer + 2
+	ld	a, (hl)
+	and	$f0 ; stores the non-direction part of the pattern...
+	ld	b, a ; ...in b
+	ld	a, (hl)
+	add	4 ; next direction
+	and	$0c ; combines the new direction part of the pattern...
+	or	b ; ...with the rest of the pattern
+	ld	(hl), a
+	; call	LDIRVM_SPRITES ; (embedded in the delay)
+ENDIF
+
+	jp	DELAY.ONE_TENTH
 
 .SONG:
 	incbin "asm/enhancedplus/PW_Dead2.pt3", 100 ; (headerless)
@@ -2781,19 +2805,24 @@ CFG_SOUND:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-; Hides the sprites (one by one)
+; Hides the sprites
 CLEAR_SPRITES:
+; Fills with SPAT_OB
 	ld	hl, spratr_buffer
-	ld	a, SPAT_OB
-	ld	b, 11
-.L8394:	ld	(hl), a
+	ld	bc, 11 << 8 + SPAT_OB
+.LOOP:
+	ld	(hl), c
 	inc	hl
 	inc	hl
 	inc	hl
 	inc	hl
-	djnz	.L8394
-	ld	a, SPAT_END
-	ld	(hl), a
+	djnz	.LOOP
+; SPAT_END
+	dec	c ; c = SPAT_END
+	ld	(hl), c
+; spratr_buffer.flicker_offset = 0
+	xor	a
+	ld	(spratr_buffer.flicker_offset), a
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -2816,65 +2845,69 @@ PUT_SPRITE:
 
 ; -----------------------------------------------------------------------------
 LDIRVM_SPRITES:
-; ; Has the VDP reported a 5th sprite?
-; 	ld	a, [STATFL]
-; 	bit	6, a
-; 	jr	z, .NO_FLICKER ; no: non-flickering LDIRVM
-; ; Reads the 5th sprite plane
-; 	and	$0f
-; ; Computes the new flickering offset
-; 	sub	2 ; (player and skull don't flicker)
-; 	add	a ; a (offset, bytes) = a *4
-; 	add	a
-; 	ld	hl, spratr_buffer.flicker_offset
-; 	add	[hl]
-; ; Is the offset beyond the actual flickering size?
-; 	cp	11 * 4 ; (size, bytes)
-; 	jr	c, .OFFSET_OK ; no
-; ; yes: tries to loop around
-; 	sub	11 * 4 ; (size, bytes)
-; 	jr	z, .OFFSET_ZERO ; (the offset got reset)
-; ; Is the offset still beyond the actual flickering size?
-; 	cp	11 * 4 ; (size, bytes)
-; 	jr	c, .OFFSET_OK ; no
-; ; yes: The flickering size has changed between frames; resets the offset
-; 	xor	a
-; .OFFSET_ZERO:
-; ; Preserves the offset for the next frame
-; 	ld	[hl], a
-; 	jr	.NO_FLICKER ; non-flickering LDIRVM
+; Has the VDP reported a 5th sprite?
+	ld	a, [STATFL]
+	bit	6, a
+	jr	z, .NO_FLICKER ; no: non-flickering LDIRVM
+; Reads the 5th sprite plane
+	and	$0f
+; Computes the new flickering offset
+	sub	2 ; (player and skull don't flicker)
+	add	a ; a (offset, bytes) = a *4
+	add	a
+	ld	hl, spratr_buffer.flicker_offset
+	add	[hl]
+; Is the offset beyond the actual flickering size?
+	cp	11 * 4 ; (size, bytes)
+	jr	c, .OFFSET_OK ; no
+; yes: tries to loop around
+	sub	11 * 4 ; (size, bytes)
+	jr	z, .OFFSET_ZERO ; (the offset got reset)
+; Is the offset still beyond the actual flickering size?
+	cp	11 * 4 ; (size, bytes)
+	jr	c, .OFFSET_OK ; no
+; yes: The flickering size has changed between frames; resets the offset
+	xor	a
+.OFFSET_ZERO:
+; Preserves the offset for the next frame
+	ld	[hl], a
+	jr	.NO_FLICKER ; non-flickering LDIRVM
 
-; .OFFSET_OK:
-; ; Preserves the offset for the next frame
-; 	ld	[hl], a
+.OFFSET_OK:
+; Preserves the offset for the next frame
+	ld	[hl], a
 
-; ; Copies the sprites before the offset at the actual end of the spratr buffer
-; 	ld	hl, spratr_buffer + 2 *4
-; 	ld	de, spratr_buffer.end
-; 	ld	b, 0 ; bc = offset
-; 	ld	c, a
-; 	push	bc ; (preserves offset)
-; 	ldir
-; ; Appends a SPAT_END (just in case)
-; 	ld	a, SPAT_END
-; 	ld	[de], a
+; Copies the sprites before the offset at the actual end of the spratr buffer
+	ld	hl, spratr_buffer + 2 *4
+	ld	de, spratr_buffer.end
+	ld	b, 0 ; bc = offset
+	ld	c, a
+	push	bc ; (preserves offset)
+	ldir
+; Appends a SPAT_END (just in case)
+	ld	a, SPAT_END
+	ld	[de], a
 
-; ; LDIRVM the non-flickering sprites
-; 	ld	hl, spratr_buffer
-; 	ld	de, SPRATR
-; 	ld	bc, 2 *4
-; 	call	LDIRVM
+; LDIRVM the non-flickering sprites
+	ld	hl, spratr_buffer
+	ld	de, SPRATR
+	ld	bc, 2 *4
+	call	LDIRVM
 
-; ; LDIRVM the sprites, starting from the offset
-; 	ld	hl, spratr_buffer + 2 *4
-; 	pop	bc ; (restores offset)
-; 	add	hl, bc
-; 	ld	de, SPRATR + 2 *4
-; 	ld	bc, spratr_buffer.size - 2 *4
-; 	jp	LDIRVM
+; LDIRVM the sprites, starting from the offset
+	ld	hl, spratr_buffer + 2 *4
+	pop	bc ; (restores offset)
+	add	hl, bc
+	ld	de, SPRATR + 2 *4
+	ld	bc, spratr_buffer.size - 2 *4
+	jp	LDIRVM
 
 ; LDIRVM the actual SPRATR buffer
 .NO_FLICKER:
+; Appends a SPAT_END (just in case)
+	ld	hl, spratr_buffer.end
+	ld	[hl], SPAT_END
+
 	ld	hl, spratr_buffer
 	ld	de, SPRATR
 	ld	bc, spratr_buffer.size
@@ -3540,6 +3573,7 @@ REPLAYER.PLAY_JINGLE:
 ; Waits for the jingle to end
 REPLAYER.WAIT:
 	halt
+	call	LDIRVM_SPRITES ; (to keep flickering)
 	ld	a, [PT3_SETUP]
 	bit	7, a ; "bit7 is set each time, when loop point is passed"
 	ret	nz
@@ -3726,7 +3760,9 @@ room_enhance_tile:	rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-; Frames per tenth for 50Hz/60Hz
+; Refresh rate in Hertzs (50Hz/60Hz) and related frames per tenth
+frame_rate:
+	rb	1
 frames_per_tenth:
 	rb	1
 
