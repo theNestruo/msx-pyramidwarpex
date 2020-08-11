@@ -27,5 +27,26 @@
 			"kind": "build",
 			"isDefault": true
 		}
+	}, {
+		"label": "run mdl",
+		"type": "shell",
+		"command": "java -jar C:\\dev\\github\\mdlz80optimizer\\target\\mdl-0.9-jar-with-dependencies.jar -dialect tniasm -warn-off-unofficial -I . asm\\PyramidWarp.enhancedplus.asm -po -popotential",
+		"group": "build",
+		"problemMatcher": {
+			"applyTo": "allDocuments",
+			"fileLocation": [
+				"autodetect",
+				"${workspaceFolder}"
+			],
+			"pattern": [
+				{
+					"regexp": "^(\\w+): Pattern-based optimization in (.+)#([0-9]+): (.+)$",
+					"file": 2,
+					"line": 3,
+					"severity": 1,
+					"message": 4
+				}
+			]
+		}
 	}]
 }

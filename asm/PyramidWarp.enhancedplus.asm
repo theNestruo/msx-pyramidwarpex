@@ -485,9 +485,9 @@ DEC_LIVES_AND_NEW_ROOM:
 	ld	b,05h
 	call	PRINT
 ; Decreases lives
-	ld	a,(game.lives)
-	dec	a
-	ld	(game.lives),a
+	ld	hl, game.lives
+	dec	(hl)
+	ld	a, (hl)
 	jp	m,GAME_OVER ; (<0 lives = GAME_OVER)
 ; Prints lives
 	jr	z,NEW_ROOM ; (no lives to print)
@@ -1274,9 +1274,7 @@ GAME_LOOP:
 ; Sets the player direction
 	ld	a,(door2.type)
 	add	a,a
-	ld	b,a
-	ld	a,01h
-	add	a,b
+	inc	a
 	ld	(player.direction),a
 	ld	(new_player_direction),a
 ; Sets the flag about the player entering a door
@@ -1302,9 +1300,7 @@ GAME_LOOP:
 ; Sets the player direction
 	ld	a,(door1.type)
 	add	a,a
-	ld	b,a
-	ld	a,01h
-	add	a,b
+	inc	a
 	ld	(player.direction),a
 	ld	(new_player_direction),a
 ; Sets the flag about the player entering a door
@@ -1452,7 +1448,7 @@ GAME_LOOP.GUN_OK:
 .L884E:	ld	a,01h ; up
 	call	MOVE_SKULL
 ; player is down and left
-.L8853:	ld	a,00h ; left
+.L8853:	xor	a ; left; was: ld a,00h
 	call	MOVE_SKULL
 	ld	a,03h ; down
 	call	MOVE_SKULL
@@ -1474,14 +1470,14 @@ GAME_LOOP.GUN_OK:
 ; player is down
 	ld	a,03h ; down
 	call	MOVE_SKULL
-	ld	a,00h ; left
+	xor	a ; left; was: ld a,00h
 	call	MOVE_SKULL
 	ld	a,02h ; right
 	call	MOVE_SKULL
 ; player is up
 .L8884:	ld	a,01h ; up
 	call	MOVE_SKULL
-	ld	a,00h ; left
+	xor	a ; left; was: ld a,00h
 	call	MOVE_SKULL
 	ld	a,02h ; right
 	call	MOVE_SKULL
@@ -1499,7 +1495,7 @@ GAME_LOOP.GUN_OK:
 	cp	b
 	jr	c,.L88B5 ; skull.x > player.x
 ; player is to the left
-	ld	a,00h ; left
+	xor	a ; left; was: ld a,00h
 	call	MOVE_SKULL
 	ld	a,01h ; up
 	call	MOVE_SKULL
@@ -1512,7 +1508,7 @@ GAME_LOOP.GUN_OK:
 	call	MOVE_SKULL
 	ld	a,03h ; down
 	call	MOVE_SKULL
-	ld	a,00h ; left
+	xor	a ; left; was: ld a,00h
 	call	MOVE_SKULL
 	; (control never reaches here)
 ; -----------------------------------------------------------------------------
@@ -1741,8 +1737,7 @@ ENDIF
 	inc	a
 	jr	z,GAME_LOOP.EVERYTHING_OK ; $ff = bullet flying
 ; Decreases counter
-	dec	a
-	dec	a
+	sub	2
 	ld	(ix+05h),a
 ; if 0, removes explosion
 	jr	z,.L8A2D
@@ -2291,7 +2286,7 @@ UPDATE_ALIVE_ENEMY:
 ; Randomizes new enemy direction
 .L8CCC:	call	RANDOMIZE
 	and	03h
-	or	a
+	; or	a ; (unnecessary)
 	jr	z,.L8CE9
 	dec	a
 	jr	z,.L8CE4
@@ -2303,7 +2298,7 @@ UPDATE_ALIVE_ENEMY:
 	call	MOVE_ENEMY
 .L8CE4:	ld	a,01h ; up
 	call	MOVE_ENEMY
-.L8CE9:	ld	a,00h ; left
+.L8CE9:	xor	a ; left; was: ld a,00h
 	call	MOVE_ENEMY
 	ld	a,03h ; down
 	call	MOVE_ENEMY
