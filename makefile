@@ -43,9 +43,13 @@ ENHANCED_DATAS=\
 ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\charset.pcx.chr \
 	asm\enhancedplus\charset.pcx.clr \
+	asm\enhancedplus\cursor.pcx.chr \
+	asm\enhancedplus\cursor.pcx.clr \
 	asm\enhancedplus\font.pcx.chr \
 	asm\enhancedplus\font.pcx.clr \
-	asm\enhancedplus\sprites.pcx.spr
+	asm\enhancedplus\sprites.pcx.spr \
+	asm\enhancedplus\title.pcx.chr \
+	asm\enhancedplus\title.pcx.clr
 
 ENHANCEDPLUS_STATIC_DATAS=\
 	asm\enhancedplus\PW_VT2.pt3 \

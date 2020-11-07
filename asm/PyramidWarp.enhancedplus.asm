@@ -17,6 +17,9 @@
 	GTSTCK:	equ $00d5 ; Get joystick status
 	GTTRIG:	equ $00d8 ; Get trigger status
 
+; Stack pointer initialization
+	STACK_POINTER_INIT:	equ $f380 ; As suggested by the MSX2 Technical Handbook
+
 ; MSX system variables
 	SCNCNT: equ $f3f6 ; Key scan timing
 	CLIKSW:	equ $f3db ; Keyboard click sound
@@ -27,8 +30,9 @@
 	BDRCLR:	equ $f3eb ; Border colour
 	JIFFY: equ $fc9e ; Software clock; each VDP interrupt gets increased by 1
 	INTCNT:	equ $fca2 ; ON INTERVAL counter (counts backwards)
+	HKEYI:	equ $fd9a ; Interrupt handler
 	HTIMI:	equ $fd9f ; Interrupt handler
-	HOOK_SIZE:	equ 5
+	HOOK_SIZE:	equ HTIMI - HKEYI
 
 ; VRAM addresses
 	CHRTBL:		equ $0000 ; Pattern table
@@ -170,6 +174,22 @@ ROM_START:
 
 ; Entry Point
 .INIT:
+; Ensures interrupt mode
+	di
+	im	1
+	ld	sp, STACK_POINTER_INIT
+; Cancels the existing hooks (several BIOS routines re-enable interruptions)
+	ld	a, $c9 ; opcode for "RET"
+	ld	[HKEYI], a
+	ld	[HTIMI], a
+
+; Zeroes all the used RAM
+	ld	hl, $e000
+	ld	de, $e001
+	ld	bc, $f380 - $e000 -1
+	ld	[hl], l ; l = $00
+	ldir
+
 ; color 15, 0, 1
 	ld	a,0Fh
 	ld	(FORCLR),a
@@ -206,12 +226,6 @@ ROM_START:
 	call	REPLAYER.RESET
 
 ; Installs the H.TIMI hook in the interruption
-; (preserves the existing hook)
-	ld	hl, HTIMI
-	ld	de, old_htimi_hook
-	ld	bc, HOOK_SIZE
-	ldir
-; Install the interrupt routine
 	di
 	ld	a, $c3 ; opcode for "JP nn"
 	ld	[HTIMI], a
@@ -252,7 +266,7 @@ ROM_START:
 ; Init CHRTBL/CLRTBL
 	ld	hl, DATA_CHARSET.CHR
 	ld	de, CHRTBL + $30 * $08
-	ld	bc, DATA_CHARSET.SIZE - $08
+	ld	bc, DATA_CHARSET.SIZE ; - $08
 	call	LDIRVM_3_BANKS
 	ld	hl, DATA_CHARSET.CLR
 	ld	de, CLRTBL + $30 * $08
@@ -273,23 +287,29 @@ ROM_START:
 
 ; Init on-screen texts
 	ld	hl,LITERAL.MSX
-	ld	de,080Dh
+	ld	de,$030e ; 080Dh
 	ld	b,03h
 	call	PRINT
-	ld	hl,LITERAL.PYRAMID_WARP
-	ld	de,0A09h
+	ld	hl,LITERAL.PYRAMID_WARP_TITLE
+	ld	de,$050a ; 0909h
+	ld	b,0Ch
+	call	PRINT
+	ld	hl,LITERAL.PYRAMID_WARP_TITLE + $0c
+	ld	de,$060a
 	ld	b,0Ch
 	call	PRINT
 	ld	hl,LITERAL.COPYRIGHT
-	ld	de,0C05h
+	ld	de,$0806 ; 0C05h
 	ld	b,14h
 	call	PRINT
 
 	call	ENASCR
 
+; Options menu
+	call	OPTIONS_MENU
 ; "Hit space key"
-	ld	de, $1008
-	call	HIT_SPACE_KEY
+	; ld	de, $1008
+	; call	HIT_SPACE_KEY
 
 ; color ,,4
 	ld	bc,CFG_COLOR.BG << 8 + 07h
@@ -3386,6 +3406,10 @@ ENDIF
 .GAME_OVER: ; 9CCF
 	DB	$10, $0A, $16, $0E, $FF			; GAME_
 	DB	$18, $1F, $0E, $1B			; OVER
+.PYRAMID_WARP_TITLE:
+	;	P__  Y__  R__  A__  M____  I_ D__    W_____  A__  R__  P__
+	DB	$8A, $8B, $8C, $8D, $8E, $8F, $90, $91, $92, $8D, $8C, $8A
+	DB	$93, $94, $95, $96, $97, $98, $99, $9A, $9B, $96, $95, $93
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3448,11 +3472,15 @@ DATA_CHARSET:
 	.CHR:
 	incbin	"asm/enhancedplus/charset.pcx.chr"
 	.CHR_FF:	equ $ - 8
+	incbin	"asm/enhancedplus/title.pcx.chr"
+	incbin	"asm/enhancedplus/cursor.pcx.chr"
 	.SIZE:	equ $ - DATA_CHARSET
 
 	.CLR:
 	incbin	"asm/enhancedplus/charset.pcx.clr"
 	.CLR_FF:	equ $ - 8
+	incbin	"asm/enhancedplus/title.pcx.clr"
+	incbin	"asm/enhancedplus/cursor.pcx.clr"
 
 DATA_ROOMS:
 	include	"asm/enhancedplus/rooms.asm"
@@ -3525,9 +3553,8 @@ HOOK:
 	ld	[SCNCNT], a
 	ld	[INTCNT], a
 
-; Invokes the previously existing hook
 	pop	af ; Restores VDP status register S#0 (a)
-	jp	old_htimi_hook
+	ret
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3601,6 +3628,231 @@ REPLAYER.FRAME:
 	include	"asm/libext/PT3-ROM.tniasm.ASM"
 ; ayFX REPLAYER v1.31
 	include	"asm/libext/ayFX-ROM.tniasm.asm"
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+OPTIONS_MENU:
+; Print option titles
+	ld	hl, .ROOMS
+	ld	de, $0C09
+	ld	b, 5
+	call	PRINT
+
+	ld	hl, .RANDOMNESS
+	ld	de, $0E04
+	ld	b, 10
+	call	PRINT
+
+	ld	hl, .ENEMIES
+	ld	de, $1007
+	ld	b, 7
+	call	PRINT
+
+; Initialization
+	xor	a
+	ld	[cursor], a
+
+.LOOP:
+; Prints cursor and current option values (1/3)
+	xor	a
+	ld	de, $0c0f
+	call	.PRINT_CURSOR
+	ld	hl, .ROOMS_VALUES
+	ld	de, $0c12
+	ld	a, [options] ; 00eerroo
+	and	$03
+	call	.PRINT_OPTION_VALUE_x8
+
+; Prints cursor and current option values (2/3)
+	ld	a, 1
+	ld	de, $0e0f
+	call	.PRINT_CURSOR
+	ld	hl, .RANDOMNESS_VALUES
+	ld	de, $0e12
+	ld	a, [options] ; 00eerroo
+	and	$04
+	call	.PRINT_OPTION_VALUE_x2
+
+; Prints cursor and current option values (3/3)
+	ld	a, 2
+	ld	de, $100f
+	call	.PRINT_CURSOR
+	ld	hl, .ENEMIES_VALUES
+	ld	de, $1012
+	ld	a, [options] ; 00eerroo
+	and	$30
+	srl	a
+	call	.PRINT_OPTION_VALUE
+
+; Prints "Hit space key"
+	call	.PRINT_HIT_SPACE_KEY
+
+; Changes option on stick
+	call	GTSTCK_ANY
+	call	.CHANGE_OPTION
+
+; Returns on trigger
+	call	GTTRIG_ANY
+	or	a
+	ret	nz
+	jr	.LOOP
+
+
+; param hl: .XXX_VALUES
+; param de: yyxx
+; param a: value as multiple of 8 ($00, $08, $10)
+.PRINT_OPTION_VALUE_x8:
+	add	a
+	add	a
+.PRINT_OPTION_VALUE_x2:
+	add	a
+.PRINT_OPTION_VALUE:
+	call	ADD_HL_A
+	ld	b, 8
+	jp	PRINT
+
+; param a: the option index
+; param de: yyxx
+.PRINT_CURSOR:
+	ld	hl, cursor
+	cp	[hl]
+	ld	hl, .CURSOR
+	jr	z, .PRINT_CURSOR_HL_OK
+	ld	hl, LITERAL.BLANKS
+.PRINT_CURSOR_HL_OK:
+	ld	b, 2
+	jp	PRINT
+
+; no params
+.PRINT_HIT_SPACE_KEY:
+	ld	hl, aux.frame_counter_2
+	ld	a, [hl]
+	inc	a
+	ld	[hl], a
+	ld	hl, HIT_SPACE_KEY.LITERAL
+	and	$40
+	jr	nz, .HIT_SPACE_KEY_HL_OK
+	ld	hl, LITERAL.BLANKS
+.HIT_SPACE_KEY_HL_OK:
+	ld	de, $1409 ; $1008
+	ld	b,0Dh
+	jp	PRINT
+
+
+; param a: GTSTCK_ANY return value
+.CHANGE_OPTION:
+	or	a
+	ret	z ; no input
+	ld	bc, 1000
+.LOOP1:
+	djnz	.LOOP1
+	dec	c
+	jr	nz, .LOOP1
+; Input: translates to direction values
+	dec	a	; 0..7
+	srl	a	; 0..3
+
+	ld	hl, cursor ; (for convenience purposes)
+; Up?
+	or	a
+	jr	nz, .NO_UP
+; Moves cursor up
+	xor	[hl] ; a already 0, checks if cursor is 0
+	ret	z
+	dec	[hl]
+	ret
+.NO_UP:
+
+; Down?
+	cp	2
+	jr	nz, .NO_DOWN
+; Moves cursor down
+	xor	[hl] ; a already 2, checks if cursor is 2
+	ret	z
+	inc	[hl]
+	ret
+.NO_DOWN:
+
+	ld	b, [hl] ; b = cursor index
+	dec	hl ; hl = options
+
+; Randomness option?
+	djnz	.NO_RANDOMNESS
+; Changes the randomness option
+	dec	a ; 0 = right, 2 = left
+	add	a ; 0 = right, 4 = left
+	xor	4 ; 4 = right, 0 = left
+	ld	b, a
+	ld	a, [hl]
+	and	$f3
+	or	b
+	ld	[hl], a
+	ret
+.NO_RANDOMNESS:
+
+; Enemies option?
+	djnz	.NO_ENEMIES
+; Changes the enemies option
+	dec	a
+	ld	a, [hl]
+	jr	nz, .DEC_ENEMIES
+; Moves enemies option to the right
+	add	$10
+	jr	.SET_ENEMIES_VALUE
+; Moves enemies option to the left
+.DEC_ENEMIES:
+	sub	$10
+.SET_ENEMIES_VALUE:
+	ld	b, a ; (preserves new value)
+	and	$30
+	cp	$30
+	ret	z ; (was already rightmost/leftmost)
+	ld	[hl], b
+	ret
+.NO_ENEMIES:
+
+; Rooms option?
+; Changes the rooms option
+	dec	a
+	ld	a, [hl]
+	jr	nz, .DEC_ROOMS
+; Moves rooms option to the right
+	and	$03
+	cp	$02
+	ret	z ; (already rightmost)
+	inc	[hl]
+	ret
+; Moves rooms option to the left
+.DEC_ROOMS:
+	and	$03
+	ret	z ; (already leftmost)
+	dec	[hl]
+	ret
+
+
+.ROOMS:
+	db	$1B, $18, $18, $16, $1C			; ROOMS
+.ROOMS_VALUES:
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
+	db	$17, $0E, $20, $FF, $FF, $FF, $FF, $FF	; NEW
+
+.RANDOMNESS:
+	db	$1B, $0A, $17, $0D, $18, $16, $17, $0E, $1C, $1C; RANDOMNESS
+.RANDOMNESS_VALUES:
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D		; ENHANCED
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15		; ORIGINAL
+
+.ENEMIES:
+	db	$0E, $17, $0E, $16, $12, $0E, $1C	; ENEMIES
+.ENEMIES_VALUES:
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
+	db	$0A, $15, $15, $FF, $FF, $FF, $FF, $FF	; ALL
+
+.CURSOR:
+	db	$9c, $9d
 ; -----------------------------------------------------------------------------
 
 
@@ -3749,9 +4001,11 @@ aux.dying_flashes:	rb 1	; C0DCH
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-room_enhance_pos:		rb 1
-room_enhance_ptr:		rb 2
+room_enhance_pos:	rb 1
+room_enhance_ptr:	rb 2
 room_enhance_tile:	rb 1
+options:		rb 1 ; 00eerroo: Enemies, Randomness, rOoms
+cursor:			rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3760,10 +4014,6 @@ frame_rate:
 	rb	1
 frames_per_tenth:
 	rb	1
-
-; Backup of the H.TIMI hook previous to the installation of the replayer hook
-old_htimi_hook:
-	rb	HOOK_SIZE
 
 ; 60Hz replayer synchronization
 replayer.frameskip:
