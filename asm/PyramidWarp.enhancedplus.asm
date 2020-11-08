@@ -3651,6 +3651,7 @@ OPTIONS_MENU:
 
 ; Initialization
 	xor	a
+	ld	[prevstick], a
 	ld	[cursor], a
 
 .LOOP:
@@ -3689,7 +3690,6 @@ OPTIONS_MENU:
 	call	.PRINT_HIT_SPACE_KEY
 
 ; Changes option on stick
-	call	GTSTCK_ANY
 	call	.CHANGE_OPTION
 
 ; Returns on trigger
@@ -3742,18 +3742,20 @@ OPTIONS_MENU:
 
 ; param a: GTSTCK_ANY return value
 .CHANGE_OPTION:
+	call	GTSTCK_ANY
+; Compares with previous value
+	ld	hl, prevstick
+	cp	[hl]
+	ret	z ; (same value)
+; Saves new value
+	ld	[hl], a
 	or	a
-	ret	z ; no input
-	ld	bc, 1000
-.LOOP1:
-	djnz	.LOOP1
-	dec	c
-	jr	nz, .LOOP1
+	ret	z ; (no input)
 ; Input: translates to direction values
 	dec	a	; 0..7
 	srl	a	; 0..3
 
-	ld	hl, cursor ; (for convenience purposes)
+	inc	hl ; (hl = cursor, for convenience purposes)
 ; Up?
 	or	a
 	jr	nz, .NO_UP
@@ -3775,7 +3777,7 @@ OPTIONS_MENU:
 .NO_DOWN:
 
 	ld	b, [hl] ; b = cursor index
-	dec	hl ; hl = options
+	inc	hl ; hl = options
 
 ; Randomness option?
 	djnz	.NO_RANDOMNESS
@@ -4004,8 +4006,11 @@ aux.dying_flashes:	rb 1	; C0DCH
 room_enhance_pos:	rb 1
 room_enhance_ptr:	rb 2
 room_enhance_tile:	rb 1
+
+; Options menu:
+prevstick:		rb 1 ; previously read GTSTCK_ANY value
+cursor:			rb 1 ; cursor index: 0 = enemies, 1 = randomness, 2 = rooms
 options:		rb 1 ; 00eerroo: Enemies, Randomness, rOoms
-cursor:			rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
