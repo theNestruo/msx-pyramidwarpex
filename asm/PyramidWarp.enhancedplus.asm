@@ -143,7 +143,6 @@ CFG_HUD:			; $yyxx coordinates
 
 CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
-	.CHARSET_3D:		; Uncomment to use "3D" charset
 	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
 	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
@@ -327,19 +326,8 @@ ROM_START:
 	push	bc
 
 
-	IFDEF CFG_OTHERS.CHARSET_3D
-		ld hl, LITERAL.WALL_x24
-		call	PRINT
-	ELSE
-		push	af
-		and	1
-		ld	hl,LITERAL.WALL_x24_B
-		jr	z, .PRN
-		ld	hl,LITERAL.WALL_x24_A
-.PRN:
-		call	PRINT
-		pop	af
-	ENDIF
+	ld hl, LITERAL.WALL_x24
+	call	PRINT
 
 	pop	bc
 	pop	de
@@ -478,7 +466,7 @@ NEW_PYRAMID:
 .L834D:	push	bc
 	ld	hl,LITERAL.ROOMS_x7
 	call	PRINT
-	inc	e ; destination += (+1, 1)
+	inc	e ; destination += (+1, -1)
 	dec	d
 	pop	bc ; length -= 2
 	dec	b
@@ -585,199 +573,9 @@ NEW_ROOM:
 	ld	de,CFG_HUD.ROOM_COORDS +1
 	call	PRINT_CHAR
 
-DRAW_ROOM:
-
-
-	IFDEF CFG_OTHERS.CHARSET_3D
-		xor	a
-		ld (room_enhance_pos), a
-	ENDIF
-
-
-; Points to the right room data
-	ld	hl,DATA_ROOMS - $0022
-	ld	de,0022h
-	ld	a,(game.current_room)
-	ld	b,a
-.L83F7:	add	hl,de
-	djnz	.L83F7
-
-; Prints the room
-	IFDEF CFG_OTHERS.CHARSET_3D
-		ld	(room_enhance_ptr), hl
-	ENDIF
-
-; For each row
-	ld	d, $01
-.ROW:
-; Reads two bytes from the data
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
-; (preserves data pointer)
-	push	hl
-; For each column
-	ld	e, $02
-.COLUMN:
-; (preserves data bytes and target pointer)
-	push	de
-; Is the first bit set?
-	sla	b
-	rl	c
-	push	bc
-
-	jr	nc,.EMPTY ; no
-; (wall)
-	IFDEF CFG_OTHERS.CHARSET_3D
-		call	PRINT_WALL_3D
-	ELSE
-
-		ld	a, CFG_TILES_PATTERN.TILE_WALL ; 30h
-		call	PRINT_TILE
-	ENDIF
-	jr	.BIT_OK
-
-.EMPTY:
-	call	CLEAR_TILE
-
-.BIT_OK:
-
-; (restores data bytes and target pointer)
-	pop	bc
-	pop	de
-; x++
-	inc	e
-	inc	e
-; x==24?
-
-	IFDEF CFG_OTHERS.CHARSET_3D
-		ld a, (room_enhance_pos)
-		inc a
-		ld (room_enhance_pos), a
-	ENDIF
-
-	ld	a, 24
-	cp	e
-	jr	nz, .COLUMN
-
-.END_ROW:
-; (restores data pointer)
-	pop	hl
-; y++
-	inc	d
-	inc	d
-; y==23?
-
-	IFDEF CFG_OTHERS.CHARSET_3D
-		ld	a, (room_enhance_pos)
-		and $F0
-		add a, $10
-		ld (room_enhance_pos), a
-	ENDIF
-
-	ld	a, 23
-	cp	d
-	jr	nz, .ROW
-
-DRAW_ROOM_ENHANCE:
-
-
-IFDEF CFG_OTHERS.CHARSET_3D
-	push	hl
-
-	; restore FIRST & LAST ROW and FIRST COLUMN
-	ld		hl, NAMTBL + 2
-	ld		a, $5E
-	ld		bc, 22
-	call	FILVRM
-
-	ld		hl, NAMTBL + 23*32 + 2
-	ld		a, $5E
-	ld		bc, 22
-	call	FILVRM
-
-	ld		hl, NAMTBL + 32 + 1
-	ld		b, 22
-.LOOP0:
-	push	bc
-	ld		a, $5E
-	call	WRTVRM
-	ld		bc, 32
-	add	hl, bc
-	pop	bc
-	djnz	.LOOP0
-
-
-	; check FIRST ROW
-	ld		hl, NAMTBL + 32 + 2
-	ld		b, 11
-.LOOP1:
-	push	hl
-	push	bc
-	call	RDVRM
-	cp		$58
-	jr		nz, .LOOP1_NEXT
-	ld		bc, -32
-	add	hl, bc
-	ld		a, $5C
-	call	WRTVRM
-	inc	hl
-	call	WRTVRM
-.LOOP1_NEXT:
-	pop	bc
-	pop	hl
-	inc	hl
-	inc	hl
-	djnz	.LOOP1
-
-	; check LAST ROW
-	ld		hl, NAMTBL + 32*22 + 2
-	ld		b, 11
-.LOOP2:
-	push	hl
-	push	bc
-	call	RDVRM
-	cp		$5A
-	jr		nz, .LOOP2_NEXT
-	ld		bc, 32
-	add	hl, bc
-	ld		a, $5D
-	call	WRTVRM
-	inc	hl
-	call	WRTVRM
-.LOOP2_NEXT:
-	pop	bc
-	pop	hl
-	inc	hl
-	inc	hl
-	djnz	.LOOP2
-
-	; check FIRST COLUMN
-	ld		hl, NAMTBL + 32 + 2
-	ld		b, 11
-.LOOP3:
-	push	bc
-	push	hl
-	call	RDVRM
-	cp		$58
-	jr		nz, .LOOP3_NEXT
-	dec	hl
-	ld		a, $5F
-	call	WRTVRM
-	ld		bc, 32
-	add	hl, bc
-	call	WRTVRM
-.LOOP3_NEXT:
-	pop	hl
-	ld		bc, 32*2
-	add	hl, bc
-	pop	bc
-	djnz	.LOOP3
-
-	pop	hl
-ENDIF
-
+; Draws the room
+	call	BUFFER_CURRENT_ROOM
+	call	DRAW_ROOM
 
 ; Is sphynx room?
 	ld	a,(game.current_room)
@@ -788,54 +586,33 @@ ENDIF
 
 ; Prints exit zone
 	push	hl
-	IFDEF CFG_OTHERS.CHARSET_3D
-		ld		hl, NAMTBL + 32*9+10
-		ld		b, 6
-	.LOOPWARP0:
-		push	bc
-		ld		b, 6
-	.LOOPWARP1:
-		call	RDVRM
-		cp	$34
-		jr	nc, .NEXTWARP1
-		; change tile
-		add	a, 16
-		call	WRTVRM
-		jr	.NEXTWARP2
-	.NEXTWARP1:
-		cp	$5C
-		jr	c, .NEXTWARP2
-		cp	$60
-		jr	nc, .NEXTWARP2
-		add	a, 4
-		call	WRTVRM
-	.NEXTWARP2:
-		inc	hl
-		djnz	.LOOPWARP1
-		ld		bc, 32-6
-		add	hl, bc
-		pop	bc
-		djnz	.LOOPWARP0
-	ELSE
-		ld	de,090Ah
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-		ld	de,090Ch
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-		ld	de,090Eh
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-		ld	de,0D0Ah
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-		ld	de,0D0Ch
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-		ld	de,0D0Eh
-		ld	a, CFG_TILES_PATTERN.TILE_WALL_WARP ; $40
-		call	PRINT_TILE
-	ENDIF
+	ld		hl, NAMTBL + 32*9+10
+	ld		b, 6
+.LOOPWARP0:
+	push	bc
+	ld		b, 6
+.LOOPWARP1:
+	call	RDVRM
+	cp	$34
+	jr	nc, .NEXTWARP1
+	; change tile
+	add	a, 16
+	call	WRTVRM
+	jr	.NEXTWARP2
+.NEXTWARP1:
+	cp	$5C
+	jr	c, .NEXTWARP2
+	cp	$60
+	jr	nc, .NEXTWARP2
+	add	a, 4
+	call	WRTVRM
+.NEXTWARP2:
+	inc	hl
+	djnz	.LOOPWARP1
+	ld		bc, 32-6
+	add	hl, bc
+	pop	bc
+	djnz	.LOOPWARP0
 	pop	hl
 
 
@@ -875,7 +652,6 @@ PRINT_ROOM_DECORATION:
 
 	jp	INIT_GAME_LOOP
 ; -----------------------------------------------------------------------------
-IFDEF CFG_OTHERS.CHARSET_3D
 
 PRINT_WALL_3D:
 	push	hl
@@ -993,7 +769,7 @@ GET_MAP_POSITION:
 	rra
 	rra
 	and 	$1F	; a = (posicion y en mapa)*2
-	ld		hl, (room_enhance_ptr)
+	ld		hl, room_buffer
 	call	ADD_HL_A
 	ld		a, (hl)	; a = byte con 8 pixeles
 	ld		c, a	; c = byte con 8 pixeles
@@ -1011,8 +787,6 @@ GET_MAP_POSITION:
 @@norotar:
 	and		$01
 	ret
-
-ENDIF
 
 
 ; -----------------------------------------------------------------------------
@@ -3353,21 +3127,10 @@ LITERAL:
 
 
 
-IFDEF CFG_OTHERS.CHARSET_3D
 	.WALL_x24:
 		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E	; 24x wall
 		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E
 		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5F
-ELSE
-	.WALL_x24_A:
-		DB	$31, $30, $31, $30, $31, $30, $31, $30	; 24x wall
-		DB	$31, $30, $31, $30, $31, $30, $31, $30
-		DB	$31, $30, $31, $30, $31, $30, $31, $30
-	.WALL_x24_B:
-		DB	$33, $32, $33, $32, $33, $32, $33, $32	; 24x wall
-		DB	$33, $32, $33, $32, $33, $32, $33, $32
-		DB	$33, $32, $33, $32, $33, $32, $33, $32
-ENDIF
 
 
 
@@ -3482,9 +3245,6 @@ DATA_CHARSET:
 	incbin	"asm/enhancedplus/title.pcx.clr"
 	incbin	"asm/enhancedplus/cursor.pcx.clr"
 
-DATA_ROOMS:
-	include	"asm/enhancedplus/rooms.asm"
-
 DATA_WALL_ENHANCE:
 	DB	$30,	$31,	$32,	$33	; 0
 	DB	$5D,	$31,	$5C,	$33	; 1
@@ -3504,14 +3264,18 @@ DATA_WALL_ENHANCE:
 	DB	$5E,	$5E,	$5E,	$5E	; 15
 
 DATA_RANDOMIZE_PYRAMID:
-	include	"asm/enhancedplus/pyramids.asm"
+	include	"asm/original/pyramids.asm"
 	.FLOOR1:	equ DATA_RANDOMIZE_PYRAMID -7
 	.FLOOR2:	equ DATA_RANDOMIZE_PYRAMID +(7*4) -5
 	.FLOOR3:	equ DATA_RANDOMIZE_PYRAMID +(7*4) +(5*4) -3
+
+DATA_ROOMS:
+	include	"asm/enhancedplus/original_rooms.asm"
+	include	"asm/enhancedplus/rooms.asm"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-.L9F56:	db	" PYRAMID WARP", $a0
+	db	" PYRAMID WARP", $a0
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
@@ -3857,6 +3621,303 @@ OPTIONS_MENU:
 	db	$9c, $9d
 ; -----------------------------------------------------------------------------
 
+; -----------------------------------------------------------------------------
+; Buffers the current room
+BUFFER_CURRENT_ROOM:
+	ld	a, (game.current_room)
+	; and	$0f ; TODO
+; Points to the right room data
+	ld	hl, DATA_ROOMS - $0022
+	ld	bc, $0022
+.L83F7:	add	hl, bc
+	dec	a
+	jr	nz, .L83F7
+; Buffers the current room data
+	ld	de, room_buffer
+	ldir
+
+; Checks enhanced randomness
+	ld	a, [options] ; 00eerroo
+	and	$04
+	ret	nz ; original
+; enhanced
+
+; Flips the room
+	jr	.DO_NOT_FLIP
+	; ld	a, r
+	; rrca
+	; jr	nc, .DO_NOT_FLIP ; no
+; yes: Flips the walls (1/2)
+	ld	bc, (room_buffer.walls + 0)
+	ld	de, (room_buffer.walls + 2)
+	ld	hl, (room_buffer.walls + 4)
+	exx
+	ld	bc, (room_buffer.walls + 20)
+	ld	de, (room_buffer.walls + 18)
+	ld	hl, (room_buffer.walls + 16)
+	ld	(room_buffer.walls + 0), bc
+	ld	(room_buffer.walls + 2), de
+	ld	(room_buffer.walls + 4), hl
+	exx
+	ld	(room_buffer.walls + 20), bc
+	ld	(room_buffer.walls + 18), de
+	ld	(room_buffer.walls + 16), hl
+; Flips the walls (2/2)
+	ld	bc, (room_buffer.walls + 6)
+	ld	de, (room_buffer.walls + 8)
+	exx
+	ld	bc, (room_buffer.walls + 14)
+	ld	de, (room_buffer.walls + 12)
+	ld	(room_buffer.walls + 6), bc
+	ld	(room_buffer.walls + 8), de
+	exx
+	ld	(room_buffer.walls + 14), bc
+	ld	(room_buffer.walls + 12), de
+; Flips the coordinates
+	ld	hl, room_buffer.box1 + 1
+	ld	b, 6
+.FLIP_COORDS_LOOP:
+	ld	a, 10
+	sub	[hl]
+	ld	[hl], a
+	inc	hl
+	inc	hl
+	djnz	.FLIP_COORDS_LOOP
+; Swaps the doors
+	ld	hl, (room_buffer.door_up)
+	ld	de, (room_buffer.door_down)
+	ld	(room_buffer.door_down), hl
+	ld	(room_buffer.door_up), de
+.DO_NOT_FLIP:
+
+; Mirrors the room
+	ld	a, r
+	rrca
+	ret	nc ; no
+; yes: Mirrors the walls
+	ld	hl, room_buffer.walls
+	ld	b, 11
+.MIRROR_WALLS_LOOP:
+; Mirrors the nibbles
+	xor	a ; 00
+	rld	; ABC0 00 -> B0C0 0A
+	call	.MIRROR_NIBBLE ; 0A->0a
+	inc	hl
+	rld	; B0C0 0a -> B00a 0C
+	call	.MIRROR_NIBBLE ; 0C->0c
+	dec	hl
+	rld	; B00a 0c -> 0c0a 0B
+	call	.MIRROR_NIBBLE ; 0B->0b
+	rld	; 0c0a 0b -> cb0a 00
+	inc	hl
+	rld	; cb0a 00 -> cba0 00
+; Additional bit shift
+	ld	e, [hl]
+	dec	hl
+	ld	d, [hl]
+	ex	de, hl
+	add	hl, hl
+	ex	de, hl
+	ld	[hl], d
+	inc	hl
+	ld	[hl], e
+; Next row
+	inc	hl
+	djnz	.MIRROR_WALLS_LOOP
+; Mirrors the coordinates
+	ld	hl, room_buffer.box1
+	ld	b, 6
+.MIRROR_COORDS_LOOP:
+	ld	a, 10
+	sub	[hl]
+	ld	[hl], a
+	inc	hl
+	inc	hl
+	djnz	.MIRROR_COORDS_LOOP
+	ret
+
+.MIRROR_NIBBLE:
+	and	$0f
+	ld	de, .MIRROR_LUT
+	add	e
+	ld	e, a
+	adc	d
+	sub	e
+	ld	d, a
+	ld	a, [de]
+	ret
+.MIRROR_LUT:
+	db	0000b, 1000b, 0100b, 1100b, 0010b, 1010b, 0110b, 1110b
+	db	0001b, 1001b, 0101b, 1101b, 0011b, 1011b, 0111b, 1111b
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+DRAW_ROOM:
+
+; Prints the room
+	xor	a
+	ld	(room_enhance_pos), a
+
+; For each row
+	ld	hl, room_buffer
+	ld	d, $01
+.ROW:
+; Reads two bytes from the data
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+; (preserves data pointer)
+	push	hl
+; For each column
+	ld	e, $02
+.COLUMN:
+; (preserves data bytes and target pointer)
+	push	de
+; Is the first bit set?
+	sla	b
+	rl	c
+	push	bc
+
+	jr	nc,.EMPTY ; no
+; (wall)
+	call	PRINT_WALL_3D
+	jr	.BIT_OK
+
+.EMPTY:
+	call	CLEAR_TILE
+
+.BIT_OK:
+
+; (restores data bytes and target pointer)
+	pop	bc
+	pop	de
+; x++
+	inc	e
+	inc	e
+; x==24?
+
+	ld a, (room_enhance_pos)
+	inc a
+	ld (room_enhance_pos), a
+
+	ld	a, 24
+	cp	e
+	jr	nz, .COLUMN
+
+.END_ROW:
+; (restores data pointer)
+	pop	hl
+; y++
+	inc	d
+	inc	d
+; y==23?
+
+	ld	a, (room_enhance_pos)
+	and $F0
+	add a, $10
+	ld (room_enhance_pos), a
+
+	ld	a, 23
+	cp	d
+	jr	nz, .ROW
+
+DRAW_ROOM_ENHANCE:
+
+
+	push	hl
+
+	; restore FIRST & LAST ROW and FIRST COLUMN
+	ld		hl, NAMTBL + 2
+	ld		a, $5E
+	ld		bc, 22
+	call	FILVRM
+
+	ld		hl, NAMTBL + 23*32 + 2
+	ld		a, $5E
+	ld		bc, 22
+	call	FILVRM
+
+	ld		hl, NAMTBL + 32 + 1
+	ld		b, 22
+.LOOP0:
+	push	bc
+	ld		a, $5E
+	call	WRTVRM
+	ld		bc, 32
+	add	hl, bc
+	pop	bc
+	djnz	.LOOP0
+
+
+	; check FIRST ROW
+	ld		hl, NAMTBL + 32 + 2
+	ld		b, 11
+.LOOP1:
+	push	hl
+	push	bc
+	call	RDVRM
+	cp		$58
+	jr		nz, .LOOP1_NEXT
+	ld		bc, -32
+	add	hl, bc
+	ld		a, $5C
+	call	WRTVRM
+	inc	hl
+	call	WRTVRM
+.LOOP1_NEXT:
+	pop	bc
+	pop	hl
+	inc	hl
+	inc	hl
+	djnz	.LOOP1
+
+	; check LAST ROW
+	ld		hl, NAMTBL + 32*22 + 2
+	ld		b, 11
+.LOOP2:
+	push	hl
+	push	bc
+	call	RDVRM
+	cp		$5A
+	jr		nz, .LOOP2_NEXT
+	ld		bc, 32
+	add	hl, bc
+	ld		a, $5D
+	call	WRTVRM
+	inc	hl
+	call	WRTVRM
+.LOOP2_NEXT:
+	pop	bc
+	pop	hl
+	inc	hl
+	inc	hl
+	djnz	.LOOP2
+
+	; check FIRST COLUMN
+	ld		hl, NAMTBL + 32 + 2
+	ld		b, 11
+.LOOP3:
+	push	bc
+	push	hl
+	call	RDVRM
+	cp		$58
+	jr		nz, .LOOP3_NEXT
+	dec	hl
+	ld		a, $5F
+	call	WRTVRM
+	ld		bc, 32
+	add	hl, bc
+	call	WRTVRM
+.LOOP3_NEXT:
+	pop	hl
+	ld		bc, 32*2
+	add	hl, bc
+	pop	bc
+	djnz	.LOOP3
+
+	pop	hl
+; -----------------------------------------------------------------------------
 
 debug_rom_end_original: equ $9f8c
 debug_rom_end_new:	equ $
@@ -3993,10 +4054,6 @@ pyramid: ; C085H
 	.room_index:	rb 1	; C085H
 	.room_array:	rb 16	; C087H (7+5+3+1 rooms)
 	.room_namtbl_ptr:rb 2	; C097H
-sound_buffer: ; C099H
-	.start:		rb 1+20	; C099H
-	.dead:		rb 1+20	; C0AEH
-	.end:		rb 1+20	; C0C3H
 aux.frame_counter_2:	rb 1	; C0D8H
 player_entering_door:	rb 1	; C0DAH
 aux.dying_flashes:	rb 1	; C0DCH
@@ -4004,13 +4061,22 @@ aux.dying_flashes:	rb 1	; C0DCH
 
 ; -----------------------------------------------------------------------------
 room_enhance_pos:	rb 1
-room_enhance_ptr:	rb 2
 room_enhance_tile:	rb 1
 
 ; Options menu:
 prevstick:		rb 1 ; previously read GTSTCK_ANY value
 cursor:			rb 1 ; cursor index: 0 = enemies, 1 = randomness, 2 = rooms
 options:		rb 1 ; 00eerroo: Enemies, Randomness, rOoms
+
+; Buffer of the current room
+room_buffer:
+	.walls:		rb 22
+	.box1:		rb 2
+	.box2:		rb 2
+	.box3:		rb 2
+	.nest:		rb 2
+	.door_up:	rb 2
+	.door_down:	rb 2
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
