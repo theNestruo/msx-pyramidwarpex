@@ -3625,8 +3625,12 @@ OPTIONS_MENU:
 ; Buffers the current room
 BUFFER_CURRENT_ROOM:
 	ld	a, (game.current_room)
-	; and	$0f ; TODO
-; Points to the right room data
+	; and	$0f ; TODO Support for more rooms
+; Checks if the room is already buffered
+	ld	hl, buffered_room
+	cp	[hl]
+	ret	z ; yes
+; no: Points to the right room data
 	ld	hl, DATA_ROOMS - $0022
 	ld	bc, $0022
 .L83F7:	add	hl, bc
@@ -3643,10 +3647,9 @@ BUFFER_CURRENT_ROOM:
 ; enhanced
 
 ; Flips the room
-	jr	.DO_NOT_FLIP
-	; ld	a, r
-	; rrca
-	; jr	nc, .DO_NOT_FLIP ; no
+	ld	a, r
+	rrca
+	jr	nc, .DO_NOT_FLIP ; no
 ; yes: Flips the walls (1/2)
 	ld	bc, (room_buffer.walls + 0)
 	ld	de, (room_buffer.walls + 2)
@@ -3684,10 +3687,14 @@ BUFFER_CURRENT_ROOM:
 	inc	hl
 	djnz	.FLIP_COORDS_LOOP
 ; Swaps the doors
-	ld	hl, (room_buffer.door_up)
-	ld	de, (room_buffer.door_down)
-	ld	(room_buffer.door_down), hl
-	ld	(room_buffer.door_up), de
+	ld	a, $80
+	ld	hl, room_buffer.door_up
+	xor	[hl]
+	ld	[hl], a
+	ld	a, $80
+	ld	hl, room_buffer.door_down
+	xor	[hl]
+	ld	[hl], a
 .DO_NOT_FLIP:
 
 ; Mirrors the room
@@ -3700,25 +3707,24 @@ BUFFER_CURRENT_ROOM:
 .MIRROR_WALLS_LOOP:
 ; Mirrors the nibbles
 	xor	a ; 00
-	rld	; ABC0 00 -> B0C0 0A
+	rld	; [hl  ]=ABC0, a=00 -> [hl  ]=B0C0, a=0A
 	call	.MIRROR_NIBBLE ; 0A->0a
 	inc	hl
-	rld	; B0C0 0a -> B00a 0C
+	rld	; [  hl]=B0C0, a=0a -> [  hl]=B00a, a=0C
 	call	.MIRROR_NIBBLE ; 0C->0c
 	dec	hl
-	rld	; B00a 0c -> 0c0a 0B
+	rld	; [hl  ]=B00a, a=0c -> [hl  ]=0c0a, a=0B
 	call	.MIRROR_NIBBLE ; 0B->0b
-	rld	; 0c0a 0b -> cb0a 00
+	rld	; [hl  ]=0c0a, a=0b -> [hl  ]=cb0a, a=00
 	inc	hl
-	rld	; cb0a 00 -> cba0 00
+	rld	; [  hl]=cb0a, a=00 -> [  hl]=cba0, a=00
 ; Additional bit shift
-	ld	e, [hl]
+	ld	e, [hl] ; de = cba0
 	dec	hl
 	ld	d, [hl]
-	ex	de, hl
-	add	hl, hl
-	ex	de, hl
-	ld	[hl], d
+	sla	e ; de << 1
+	rl	d
+	ld	[hl], d ; de <- cba0 (shifted)
 	inc	hl
 	ld	[hl], e
 ; Next row
@@ -3917,6 +3923,8 @@ DRAW_ROOM_ENHANCE:
 	djnz	.LOOP3
 
 	pop	hl
+
+	ret
 ; -----------------------------------------------------------------------------
 
 debug_rom_end_original: equ $9f8c
@@ -4069,6 +4077,7 @@ cursor:			rb 1 ; cursor index: 0 = enemies, 1 = randomness, 2 = rooms
 options:		rb 1 ; 00eerroo: Enemies, Randomness, rOoms
 
 ; Buffer of the current room
+buffered_room:		rb 1 ; prevents re-buffering the current room
 room_buffer:
 	.walls:		rb 22
 	.box1:		rb 2
