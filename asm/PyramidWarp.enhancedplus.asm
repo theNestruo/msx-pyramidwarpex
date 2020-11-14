@@ -320,26 +320,20 @@ ROM_START:
 
 ; Fills in playground
 	ld	de,0001h
-	ld	bc,1818h
+	ld	bc, $1918 ; was: 1818h, now clears spurious characters
 	xor	a ; enhancedplus
-.LOOP:	call	.SUB
-	jr	z, .CONT
-	jr	.LOOP
-
-.SUB:	push	de
+.LOOP:
+	push	de
 	push	bc
-
-
-	ld hl, LITERAL.WALL_x24
+	ld	hl, LITERAL.WALL_x24 ; (followed by blanks!)
 	call	PRINT
-
 	pop	bc
 	pop	de
+
 	inc	a
 	inc	d
 	dec	c
-	ret
-.CONT:
+	jr	nz, .LOOP
 
 ; Prints HUD
 	ld	hl,LITERAL.DASHES
@@ -3102,20 +3096,17 @@ LITERAL:
 
 
 
-	.WALL_x24:
-		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E	; 24x wall
-		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E
-		DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5F
+.WALL_x24:
+	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E	; 24x wall
+	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E
+	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5F
 
-
-
-
-.ROOMS_x7:	; 9C54
-	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
-
-.BLANKS: ; 9C62
-	DB	$2F, $2F, $2F, $2F, $2F, $2F, $2F
+.BLANKS:
+	DB	$2F, $2F, $2F, $2F, $2F, $2F, $2F	; 15x blanks
 	DB	$2F, $2F, $2F, $2F, $2F, $2F
+
+.ROOMS_x7:
+	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 
 .LIVES_x6: ; 9C77
 	DB	$50, $50, $50, $50, $50, $50		; 6x life
@@ -3543,7 +3534,7 @@ OPTIONS_MENU:
 	jr	nz, .DEC_ROOMS
 ; Moves rooms option to the right
 	and	$03
-	cp	$03
+	cp	$02
 	ret	z ; (already rightmost)
 	inc	[hl]
 	ret
@@ -3560,8 +3551,7 @@ OPTIONS_MENU:
 .ROOMS_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
 	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-	db	$0C, $15, $0A, $1C, $1C, $12, $0C, $FF	; CLASSIC
-	db	$17, $0E, $20, $FF, $FF, $FF, $FF, $FF	; NEW
+	db	$17, $0E, $20, $0E, $1B, $FF, $FF, $FF	; NEWER
 
 .MIRRORING:
 	db	$16, $12, $1B, $1B, $18, $1B, $12, $17, $10 ; MIRRORING
@@ -3623,70 +3613,40 @@ DATA_RANDOMIZE_PYRAMID:
 ; -----------------------------------------------------------------------------
 ; Builds the pyramid definition (from the pyramid HUD)
 BUILD_PYRAMID_DEFINITION:
-; Checks rooms set
-	ld	a, [options] ; 00eemmrr
-	and	$03
-	jr	nz, .NOT_ORIGINAL
-; original mode: copies the pyramid (HUD) as the initial pyramid definition
+; Copies the pyramid (HUD) as the initial pyramid definition
 	ld	hl, pyramid.room_array
 	ld	de, pyramid_definition
 	ld	bc, $0010
 	ldir
-	ret
-.NOT_ORIGINAL:
-
-; Checks enhanced
+; Checks rooms set
+	ld	a, [options] ; 00eemmrr
+	and	$03
+	ret	z ; original mode: no changes
 	dec	a
-	jr	nz, .NOT_ENHANCED
-; Enhanced mode
+	jr	z, .ENHANCED_ROOMS
+; Newer rooms mode
+	ld	hl, pyramid_definition
+	ld	bc, $0f10 ; 15 rooms, +16
+.NEWER_ROOMS_LOOP:
+	ld	a, [hl]
+	add	c
+	ld	[hl], a
+	inc	hl
+	djnz	.NEWER_ROOMS_LOOP
+	ret
+
+.ENHANCED_ROOMS:
+; Classic and newer rooms, better randomized
 	ld	hl, $0e01 ; Randomize from: 1-14
-	ld	bc, $0708 ; Copy 7 numbers, split at 8: 1-7, 8-14
+	ld	bc, $0708 ; Copy 7 numbers, split pivot at 8: 1-7, 8-14
 	ld	de, pyramid_definition
 	call	.RANDOMIZE_FLOOR
 	ld	hl, $1108 ; Randomize from: 8-17
-	ld	bc, $050d ; Copy 3 numbers, split at 13: 8-12, 13-17
+	ld	bc, $050d ; Copy 5 numbers, split pivot at 13: 8-12, 13-17
 	call	.RANDOMIZE_FLOOR
 	ld	hl, $120d ; Randomize from: 13-18
-	ld	bc, $0310 ; Copy 3 numbers, split at 16: 13-15, 16-18
-	call	.RANDOMIZE_FLOOR
-	ld	a, 10h ; (sphynx room)
-	ld	(de),a
-	ret
-.NOT_ENHANCED:
-
-; Checks classic
-	dec	a
-	jr	nz, .NOT_CLASSIC
-; Classic mode
-	ld	hl, $0701 ; Randomize from: 1-7
-	ld	bc, $0708 ; Copy 7 numbers, split at 8: 1-7 (no split)
-	ld	de, pyramid_definition
-	call	.RANDOMIZE_FLOOR
-	ld	hl, $0c08 ; Randomize from: 8-12
-	ld	bc, $050d ; Copy 3 numbers, split at 13: 8-12 (no split)
-	call	.RANDOMIZE_FLOOR
-	ld	hl, $0f0d ; Randomize from: 13-15
-	ld	bc, $0310 ; Copy 3 numbers, split at 16: 13-15 (no split)
-	call	.RANDOMIZE_FLOOR
-	ld	a, 10h ; (sphynx room)
-	ld	(de),a
-	ret
-.NOT_CLASSIC:
-
-; New rooms mode
-	ld	hl, $0701 ; Randomize from: 1-7
-	ld	bc, $0700 ; Copy 7 numbers, split at 0: 1-7 (all splited)
-	ld	de, pyramid_definition
-	call	.RANDOMIZE_FLOOR
-	ld	hl, $0c08 ; Randomize from: 8-12
-	ld	bc, $0500 ; Copy 3 numbers, split at 0: 8-12 (all splited)
-	call	.RANDOMIZE_FLOOR
-	ld	hl, $0f0d ; Randomize from: 13-15
-	ld	bc, $0300 ; Copy 3 numbers, split at 0: 13-15 (all splited)
-	call	.RANDOMIZE_FLOOR
-	ld	a, 10h ; (sphynx room)
-	ld	(de),a
-	ret
+	ld	bc, $0310 ; Copy 3 numbers, split pivot at 16: 13-15, 16-18
+	; jr	.RANDOMIZE_FLOOR ; (falls through)
 
 ; Randomizes a floor with the new method
 .RANDOMIZE_FLOOR:
@@ -3702,19 +3662,20 @@ BUILD_PYRAMID_DEFINITION:
 	inc	a
 	cp	h
 	jr	nz, .FILL_LOOP
+	dec	h ; (restores original h value)
 
 ; Shuffles the shuffle area
 	push	bc ; (preserves count and split pivot)
+	ld	b, h
 	ld	hl, pyramid_definition.tmp
-	dec	b ; (for convenience reasons, no need to shuffle a single room)
 .SHUFFLE_LOOP:
 ; a = 0..b
 	ld	a, r
 	and	$0f
+	jr	z, .NO_SWAP
 .SHUFFLE_A_NOT_OK:
 	cp	b
 	jr	c, .SHUFFLE_A_OK
-	jr	z, .SHUFFLE_A_OK
 	sub	b
 	jr	.SHUFFLE_A_NOT_OK
 .SHUFFLE_A_OK:
@@ -3727,6 +3688,7 @@ BUILD_PYRAMID_DEFINITION:
 	ld	a, [hl] ; a = [hl]
 	ld	[de], a ; [hl+a] = a
 	ld	[hl], c ; [hl] = c
+.NO_SWAP:
 	inc	hl
 ; Next byte
 	djnz	.SHUFFLE_LOOP
