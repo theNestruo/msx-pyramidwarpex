@@ -142,7 +142,7 @@ CFG_HUD:			; $yyxx coordinates
 
 
 CFG_OTHERS:
-	.OPTIONS_0:		equ 00000101b ; 00eemmrr: Enemies, Mirroring, Rooms
+	.OPTIONS_0:		equ 00000100b ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
 	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2

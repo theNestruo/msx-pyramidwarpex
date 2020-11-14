@@ -40,9 +40,14 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 * Numbers in scoreboard in a different color (to improve readability)
 * Fixes the first draw of the playground
 
+### Additional enhancements
+
+* Sprite flickering routine
+* Proper title charset
+* More randomness! Rooms can be mirrored and flipped
+* More room definitions! _(WIP: new rooms are supported but not defined yet)_
+* Proper music and sounds _(WIP: PT3+ayFX integrated, but not all music and effects are ready yet)_
+
 ### Future enhancements
 
-* Proper music and sounds
-* More room definitions! More randomness!
-* Sprite flickering routine
-* (bug) Improve the old "use 3D charset" enhancement to be compatible with "floor tile" enhancement (and with the new graphic set)
+* Options for original (4), all (6), progressive and adaptative number of enemies
