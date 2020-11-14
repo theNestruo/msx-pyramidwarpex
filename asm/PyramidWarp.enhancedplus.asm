@@ -142,6 +142,7 @@ CFG_HUD:			; $yyxx coordinates
 
 
 CFG_OTHERS:
+	.OPTIONS_0:		equ 00000101b ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
 	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2
@@ -188,6 +189,9 @@ ROM_START:
 	ld	bc, $f380 - $e000 -1
 	ld	[hl], l ; l = $00
 	ldir
+; Initializes the options
+	ld	a, CFG_OTHERS.OPTIONS_0
+	ld	[options], a
 
 ; color 15, 0, 1
 	ld	a,0Fh
@@ -442,23 +446,13 @@ NEW_GAME:
 
 ; -----------------------------------------------------------------------------
 NEW_PYRAMID:
+; Builds the pyramid
+	call	BUILD_PYRAMID
+	call	BUILD_PYRAMID_DEFINITION
+
 ; Room 0
 	xor	a
 	ld	(pyramid.room_index),a
-
-; Builds the pyramid
-	ld	de, pyramid.room_array
-	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR1
-	ld	bc,0007h ; 7 rooms
-	call	RANDOMIZE_FLOOR
-	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR2
-	ld	bc,0005h ; 5 rooms
-	call	RANDOMIZE_FLOOR
-	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR3
-	ld	bc,0003h ; 3 rooms
-	call	RANDOMIZE_FLOOR
-	ld	a,10h ; (sphynx room)
-	ld	(de),a
 
 ; Prints the pyramid in the HUD
 	ld	de,1519h
@@ -575,7 +569,7 @@ NEW_ROOM:
 
 ; Draws the room
 	call	BUFFER_CURRENT_ROOM
-	call	DRAW_ROOM
+	call	DRAW_CURRENT_ROOM
 
 ; Is sphynx room?
 	ld	a,(game.current_room)
@@ -1931,25 +1925,6 @@ RANDOMIZE:
 	ret
 ; -----------------------------------------------------------------------------
 
-; -----------------------------------------------------------------------------
-; param hl: Source data. One of DATA_RANDOMIZE_PYRAMID.FLOOR*
-; param de: Pointer to the room_array
-; param bc: Number of rooms of the current floor
-; ret de: Updated pointer to the room_array
-RANDOMIZE_FLOOR:
-	call	RANDOMIZE
-	and	03h
-	inc	a ; a = 1..4
-; (skips to the right source)
-.LOOP:	add	hl,bc
-	dec	a
-	jr	nz, .LOOP
-; (copies the sequence)
-	ldir
-	ret
-; -----------------------------------------------------------------------------
-
-
 	; Referenced from 869B, 87E8, 8908, 8969, 8C64, 8E22, 89E1, 8C6C, 8EDD, 8A3A
 	; --- START PROC L8C3C ---
 
@@ -3262,23 +3237,6 @@ DATA_WALL_ENHANCE:
 	DB	$5D,	$5D,	$5E,	$5E	; 13
 	DB	$5E,	$5E,	$5E,	$5E	; 14
 	DB	$5E,	$5E,	$5E,	$5E	; 15
-
-DATA_RANDOMIZE_PYRAMID:
-	include	"asm/original/pyramids.asm"
-	.FLOOR1:	equ DATA_RANDOMIZE_PYRAMID -7
-	.FLOOR2:	equ DATA_RANDOMIZE_PYRAMID +(7*4) -5
-	.FLOOR3:	equ DATA_RANDOMIZE_PYRAMID +(7*4) +(5*4) -3
-
-DATA_ROOMS:
-	include	"asm/enhancedplus/original_rooms.asm"
-	include	"asm/enhancedplus/rooms.asm"
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-	db	" PYRAMID WARP", $a0
-	db	" 1983. 9. 15", $a0
-	db	" by T&E SOFT", $a0
-	db	" EIZI KATO !!", $a0
 ; -----------------------------------------------------------------------------
 
 
@@ -3403,9 +3361,9 @@ OPTIONS_MENU:
 	ld	b, 5
 	call	PRINT
 
-	ld	hl, .RANDOMNESS
-	ld	de, $0E04
-	ld	b, 10
+	ld	hl, .MIRRORING
+	ld	de, $0E05
+	ld	b, 9
 	call	PRINT
 
 	ld	hl, .ENEMIES
@@ -3425,7 +3383,7 @@ OPTIONS_MENU:
 	call	.PRINT_CURSOR
 	ld	hl, .ROOMS_VALUES
 	ld	de, $0c12
-	ld	a, [options] ; 00eerroo
+	ld	a, [options] ; 00eemmrr
 	and	$03
 	call	.PRINT_OPTION_VALUE_x8
 
@@ -3433,9 +3391,9 @@ OPTIONS_MENU:
 	ld	a, 1
 	ld	de, $0e0f
 	call	.PRINT_CURSOR
-	ld	hl, .RANDOMNESS_VALUES
+	ld	hl, .MIRRORING_VALUES
 	ld	de, $0e12
-	ld	a, [options] ; 00eerroo
+	ld	a, [options] ; 00eemmrr
 	and	$04
 	call	.PRINT_OPTION_VALUE_x2
 
@@ -3445,7 +3403,7 @@ OPTIONS_MENU:
 	call	.PRINT_CURSOR
 	ld	hl, .ENEMIES_VALUES
 	ld	de, $1012
-	ld	a, [options] ; 00eerroo
+	ld	a, [options] ; 00eemmrr
 	and	$30
 	srl	a
 	call	.PRINT_OPTION_VALUE
@@ -3543,9 +3501,9 @@ OPTIONS_MENU:
 	ld	b, [hl] ; b = cursor index
 	inc	hl ; hl = options
 
-; Randomness option?
-	djnz	.NO_RANDOMNESS
-; Changes the randomness option
+; Mirroring option?
+	djnz	.NO_MIRRORING
+; Changes the mirroring option
 	dec	a ; 0 = right, 2 = left
 	add	a ; 0 = right, 4 = left
 	xor	4 ; 4 = right, 0 = left
@@ -3555,7 +3513,7 @@ OPTIONS_MENU:
 	or	b
 	ld	[hl], a
 	ret
-.NO_RANDOMNESS:
+.NO_MIRRORING:
 
 ; Enemies option?
 	djnz	.NO_ENEMIES
@@ -3585,7 +3543,7 @@ OPTIONS_MENU:
 	jr	nz, .DEC_ROOMS
 ; Moves rooms option to the right
 	and	$03
-	cp	$02
+	cp	$03
 	ret	z ; (already rightmost)
 	inc	[hl]
 	ret
@@ -3600,38 +3558,212 @@ OPTIONS_MENU:
 .ROOMS:
 	db	$1B, $18, $18, $16, $1C			; ROOMS
 .ROOMS_VALUES:
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$0C, $15, $0A, $1C, $1C, $12, $0C, $FF	; CLASSIC
 	db	$17, $0E, $20, $FF, $FF, $FF, $FF, $FF	; NEW
 
-.RANDOMNESS:
-	db	$1B, $0A, $17, $0D, $18, $16, $17, $0E, $1C, $1C; RANDOMNESS
-.RANDOMNESS_VALUES:
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D		; ENHANCED
+.MIRRORING:
+	db	$16, $12, $1B, $1B, $18, $1B, $12, $17, $10 ; MIRRORING
+.MIRRORING_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15		; ORIGINAL
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D		; ENHANCED
 
 .ENEMIES:
 	db	$0E, $17, $0E, $16, $12, $0E, $1C	; ENEMIES
 .ENEMIES_VALUES:
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
-	db	$0A, $15, $15, $FF, $FF, $FF, $FF, $FF	; ALL
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$0A, $15, $15, $FF, $28, $06, $29, $FF	; ALL (6)
 
 .CURSOR:
 	db	$9c, $9d
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
+; Builds the pyramid
+BUILD_PYRAMID:
+	ld	de, pyramid.room_array
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR1
+	ld	bc,0007h ; 7 rooms
+	call	.RANDOMIZE_FLOOR
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR2
+	ld	bc,0005h ; 5 rooms
+	call	.RANDOMIZE_FLOOR
+	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR3
+	ld	bc,0003h ; 3 rooms
+	call	.RANDOMIZE_FLOOR
+	ld	a,10h ; (sphynx room)
+	ld	(de),a
+	ret
+
+; param hl: Source data. One of DATA_RANDOMIZE_PYRAMID.FLOOR*
+; param de: Pointer to the room_array
+; param bc: Number of rooms of the current floor
+; ret de: Updated pointer to the room_array
+.RANDOMIZE_FLOOR:
+	call	RANDOMIZE
+	and	03h
+	inc	a ; a = 1..4
+; (skips to the right source)
+.LOOP:	add	hl,bc
+	dec	a
+	jr	nz, .LOOP
+; (copies the sequence)
+	ldir
+	ret
+
+DATA_RANDOMIZE_PYRAMID:
+	include	"asm/original/pyramids.asm"
+	.FLOOR1:	equ DATA_RANDOMIZE_PYRAMID -7
+	.FLOOR2:	equ DATA_RANDOMIZE_PYRAMID +(7*4) -5
+	.FLOOR3:	equ DATA_RANDOMIZE_PYRAMID +(7*4) +(5*4) -3
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Builds the pyramid definition (from the pyramid HUD)
+BUILD_PYRAMID_DEFINITION:
+; Checks rooms set
+	ld	a, [options] ; 00eemmrr
+	and	$03
+	jr	nz, .NOT_ORIGINAL
+; original mode: copies the pyramid (HUD) as the initial pyramid definition
+	ld	hl, pyramid.room_array
+	ld	de, pyramid_definition
+	ld	bc, $0010
+	ldir
+	ret
+.NOT_ORIGINAL:
+
+; Checks enhanced
+	dec	a
+	jr	nz, .NOT_ENHANCED
+; Enhanced mode
+	ld	hl, $0e01 ; Randomize from: 1-14
+	ld	bc, $0708 ; Copy 7 numbers, split at 8: 1-7, 8-14
+	ld	de, pyramid_definition
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $1108 ; Randomize from: 8-17
+	ld	bc, $050d ; Copy 3 numbers, split at 13: 8-12, 13-17
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $120d ; Randomize from: 13-18
+	ld	bc, $0310 ; Copy 3 numbers, split at 16: 13-15, 16-18
+	call	.RANDOMIZE_FLOOR
+	ld	a, 10h ; (sphynx room)
+	ld	(de),a
+	ret
+.NOT_ENHANCED:
+
+; Checks classic
+	dec	a
+	jr	nz, .NOT_CLASSIC
+; Classic mode
+	ld	hl, $0701 ; Randomize from: 1-7
+	ld	bc, $0708 ; Copy 7 numbers, split at 8: 1-7 (no split)
+	ld	de, pyramid_definition
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $0c08 ; Randomize from: 8-12
+	ld	bc, $050d ; Copy 3 numbers, split at 13: 8-12 (no split)
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $0f0d ; Randomize from: 13-15
+	ld	bc, $0310 ; Copy 3 numbers, split at 16: 13-15 (no split)
+	call	.RANDOMIZE_FLOOR
+	ld	a, 10h ; (sphynx room)
+	ld	(de),a
+	ret
+.NOT_CLASSIC:
+
+; New rooms mode
+	ld	hl, $0701 ; Randomize from: 1-7
+	ld	bc, $0700 ; Copy 7 numbers, split at 0: 1-7 (all splited)
+	ld	de, pyramid_definition
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $0c08 ; Randomize from: 8-12
+	ld	bc, $0500 ; Copy 3 numbers, split at 0: 8-12 (all splited)
+	call	.RANDOMIZE_FLOOR
+	ld	hl, $0f0d ; Randomize from: 13-15
+	ld	bc, $0300 ; Copy 3 numbers, split at 0: 13-15 (all splited)
+	call	.RANDOMIZE_FLOOR
+	ld	a, 10h ; (sphynx room)
+	ld	(de),a
+	ret
+
+; Randomizes a floor with the new method
+.RANDOMIZE_FLOOR:
+	push	de ; (preserves target)
+
+; Initializes the shuffle area (1,2,3...)
+	ld	ix, pyramid_definition.tmp
+	ld	a, l
+	inc	h ; (for convenience reasons)
+.FILL_LOOP:
+	ld	[ix], a
+	inc	ix
+	inc	a
+	cp	h
+	jr	nz, .FILL_LOOP
+
+; Shuffles the shuffle area
+	push	bc ; (preserves count and split pivot)
+	ld	hl, pyramid_definition.tmp
+	dec	b ; (for convenience reasons, no need to shuffle a single room)
+.SHUFFLE_LOOP:
+; a = 0..b
+	ld	a, r
+	and	$0f
+.SHUFFLE_A_NOT_OK:
+	cp	b
+	jr	c, .SHUFFLE_A_OK
+	jr	z, .SHUFFLE_A_OK
+	sub	b
+	jr	.SHUFFLE_A_NOT_OK
+.SHUFFLE_A_OK:
+; Swaps [hl] and [hl+a]
+	push	hl
+	call	ADD_HL_A
+	ld	c, [hl] ; c = [hl+a]
+	pop	de
+	ex	de, hl
+	ld	a, [hl] ; a = [hl]
+	ld	[de], a ; [hl+a] = a
+	ld	[hl], c ; [hl] = c
+	inc	hl
+; Next byte
+	djnz	.SHUFFLE_LOOP
+	pop	bc ; (restores count and split)
+
+; Actually copies the shuffled area to the pyramid_definition
+	ld	hl, pyramid_definition.tmp
+	pop	de ; (restores target)
+.COPY_LOOP:
+	ld	a, [hl]
+	cp	c
+	jr	c, .COPY_A_OK ; (a < pivot point)
+; (a > pivot point: go to the "newer rooms" section)
+	add	$10
+.COPY_A_OK:
+	ld	[de], a
+	inc	hl
+	inc	de
+	djnz	.COPY_LOOP
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
 ; Buffers the current room
 BUFFER_CURRENT_ROOM:
+; (uses the actual pyramid definition)
 	ld	a, (game.current_room)
-	; and	$0f ; TODO Support for more rooms
+	ld	hl, pyramid_definition
+	call	ADD_HL_A
+	ld	a, [hl]
 ; Checks if the room is already buffered
 	ld	hl, buffered_room
 	cp	[hl]
 	ret	z ; yes
+	ld	[hl], a ; (saves the room as buffered)
 ; no: Points to the right room data
-	ld	hl, DATA_ROOMS - $0022
+	ld	hl, .DATA - $0022
 	ld	bc, $0022
 .L83F7:	add	hl, bc
 	dec	a
@@ -3640,10 +3772,10 @@ BUFFER_CURRENT_ROOM:
 	ld	de, room_buffer
 	ldir
 
-; Checks enhanced randomness
-	ld	a, [options] ; 00eerroo
-	and	$04
-	ret	nz ; original
+; Checks enhanced mirroring
+	ld	a, [options] ; 00eemmrr
+	and	$0c
+	ret	z ; original
 ; enhanced
 
 ; Flips the room
@@ -3708,13 +3840,13 @@ BUFFER_CURRENT_ROOM:
 ; Mirrors the nibbles
 	xor	a ; 00
 	rld	; [hl  ]=ABC0, a=00 -> [hl  ]=B0C0, a=0A
-	call	.MIRROR_NIBBLE ; 0A->0a
+	call	MIRROR_NIBBLE ; 0A->0a
 	inc	hl
 	rld	; [  hl]=B0C0, a=0a -> [  hl]=B00a, a=0C
-	call	.MIRROR_NIBBLE ; 0C->0c
+	call	MIRROR_NIBBLE ; 0C->0c
 	dec	hl
 	rld	; [hl  ]=B00a, a=0c -> [hl  ]=0c0a, a=0B
-	call	.MIRROR_NIBBLE ; 0B->0b
+	call	MIRROR_NIBBLE ; 0B->0b
 	rld	; [hl  ]=0c0a, a=0b -> [hl  ]=cb0a, a=00
 	inc	hl
 	rld	; [  hl]=cb0a, a=00 -> [  hl]=cba0, a=00
@@ -3742,23 +3874,13 @@ BUFFER_CURRENT_ROOM:
 	djnz	.MIRROR_COORDS_LOOP
 	ret
 
-.MIRROR_NIBBLE:
-	and	$0f
-	ld	de, .MIRROR_LUT
-	add	e
-	ld	e, a
-	adc	d
-	sub	e
-	ld	d, a
-	ld	a, [de]
-	ret
-.MIRROR_LUT:
-	db	0000b, 1000b, 0100b, 1100b, 0010b, 1010b, 0110b, 1110b
-	db	0001b, 1001b, 0101b, 1101b, 0011b, 1011b, 0111b, 1111b
+.DATA:
+	include	"asm/enhancedplus/mapper/rooms_original.asm"
+	include	"asm/enhancedplus/mapper/rooms.asm"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-DRAW_ROOM:
+DRAW_CURRENT_ROOM:
 
 ; Prints the room
 	xor	a
@@ -3927,6 +4049,32 @@ DRAW_ROOM_ENHANCE:
 	ret
 ; -----------------------------------------------------------------------------
 
+; -----------------------------------------------------------------------------
+; param a: the nibble to mirror
+; ret a: the mirrored nibble
+; touches de
+MIRROR_NIBBLE:
+	and	$0f
+	ld	de, .MIRROR_LUT
+	add	e
+	ld	e, a
+	adc	d
+	sub	e
+	ld	d, a
+	ld	a, [de]
+	ret
+.MIRROR_LUT:
+	db	0000b, 1000b, 0100b, 1100b, 0010b, 1010b, 0110b, 1110b
+	db	0001b, 1001b, 0101b, 1101b, 0011b, 1011b, 0111b, 1111b
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+	db	" PYRAMID WARP", $a0
+	db	" 1983. 9. 15", $a0
+	db	" by T&E SOFT", $a0
+	db	" EIZI KATO !!", $a0
+; -----------------------------------------------------------------------------
+
 debug_rom_end_original: equ $9f8c
 debug_rom_end_new:	equ $
 debug_rom_end_diff:	equ debug_rom_end_original - debug_rom_end_new
@@ -4073,11 +4221,16 @@ room_enhance_tile:	rb 1
 
 ; Options menu:
 prevstick:		rb 1 ; previously read GTSTCK_ANY value
-cursor:			rb 1 ; cursor index: 0 = enemies, 1 = randomness, 2 = rooms
-options:		rb 1 ; 00eerroo: Enemies, Randomness, rOoms
+cursor:			rb 1 ; cursor index: 0 = enemies, 1 = mirroring, 2 = rooms
+options:		rb 1 ; 00eemmrr: Enemies, Mirroring, Rooms
+
+; The actual pyramid definition, as the old pyramid.room_array
+pyramid_definition:	rb 16 ; (7+5+3+1 rooms)
+	.tmp:		rb 14 ; (for shuffling the rooms)
 
 ; Buffer of the current room
 buffered_room:		rb 1 ; prevents re-buffering the current room
+; Room data, copied from BUFFER_CURRENT_ROOM.DATA[i]
 room_buffer:
 	.walls:		rb 22
 	.box1:		rb 2

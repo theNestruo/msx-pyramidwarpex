@@ -52,7 +52,13 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\title.pcx.clr
 
 ENHANCEDPLUS_STATIC_DATAS=\
+	asm\enhancedplus\mapper\rooms_original.asm \
+	asm\enhancedplus\mapper\rooms.asm \
+	asm\enhancedplus\PW_Dead2.pt3 \
+	asm\enhancedplus\PW_LevelFinished.pt3 \
+	asm\enhancedplus\PW_NewGame.pt3 \
 	asm\enhancedplus\PW_VT2.pt3 \
+	asm\enhancedplus\PW_VT2_3chan.pt3 \
 	asm\enhancedplus\test.afb
 
 #
