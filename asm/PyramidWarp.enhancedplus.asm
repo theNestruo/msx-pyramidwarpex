@@ -16,6 +16,7 @@
 	GICINI:	equ $0090 ; Initialize PSG (GI Chip)
 	GTSTCK:	equ $00d5 ; Get joystick status
 	GTTRIG:	equ $00d8 ; Get trigger status
+	SNSMAT:	equ $0141 ; Read row of keyboard matrix
 
 ; Stack pointer initialization
 	STACK_POINTER_INIT:	equ $f380 ; As suggested by the MSX2 Technical Handbook
@@ -142,10 +143,11 @@ CFG_HUD:			; $yyxx coordinates
 
 
 CFG_OTHERS:
-	.OPTIONS_0:		equ ($02 << 4) + ($01 << 2) + ($00) ; 00eemmrr: Enemies, Mirroring, Rooms
+	.OPTIONS_0:		equ ($02 << 4) + ($01 << 2) + ($01) ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
+	; .CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphynx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
@@ -444,7 +446,11 @@ NEW_PYRAMID:
 	call	BUILD_PYRAMID_DEFINITION
 
 ; Room 0
-	xor	a
+	IFDEF  CFG_OTHERS.CHEAT_WIN_GAME
+		ld	a, 15 ; (starts in the sphynx room)
+	ELSE
+		xor	a
+	ENDIF
 	ld	(pyramid.room_index),a
 
 ; Enemy count
@@ -507,16 +513,11 @@ NEW_ROOM:
 	call	CLEAR_SPRITES
 
 ; Reads the current room index
-	ld	a,(pyramid.room_index)
-	ld	hl,pyramid.room_array
+	ld	a, [pyramid.room_index]
+	ld	hl, pyramid.room_array
 	call	ADD_HL_A
-	ld	a,(hl)
-
-	IFDEF  CFG_OTHERS.CHEAT_WIN_GAME
-		ld	a, $10 ; TESTING END
-	ENDIF
-
-	ld	(game.current_room),a
+	ld	a, [hl]
+	ld	[game.current_room], a
 
 ; Points to the correct map position
 	ld	de,1518h	; address or value?
@@ -569,7 +570,7 @@ NEW_ROOM:
 	call	BUFFER_CURRENT_ROOM
 	call	DRAW_CURRENT_ROOM
 
-; Is sphynx room?
+; Is the sphynx room?
 	ld	a,(game.current_room)
 	cp	10h
 	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
@@ -1431,7 +1432,7 @@ GAME_LOOP.SKULL_OK:
 ; -----------------------------------------------------------------------------
 GAME_LOOP.BULLET_OK:
 .L8969:	call	SHORT_DELAY
-; Sphynx room?
+; Is the sphynx room?
 	ld	a,(game.current_room)
 	cp	10h
 	jp	z,CHECK_SPHYNX_ROOM_BOX ; yes
@@ -1444,6 +1445,13 @@ GAME_LOOP.BULLET_OK:
 	call	UPDATE_ENEMY
 	ld	ix,snake1
 	call	UPDATE_ENEMY
+
+	IFDEF CFG_OTHERS.CHEAT_TAB_FAST_FORWARD
+		ld	a, $07 ; a = $07 ; CR SEL BS STOP TAB ESC F5 F4
+		call	SNSMAT
+		bit	3, a
+		jr	z, .DO_EXIT
+	ENDIF
 
 ; Is the exit open?
 	ld	a,(exit.is_enabled)
@@ -1471,7 +1479,7 @@ GAME_LOOP.BULLET_OK:
 .L89B1:	call	CLEAR_TILE
 
 ; Compares player and exit coordinates
-.L89B4:	ld	hl,player.spratr_y
+.L89B4: ld	hl,player.spratr_y
 	ld	a,58h
 	cp	(hl)
 	jr	nz,GAME_LOOP.EXIT_OK ; no
@@ -1479,6 +1487,7 @@ GAME_LOOP.BULLET_OK:
 	ld	a,60h
 	cp	(hl)
 	jr	nz,GAME_LOOP.EXIT_OK ; no
+.DO_EXIT:
 ; yes: increases room index (and increases the enemy count on new floor)
 	call	INCREASE_ROOM_INDEX
 	call	z, INCREASE_ENEMY_COUNT
@@ -2705,22 +2714,6 @@ LDIRVM_3_BANKS:
 	ret
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8F46, 8FAD, 9148, 9130, 9142, 9139, 911E, 8FE5, 9127, 906D, 9091, 904C, 9100, 9106
-	; --- START PROC L9264 ---
-
-; -----------------------------------------------------------------------------
-; param hl: sound data pointer
-PLAY_SOUND:
-; .L9264:	ld	b,(hl)
-; .L9265:	inc	hl
-; 	ld	a,(hl)
-; 	inc	hl
-; 	ld	e,(hl)
-; 	call	0093h
-; 	djnz	.L9265
-	ret
-; -----------------------------------------------------------------------------
-
 	; Referenced from 86C2
 	; --- START PROC L926F ---
 
@@ -3641,7 +3634,7 @@ BUILD_PYRAMID_DEFINITION:
 	jr	z, .ENHANCED_ROOMS
 ; Newer rooms mode
 	ld	hl, pyramid_definition
-	ld	bc, $0f10 ; 15 rooms, +16
+	ld	bc, $1010 ; 16 rooms, +16
 .NEWER_ROOMS_LOOP:
 	ld	a, [hl]
 	add	c
@@ -3651,6 +3644,9 @@ BUILD_PYRAMID_DEFINITION:
 	ret
 
 .ENHANCED_ROOMS:
+	ld b,b
+	jr $+2
+
 ; Classic and newer rooms, better randomized
 	ld	hl, $0e01 ; Randomize from: 1-14
 	ld	bc, $0708 ; Copy 7 numbers, split pivot at 8: 1-7, 8-14
@@ -3661,27 +3657,44 @@ BUILD_PYRAMID_DEFINITION:
 	call	.RANDOMIZE_FLOOR
 	ld	hl, $120d ; Randomize from: 13-18
 	ld	bc, $0310 ; Copy 3 numbers, split pivot at 16: 13-15, 16-18
-	; jr	.RANDOMIZE_FLOOR ; (falls through)
+	call	.RANDOMIZE_FLOOR ; (falls through)
+; Randomizes the sphynx room
+	ld	a, r
+	rrca
+	ret	nc ; classic room
+; Newer room
+	ld	a, [de]
+	add	$10
+	ld	[de], a
+	ret
 
 ; Randomizes a floor with the new method
 .RANDOMIZE_FLOOR:
 	push	de ; (preserves target)
+	push	bc ; (preserves count and split pivot)
 
 ; Initializes the shuffle area (1,2,3...)
-	ld	ix, pyramid_definition.tmp
+	sla	b ; (randomize twice the numbers)
+	push	bc ; (preserves double count)
+	ld	de, pyramid_definition.tmp
 	ld	a, l
-	inc	h ; (for convenience reasons)
 .FILL_LOOP:
-	ld	[ix], a
-	inc	ix
+; Check if split pivot has been reached
+	cp	c
+	jr	nz, .FILL_A_OK
+; Split pivot reached
+	sub	c ; translates 8-14 -> 1-7 (+$10), 13-17 -> 8-12 (+$10), 16-18 -> 13-15 (+$10)
+	add	l
+	add	$10
+.FILL_A_OK:
+	ld	[de], a
+	inc	de
 	inc	a
-	cp	h
-	jr	nz, .FILL_LOOP
-	dec	h ; (restores original h value)
+	djnz	.FILL_LOOP
 
 ; Shuffles the shuffle area
-	push	bc ; (preserves count and split pivot)
-	ld	b, h
+	pop	bc ; (restores double count)
+	dec	b ; (do not shuffle last number)
 	ld	hl, pyramid_definition.tmp
 .SHUFFLE_LOOP:
 ; a = 0..b
@@ -3707,22 +3720,14 @@ BUILD_PYRAMID_DEFINITION:
 	inc	hl
 ; Next byte
 	djnz	.SHUFFLE_LOOP
-	pop	bc ; (restores count and split)
 
 ; Actually copies the shuffled area to the pyramid_definition
+	pop	bc ; (restores count)
+	ld	c, b
+	ld	b, 0
 	ld	hl, pyramid_definition.tmp
 	pop	de ; (restores target)
-.COPY_LOOP:
-	ld	a, [hl]
-	cp	c
-	jr	c, .COPY_A_OK ; (a < pivot point)
-; (a > pivot point: go to the "newer rooms" section)
-	add	$10
-.COPY_A_OK:
-	ld	[de], a
-	inc	hl
-	inc	de
-	djnz	.COPY_LOOP
+	ldir
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -3815,8 +3820,8 @@ DECREASE_ENEMY_COUNT:
 ; Buffers the current room
 BUFFER_CURRENT_ROOM:
 ; (uses the actual pyramid definition)
+	ld	hl, pyramid_definition -1 ; (-1 because game.current_room is 1-based)
 	ld	a, (game.current_room)
-	ld	hl, pyramid_definition
 	call	ADD_HL_A
 	ld	a, [hl]
 ; Checks if the room is already buffered
@@ -3833,6 +3838,11 @@ BUFFER_CURRENT_ROOM:
 ; Buffers the current room data
 	ld	de, room_buffer
 	ldir
+
+; Is the sphynx room?
+	ld	a, (game.current_room)
+	cp	$10
+	ret	z ; (do not mirror nor flip the sphynx room)
 
 ; Checks enhanced mirroring
 	ld	a, [options] ; 00eemmrr
