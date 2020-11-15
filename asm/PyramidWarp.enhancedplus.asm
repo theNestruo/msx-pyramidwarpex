@@ -65,7 +65,7 @@ CFG_COLOR:
 	.SCORPION:	equ 9	; 9
 	.BAT_0:		equ 1	; 1
 	.BAT:		equ 5	; 1
-	.OTHER:		equ 3
+	.SNAKE:		equ 3
 	.PLAYER:	equ 14	; 11
 	.PLAYER_GUN:	equ 15	; 15
 	.BULLET:	equ 15	; 15
@@ -85,12 +85,12 @@ CFG_BASE_PATTERN:
 	.SKULL:		equ	$10
 	.SCORPION:	equ	$12
 	.BAT:		equ	$14
-	.OTHER:		equ	$16
+	.SNAKE:		equ	$16
 
 	.SKULL4:	equ	$10
 	.SCORPION4:	equ	$28
 	.BAT4:		equ	$30
-	.OTHER4:	equ	$38
+	.SNAKE4:	equ	$38
 
 	.DOOR_0:	equ	$18
 	.DOOR_1:	equ	$19
@@ -144,8 +144,6 @@ CFG_HUD:			; $yyxx coordinates
 CFG_OTHERS:
 	.OPTIONS_0:		equ 00000100b ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
-	.EXTRA_ENEMY_1:		; Uncomment to use the unused_enemy_slot1
-	.EXTRA_ENEMY_2:		; Uncomment to use the unused_enemy_slot2
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphynx room!!
@@ -386,6 +384,7 @@ ROM_START:
 	ld	a, CFG_BASE_PATTERN.SCORPION4 * 4 ; 12h
 	ld	(scorpion1.base_pattern),a
 	ld	(scorpion2.base_pattern),a
+
 	ld	a,CFG_COLOR.BAT ; 01h
 	ld	(bat1.spratr_color),a
 	ld	(bat2.spratr_color),a
@@ -393,25 +392,25 @@ ROM_START:
 	ld	(bat1.base_pattern),a
 	ld	(bat2.base_pattern),a
 
-	ld	a,CFG_COLOR.OTHER
-	ld	(unused_enemy_slot1.spratr_color),a
-	ld	(unused_enemy_slot2.spratr_color),a
-	ld	a, CFG_BASE_PATTERN.OTHER4 * 4 ; 16h
-	ld	(unused_enemy_slot1.base_pattern),a
-	ld	(unused_enemy_slot2.base_pattern),a
+	ld	a,CFG_COLOR.SNAKE
+	ld	(snake1.spratr_color),a
+	ld	(snake2.spratr_color),a
+	ld	a, CFG_BASE_PATTERN.SNAKE4 * 4 ; 16h
+	ld	(snake1.base_pattern),a
+	ld	(snake2.base_pattern),a
 
 	ld	a, 2
 	ld	(scorpion1.sprite_plane), a
 	inc	a
 	ld	(bat1.sprite_plane), a ; 3
 	inc	a
-	ld	(unused_enemy_slot1.sprite_plane), a ; 4
+	ld	(snake1.sprite_plane), a ; 4
 	inc	a
 	ld	(scorpion2.sprite_plane), a ; 5
 	inc	a
 	ld	(bat2.sprite_plane), a ; 6
 	inc	a
-	ld	(unused_enemy_slot2.sprite_plane), a ; 7
+	ld	(snake2.sprite_plane), a ; 7
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8E07
@@ -424,7 +423,7 @@ NEW_GAME:
 	ld	(game.lives),a
 ; First pyramid (extra time)
 	xor	a
-	ld	(game.first_pyramid),a
+	ld	(game.pyramid_count),a
 ; Score to 0 (and prints score)
 	xor	a
 	ld	bc,0000h
@@ -447,6 +446,9 @@ NEW_PYRAMID:
 ; Room 0
 	xor	a
 	ld	(pyramid.room_index),a
+
+; Enemy count
+	call	INIT_ENEMY_COUNT
 
 ; Prints the pyramid in the HUD
 	ld	de,1519h
@@ -874,7 +876,7 @@ INIT_GAME_LOOP:
 
 ; Initializes air_left (fisrt_pyramid ? 3000 : 2000)
 	ld	hl,0BB8h ; 3000
-	ld	a,(game.first_pyramid)
+	ld	a,(game.pyramid_count)
 	or	a
 	jr	z,.L862E
 	ld	hl,07D0h ; 2000
@@ -890,8 +892,8 @@ INIT_GAME_LOOP:
 	ld	(scorpion2.status),a
 	ld	(bat1.status),a
 	ld	(bat2.status),a
-	ld	(unused_enemy_slot1.status),a
-	ld	(unused_enemy_slot2.status),a
+	ld	(snake1.status),a
+	ld	(snake2.status),a
 	ld	(bullet.status),a
 	ld	(aux.frame_counter),a
 	ld	(exit.is_enabled),a
@@ -1438,10 +1440,9 @@ GAME_LOOP.BULLET_OK:
 	call	UPDATE_BOX
 	ld	ix,bat1
 	call	UPDATE_ENEMY
-IFDEF CFG_OTHERS.EXTRA_ENEMY_1
-	ld	ix,unused_enemy_slot1
+	ld	ix,snake1
 	call	UPDATE_ENEMY
-ENDIF
+
 ; Is the exit open?
 	ld	a,(exit.is_enabled)
 	or	a
@@ -1501,16 +1502,25 @@ GAME_LOOP.EXIT_OK:
 ; Updates box2, scorpion2, bat2 and box3
 	ld	ix,box2
 	call	UPDATE_BOX
+
 	ld	ix,scorpion2
-	call	UPDATE_ENEMY
+	ld	a, [enemy_count]
+	cp	4
+	call	nc, UPDATE_ENEMY ; (only if enemy_count >= 4)
+
 	ld	ix,bat2
-	call	UPDATE_ENEMY
+	ld	a, [enemy_count]
+	cp	5
+	call	nc, UPDATE_ENEMY ; (only if enemy_count >= 5)
+
 	ld	ix,box3
 	call	UPDATE_BOX
-IFDEF CFG_OTHERS.EXTRA_ENEMY_2
-	ld	ix,unused_enemy_slot2
-	call	UPDATE_ENEMY
-ENDIF
+
+	ld	ix,snake2
+	ld	a, [enemy_count]
+	cp	6
+	call	nc, UPDATE_ENEMY ; (only if enemy_count >= 6)
+
 ; Updates bullet explosion
 	ld	ix,bullet
 	ld	a,(ix+05h) ; bullet.status
@@ -1724,8 +1734,8 @@ CHECK_SPHYNX_ROOM_BOX:
 	ld	hl, game.lives
 	inc	[hl]
 ; Increases difficulty
-	ld	a,0FFh
-	ld	(game.first_pyramid),a
+	ld	hl, game.pyramid_count
+	inc	[hl]
 ; Enters a new pyramid
 	jp	NEW_PYRAMID
 ; -----------------------------------------------------------------------------
@@ -3348,8 +3358,8 @@ REPLAYER.FRAME:
 OPTIONS_MENU:
 ; Print option titles
 	ld	hl, .ROOMS
-	ld	de, $0C09
-	ld	b, 5
+	ld	de, $0C06
+	ld	b, 8
 	call	PRINT
 
 	ld	hl, .MIRRORING
@@ -3358,8 +3368,8 @@ OPTIONS_MENU:
 	call	PRINT
 
 	ld	hl, .ENEMIES
-	ld	de, $1007
-	ld	b, 7
+	ld	de, $1004
+	ld	b, 10
 	call	PRINT
 
 ; Initialization
@@ -3513,17 +3523,20 @@ OPTIONS_MENU:
 	ld	a, [hl]
 	jr	nz, .DEC_ENEMIES
 ; Moves enemies option to the right
-	add	$10
-	jr	.SET_ENEMIES_VALUE
-; Moves enemies option to the left
-.DEC_ENEMIES:
-	sub	$10
-.SET_ENEMIES_VALUE:
-	ld	b, a ; (preserves new value)
 	and	$30
 	cp	$30
-	ret	z ; (was already rightmost/leftmost)
-	ld	[hl], b
+	ret	z ; (was already rightmost)
+	ld	a, [hl]
+	add	$10
+	ld	[hl], a
+	ret
+; Moves enemies option to the left
+.DEC_ENEMIES:
+	and	$30
+	ret	z ; (was already leftmost)
+	ld	a, [hl]
+	sub	$10
+	ld	[hl], a
 	ret
 .NO_ENEMIES:
 
@@ -3547,7 +3560,7 @@ OPTIONS_MENU:
 
 
 .ROOMS:
-	db	$1B, $18, $18, $16, $1C			; ROOMS
+	DB	$19, $22, $1B, $0A, $16, $12, $0D, $1C	; PYRAMIDS
 .ROOMS_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
 	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
@@ -3556,15 +3569,16 @@ OPTIONS_MENU:
 .MIRRORING:
 	db	$16, $12, $1B, $1B, $18, $1B, $12, $17, $10 ; MIRRORING
 .MIRRORING_VALUES:
-	db	$18, $1B, $12, $10, $12, $17, $0A, $15		; ORIGINAL
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D		; ENHANCED
-
-.ENEMIES:
-	db	$0E, $17, $0E, $16, $12, $0E, $1C	; ENEMIES
-.ENEMIES_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
 	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-	db	$0A, $15, $15, $FF, $28, $06, $29, $FF	; ALL (6)
+
+.ENEMIES:
+	db	$0D, $12, $0F, $0F, $12, $0C, $1E, $15, $1D, $22 ; DIFFICULTY
+.ENEMIES_VALUES:
+	db	$0E, $0A, $1C, $12, $0E, $1B, $FF, $FF	; EASIER (3)
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL (4)
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$11, $0A, $1B, $0D, $0E, $1B, $FF, $FF	; HARDER (6)
 
 .CURSOR:
 	db	$9c, $9d
@@ -3708,6 +3722,38 @@ BUILD_PYRAMID_DEFINITION:
 	inc	hl
 	inc	de
 	djnz	.COPY_LOOP
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+INIT_ENEMY_COUNT:
+; Checks the option value
+	ld	a, [options] ; 00eemmrr
+
+; Easier mode (3 enemies, fixed)
+	ld	b, 3
+	and	$30
+	jr	z, .SET_ENEMY_COUNT
+; Original mode (4 enemies, fixed)
+	inc	b ; b = 4
+	sub	$10
+	jr	z, .SET_ENEMY_COUNT
+; Harder mode (6 enemies, fixed)
+	inc	b ; b = 6
+	inc	b
+	sub	$10
+	jr	nz, .SET_ENEMY_COUNT
+; Enhanced mode (3-6 enemies, progressive)
+.ENHANCED:
+	ld	a, [game.pyramid_count]
+	add	3
+	ld	b, a
+	cp	7
+	jr	c, .SET_ENEMY_COUNT
+	ld	b, 6 ; (cannot set more than 6 enemies)
+.SET_ENEMY_COUNT:
+	ld	a, b
+	ld	[enemy_count], a
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -4105,7 +4151,7 @@ bat1: ; C02EH
 	.status:	rb 1	; C033H
 	.base_pattern:	rb 1	; C034H ($14)
 	.sprite_plane:	rb 1	; C035H ($05)
-unused_enemy_slot1: ; C036H
+snake1: ; C036H
 	.spratr_y:	rb 3	; C036H
 	.spratr_color:	rb 1	; C039H
 	.direction:	rb 1	; C03AH
@@ -4126,7 +4172,7 @@ bat2: ; C046H
 	.status:	rb 1	; C04BH
 	.base_pattern:	rb 1	; C04CH ($14)
 	.sprite_plane:	rb 1	; C04DH ($08)
-unused_enemy_slot2: ; C04EH
+snake2: ; C04EH
 	.spratr_y:	rb 3	; C04EH
 	.spratr_color:	rb 1	; C051H
 	.direction:	rb 1	; C052H
@@ -4163,7 +4209,7 @@ game: ; C071H
 	.current_room:	rb 1	; C076H
 	.air_left:	rb 2	; C077H
 	.air_left_copy:	rb 2	; C079H
-	.first_pyramid:	rb 1	; C07BH
+	.pyramid_count:	rb 1	; C07BH
 	.lives:		rb 1	; C07CH
 aux.how_many_bytes:	rb 2	; C07DH
 game.high_score_bcd:	rb 3	; C07FH (6 digits)
@@ -4201,6 +4247,8 @@ room_buffer:
 	.nest:		rb 2
 	.door_up:	rb 2
 	.door_down:	rb 2
+
+enemy_count:		rb 1 ; current enemy count
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
