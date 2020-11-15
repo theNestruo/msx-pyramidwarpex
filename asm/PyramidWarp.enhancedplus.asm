@@ -3839,12 +3839,22 @@ BUFFER_CURRENT_ROOM:
 	and	$0c
 	ret	z ; original
 ; enhanced
+	ld	a, r
+; Randomly flips the room
+	bit	0, a
+	jr	z, .FLIP_OK
+	push	af ; (preserves random byte)
+	call	.FLIP_ROOM
+	pop	af ; (restores random byte)
+.FLIP_OK:
+; Randomly mirrors the room
+	bit	1, a
+	ret	z
+	jr	.MIRROR_ROOM
 
 ; Flips the room
-	ld	a, r
-	rrca
-	jr	nc, .DO_NOT_FLIP ; no
-; yes: Flips the walls (1/2)
+.FLIP_ROOM:
+; Flips the walls (1/2)
 	ld	bc, (room_buffer.walls + 0)
 	ld	de, (room_buffer.walls + 2)
 	ld	hl, (room_buffer.walls + 4)
@@ -3889,13 +3899,11 @@ BUFFER_CURRENT_ROOM:
 	ld	hl, room_buffer.door_down
 	xor	[hl]
 	ld	[hl], a
-.DO_NOT_FLIP:
+	ret
 
 ; Mirrors the room
-	ld	a, r
-	rrca
-	ret	nc ; no
-; yes: Mirrors the walls
+.MIRROR_ROOM:
+; Mirrors the walls
 	ld	hl, room_buffer.walls
 	ld	b, 11
 .MIRROR_WALLS_LOOP:
