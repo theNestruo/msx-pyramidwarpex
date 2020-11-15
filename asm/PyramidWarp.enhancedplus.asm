@@ -142,7 +142,7 @@ CFG_HUD:			; $yyxx coordinates
 
 
 CFG_OTHERS:
-	.OPTIONS_0:		equ 00000100b ; 00eemmrr: Enemies, Mirroring, Rooms
+	.OPTIONS_0:		equ ($02 << 4) + ($01 << 2) + ($00) ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
@@ -477,6 +477,8 @@ NEW_PYRAMID:
 
 ; -----------------------------------------------------------------------------
 DEC_LIVES_AND_NEW_ROOM:
+; Decreases the enemy count
+	call	DECREASE_ENEMY_COUNT
 ; Clear lives
 	ld	hl,LITERAL.BLANKS
 	ld	de,CFG_HUD.LIVES_COORDS
@@ -1477,10 +1479,9 @@ GAME_LOOP.BULLET_OK:
 	ld	a,60h
 	cp	(hl)
 	jr	nz,GAME_LOOP.EXIT_OK ; no
-; yes: increases room index
-	ld	a,(pyramid.room_index)
-	inc	a
-	ld	(pyramid.room_index),a
+; yes: increases room index (and increases the enemy count on new floor)
+	call	INCREASE_ROOM_INDEX
+	call	z, INCREASE_ENEMY_COUNT
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a, CFG_PYRAMID.ROOM_VISITED ; $51
@@ -3726,6 +3727,7 @@ BUILD_PYRAMID_DEFINITION:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
+; Initializes the enemy count based on the option value and the pyramid number
 INIT_ENEMY_COUNT:
 ; Checks the option value
 	ld	a, [options] ; 00eemmrr
@@ -3754,6 +3756,58 @@ INIT_ENEMY_COUNT:
 .SET_ENEMY_COUNT:
 	ld	a, b
 	ld	[enemy_count], a
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Increases room index
+; ret z: entering second or third floor
+; ret nz: otherwise
+INCREASE_ROOM_INDEX:
+; Increases room index
+	ld	a,(pyramid.room_index)
+	inc	a
+	ld	(pyramid.room_index),a
+; Entering second floor?
+	cp	a, 7
+	ret	z
+; no: Entering third floor?
+	cp	a, 7 +5
+	ret	; ret z/nz
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Increases the enemy count
+INCREASE_ENEMY_COUNT:
+; Checks the option value
+	ld	a, [options] ; 00eemmrr
+	and	$30
+	cp	$20
+	ret	nz ; not enhanced mode
+; Increases the enemy count
+	ld	a, 6 ; maximum = 6
+	ld	hl, enemy_count
+	cp	[hl]
+	ret	z ; (cannot set more than 6 enemies)
+	inc	[hl]
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Decreases the enemy count
+DECREASE_ENEMY_COUNT:
+; Checks the option value
+	ld	a, [options] ; 00eemmrr
+	and	$30
+	cp	$20
+	ret	nz ; not enhanced mode
+; Decreases the enemy count
+	ld	a, [game.pyramid_count] ; minimum = pyramid_count + 3
+	add	3
+	ld	hl, enemy_count
+	cp	[hl]
+	ret	nc ; (cannot set fewer than pyramid_count + 3 enemies)
+	dec	[hl]
 	ret
 ; -----------------------------------------------------------------------------
 
