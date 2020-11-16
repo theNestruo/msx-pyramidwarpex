@@ -8,6 +8,7 @@ EMULATOR=cmd /c start
 PCX2MSX=pcx2msx+
 PCX2SPR=pcx2spr
 TMX2BIN=tmx2bin
+ZX7=zx7.exe
 
 #
 # commands
@@ -49,16 +50,18 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\font.pcx.clr \
 	asm\enhancedplus\sprites.pcx.spr \
 	asm\enhancedplus\title.pcx.chr \
-	asm\enhancedplus\title.pcx.clr
+	asm\enhancedplus\title.pcx.clr \
+	asm\enhancedplus\PW_Dead2.pt3.zx7 \
+	asm\enhancedplus\PW_LevelFinished.pt3.zx7 \
+	asm\enhancedplus\PW_NewGame.pt3.zx7 \
+	asm\enhancedplus\PW_VT2.pt3.zx7 \
+	asm\enhancedplus\PW_VT2_3chan.pt3.zx7 \
+	asm\enhancedplus\PW_VT2_3chan_nointro.pt3.zx7 \
+	asm\enhancedplus\PW_VT2_Sphinx.pt3.zx7 \
 
 ENHANCEDPLUS_STATIC_DATAS=\
 	asm\enhancedplus\mapper\rooms_original.asm \
 	asm\enhancedplus\mapper\rooms.asm \
-	asm\enhancedplus\PW_Dead2.pt3 \
-	asm\enhancedplus\PW_LevelFinished.pt3 \
-	asm\enhancedplus\PW_NewGame.pt3 \
-	asm\enhancedplus\PW_VT2.pt3 \
-	asm\enhancedplus\PW_VT2_3chan.pt3 \
 	asm\enhancedplus\test.afb
 
 #
@@ -108,3 +111,11 @@ enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS) $(ENHAN
 
 %.pcx.spr: %.pcx
 	$(PCX2SPR) $<
+
+#
+# Packed targets
+#
+
+%.pt3.zx7: %.pt3
+	$(REMOVE) $@
+	$(ZX7) $<

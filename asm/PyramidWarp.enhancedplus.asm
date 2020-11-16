@@ -76,7 +76,7 @@ CFG_COLOR:
 	.DOOR_2:	equ 15	; 8
 
 	.BG:		equ 4	; 4
-	.BG_SPHYNX:	equ 1	; 1
+	.BG_SPHINX:	equ 1	; 1
 	.BG_DEAD_1:	equ 8	; 6
 	.BG_DEAD_2:	equ 9	; 4
 	.BG_DEAD_3:	equ 6
@@ -147,8 +147,8 @@ CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
-	; .CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
-	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphynx room!!
+	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
+	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
 
@@ -447,11 +447,12 @@ NEW_PYRAMID:
 
 ; Room 0
 	IFDEF  CFG_OTHERS.CHEAT_WIN_GAME
-		ld	a, 15 ; (starts in the sphynx room)
+		ld	a, 15 ; (starts in the sphinx room)
 	ELSE
 		xor	a
 	ENDIF
 	ld	(pyramid.room_index),a
+	ld	(nointro_song), a
 
 ; Enemy count
 	call	INIT_ENEMY_COUNT
@@ -470,8 +471,8 @@ NEW_PYRAMID:
 	ld	a,01h ; if more than one room, loops
 	cp	b
 	jr	nz,.L834D
-; Prints the sphynx room
-	ld	a,$52 ; ($52 = sphynx room)
+; Prints the sphinx room
+	ld	a,$52 ; ($52 = sphinx room)
 	call	PRINT_CHAR
 
 ; Plays "Start game" music
@@ -570,10 +571,10 @@ NEW_ROOM:
 	call	BUFFER_CURRENT_ROOM
 	call	DRAW_CURRENT_ROOM
 
-; Is the sphynx room?
+; Is the sphinx room?
 	ld	a,(game.current_room)
 	cp	10h
-	jp	z,PRINT_SPHYNX_ROOM_DECORATION ; yes
+	jp	z,PRINT_SPHINX_ROOM_DECORATION ; yes
 ; ------VVVV----falls through--------------------------------------------------
 
 
@@ -845,7 +846,7 @@ NEW_DOOR:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-PRINT_SPHYNX_ROOM_DECORATION:
+PRINT_SPHINX_ROOM_DECORATION:
 ; Prints single box
 	ld	de,0B0Ch	; address or value?
 	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
@@ -1432,10 +1433,10 @@ GAME_LOOP.SKULL_OK:
 ; -----------------------------------------------------------------------------
 GAME_LOOP.BULLET_OK:
 .L8969:	call	SHORT_DELAY
-; Is the sphynx room?
+; Is the sphinx room?
 	ld	a,(game.current_room)
 	cp	10h
-	jp	z,CHECK_SPHYNX_ROOM_BOX ; yes
+	jp	z,CHECK_SPHINX_ROOM_BOX ; yes
 ; no: updates scorpion1, box1 and bat1
 	ld	ix,scorpion1
 	call	UPDATE_ENEMY
@@ -1651,7 +1652,7 @@ GAME_LOOP.NEXT:
 
 ; -----------------------------------------------------------------------------
 	; Referenced from 8971
-CHECK_SPHYNX_ROOM_BOX:
+CHECK_SPHINX_ROOM_BOX:
 ; Is the player at ($60,$58)?
 .L8AB7:	ld	hl,player.spratr_y
 	ld	a,58h
@@ -1670,13 +1671,13 @@ CHECK_SPHYNX_ROOM_BOX:
 ;	ld	b,0E3h
 ;	call	WRTVDP
 
-; Prints sphynx sprites
-	ld	hl, DATA_SPHYNX_SPRATR + 0 *4
+; Prints sphinx sprites
+	ld	hl, DATA_SPHINX_SPRATR + 0 *4
 	ld	de, spratr_buffer
 	ld	bc, 9 * 4
 	ldir
 
-	; Prints sphynx tiles
+	; Prints sphinx tiles
 	ld	de, 030Ah
 	ld	a, $64 + 4*0
 	call	PRINT_TILE
@@ -1708,15 +1709,15 @@ CHECK_SPHYNX_ROOM_BOX:
 	call	PRINT_TILE
 
 
-; Prints the sphynx room in the map
-	ld	a,$52 ; ($62 = sphynx room)
+; Prints the sphinx room in the map
+	ld	a,$52 ; ($62 = sphinx room)
 	ld	de,121Ch	; address or value?
 	call	PRINT_CHAR
 ; color ,,1
-	ld	bc,CFG_COLOR.BG_SPHYNX << 8 + 07h
+	ld	bc,CFG_COLOR.BG_SPHINX << 8 + 07h
 	call	WRTVDP
-; Sphynx sound
-	call	PLAY_SOUND_SPHYNX
+; Sphinx sound
+	call	PLAY_SOUND_SPHINX
 ; Increase score
 	ld	de,2000h ; 2000 points (BCD)
 	call	ADD_SCORE
@@ -2445,20 +2446,31 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 ; -----------------------------------------------------------------------------
 PLAY_START_GAME_MUSIC:
 ; Plays the jingle
-	ld	hl, .SONG -100 ; (headerless)
+	ld	hl, .SONG
 	call	REPLAYER.PLAY_JINGLE
 	jp	DELAY.ONE_SECOND
 .SONG:
-	incbin "asm/enhancedplus/PW_NewGame.pt3", 100 ; (headerless)
+	incbin "asm/enhancedplus/PW_NewGame.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 PLAY_INGAME_MUSIC:
-	ld	hl, .SONG -100 ; (headerless)
+	ld	hl, .SONG_NOINTRO
+; Is the first time?
+	ld	a, [nointro_song]
+	or	a
+	jr	nz, .HL_OK ; no: uses the "nointro" version
+; yes
+	inc	a
+	ld	[nointro_song], a ; sets the "nointro" flag
+	ld	hl, .SONG ; uses the default version
+.HL_OK:
 	xor	a ; (loop)
 	jp	REPLAYER.PLAY
 .SONG:
-	incbin "asm/enhancedplus/PW_VT2_3chan.pt3", 100 ; (headerless)
+	incbin "asm/enhancedplus/PW_VT2_3chan.pt3.zx7"
+.SONG_NOINTRO:
+	incbin "asm/enhancedplus/PW_VT2_3chan_nointro.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2471,7 +2483,7 @@ IFDEF CFG_OTHERS.DEAD_PLAYER_COLOR
 ENDIF
 
 ; Plays the jingle
-	ld	hl, .SONG -100 ; (headerless)
+	ld	hl, .SONG
 	inc	a ; (not a loop)
 	call	REPLAYER.PLAY
 
@@ -2522,7 +2534,7 @@ ENDIF
 	jp	DELAY.ONE_TENTH
 
 .SONG:
-	incbin "asm/enhancedplus/PW_Dead2.pt3", 100 ; (headerless)
+	incbin "asm/enhancedplus/PW_Dead2.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2531,13 +2543,28 @@ PLAY_SOUND_EXIT:
 	ld	bc, CFG_COLOR.BG_EXIT << 8 + 07h
 	call	WRTVDP
 ; Plays the jingle
-	ld	hl, .SONG -100 ; (headerless)
+	ld	hl, .SONG
 	call	REPLAYER.PLAY_JINGLE
 ; color ,,4
 	ld	bc, CFG_COLOR.BG << 8 + 07h
 	jp	WRTVDP
 .SONG:
-	incbin "asm/enhancedplus/PW_LevelFinished.pt3", 100 ; (headerless)
+	incbin "asm/enhancedplus/PW_LevelFinished.pt3.zx7"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+PLAY_SOUND_SPHINX:
+; color ,,3
+	ld	bc, CFG_COLOR.BG_EXIT << 8 + 07h
+	call	WRTVDP
+; Plays the jingle
+	ld	hl, .SONG
+	call	REPLAYER.PLAY_JINGLE
+; color ,,4
+	ld	bc, CFG_COLOR.BG << 8 + 07h
+	jp	WRTVDP
+.SONG:
+	incbin "asm/enhancedplus/PW_LevelFinished.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2561,10 +2588,10 @@ PLAY_SOUND_BULLET:
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
 
-PLAY_SOUND_SPHYNX:
-	ld	a, CFG_SOUND.SPHYNX
-	ld	c, 9 ; default-low priority
-	jp	ayFX_INIT
+; PLAY_SOUND_SPHINX:
+; 	ld	a, CFG_SOUND.SPHINX
+; 	ld	c, 9 ; default-low priority
+; 	jp	ayFX_INIT
 ; -----------------------------------------------------------------------------
 
 
@@ -2579,7 +2606,7 @@ CFG_SOUND:
 	.DOOR:			equ 13 -1	; 10, 11, 12, 13, 17
 	.BULLET:		equ  5 -1	; 2, 5, 7
 	.BULLET_HIT:		equ 14 -1	; 2, 5, 7, 9, 14
-	.SPHYNX:		equ 11 -1	; 6, 11
+	; .SPHINX:		equ 11 -1	; 6, 11
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3146,7 +3173,7 @@ LITERAL:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-DATA_SPHYNX_SPRATR:
+DATA_SPHINX_SPRATR:
 .L9F28:
 	DB	23,  80, $7C, $04
 	DB	23,  96, $80, $04
@@ -3175,7 +3202,7 @@ DATA_SOUND.MUTE_CHANNELS:
 .L9F38:	DB	01h ; length
 	DB	07h, 0BFh
 
-DATA_SOUND.SPHYNX:
+DATA_SOUND.SPHINX:
 .L9F3B:	DB	0Dh ; length
 	DB	00h, 01h
 	DB	01h, 01h
@@ -3295,14 +3322,24 @@ REPLAYER.STOP:
 
 
 ; Starts the replayer
-; param hl: pointer to the song
+; param hl: pointer to the packed song
 ; param a: *******l, where l (LSB) is the loop flag (0 = loop),
 REPLAYER.PLAY:
+	push	af ; (preserves flags)
+	push	hl ; (preserves source)
+; (makes the replayer stop during unpack to avoid corruption)
+	call	REPLAYER.STOP
+; Unpacks song
+	pop	hl ; (restores source)
+	ld	de, unpack_buffer
+	call	UNPACK
 ; Saves the configuration (the loop flag)
+	pop	af ; (restores flags)
+	and	$01 ; (loop flag only)
 	ld	[PT3_SETUP], a
 ; Initializes song
+	ld	hl, unpack_buffer
 	jp	PT3_INIT
-
 
 ; Starts the replayer and waits for a jingle to end
 ; param hl: pointer to the song
@@ -3345,6 +3382,13 @@ REPLAYER.FRAME:
 	include	"asm/libext/PT3-ROM.tniasm.ASM"
 ; ayFX REPLAYER v1.31
 	include	"asm/libext/ayFX-ROM.tniasm.asm"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; ZX7 decoder by Einar Saukas, Antonio Villena & Metalbrain
+; "Standard" version (69 bytes only)
+UNPACK:
+	include	"asm/libext/dzx7_standard.tniasm.asm"
 ; -----------------------------------------------------------------------------
 
 
@@ -3591,7 +3635,7 @@ BUILD_PYRAMID:
 	ld	hl,DATA_RANDOMIZE_PYRAMID.FLOOR3
 	ld	bc,0003h ; 3 rooms
 	call	.RANDOMIZE_FLOOR
-	ld	a,10h ; (sphynx room)
+	ld	a,10h ; (sphinx room)
 	ld	(de),a
 	ret
 
@@ -3644,9 +3688,6 @@ BUILD_PYRAMID_DEFINITION:
 	ret
 
 .ENHANCED_ROOMS:
-	ld b,b
-	jr $+2
-
 ; Classic and newer rooms, better randomized
 	ld	hl, $0e01 ; Randomize from: 1-14
 	ld	bc, $0708 ; Copy 7 numbers, split pivot at 8: 1-7, 8-14
@@ -3658,7 +3699,7 @@ BUILD_PYRAMID_DEFINITION:
 	ld	hl, $120d ; Randomize from: 13-18
 	ld	bc, $0310 ; Copy 3 numbers, split pivot at 16: 13-15, 16-18
 	call	.RANDOMIZE_FLOOR ; (falls through)
-; Randomizes the sphynx room
+; Randomizes the sphinx room
 	ld	a, r
 	rrca
 	ret	nc ; classic room
@@ -3839,10 +3880,10 @@ BUFFER_CURRENT_ROOM:
 	ld	de, room_buffer
 	ldir
 
-; Is the sphynx room?
+; Is the sphinx room?
 	ld	a, (game.current_room)
 	cp	$10
-	ret	z ; (do not mirror nor flip the sphynx room)
+	ret	z ; (do not mirror nor flip the sphinx room)
 
 ; Checks enhanced mirroring
 	ld	a, [options] ; 00eemmrr
@@ -4320,7 +4361,11 @@ room_buffer:
 	.door_up:	rb 2
 	.door_down:	rb 2
 
-enemy_count:		rb 1 ; current enemy count
+; Current enemy count
+enemy_count:		rb 1
+
+; Plays the song with intro
+nointro_song:	rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4342,14 +4387,18 @@ spratr_buffer:
 ; (extra space for the flickering routine)
 	rb	11 * 4
 
+; Offset used by the flickering routine
 .flicker_offset:
-	rw	1 ; Offset used by the flickering routine
-
+	rw	1
 
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-RAM.tniasm.ASM"
 ; ayFX REPLAYER v1.31
 	include	"asm/libext/ayFX-RAM.tniasm.asm"
+
+; Unpack buffer
+unpack_buffer:
+	rb	2048 ; 2K should be enough for the largest PT3 song
 ; -----------------------------------------------------------------------------
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
