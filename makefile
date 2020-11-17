@@ -42,21 +42,17 @@ ENHANCED_DATAS=\
 	asm\enhanced\sprites4d.pcx.spr
 
 ENHANCEDPLUS_DATAS=\
-	asm\enhancedplus\charset.pcx.chr \
-	asm\enhancedplus\charset.pcx.clr \
-	asm\enhancedplus\cursor.pcx.chr \
-	asm\enhancedplus\cursor.pcx.clr \
-	asm\enhancedplus\font.pcx.chr \
-	asm\enhancedplus\font.pcx.clr \
-	asm\enhancedplus\sprites.pcx.spr \
-	asm\enhancedplus\title.pcx.chr \
-	asm\enhancedplus\title.pcx.clr \
+	asm\enhancedplus\full_charset.pcx.chr.zx7 \
+	asm\enhancedplus\full_charset.pcx.clr.zx7 \
+	asm\enhancedplus\font.pcx.chr.zx7 \
+	asm\enhancedplus\sprites.pcx.spr.zx7 \
 	asm\enhancedplus\PW_Dead2.pt3.zx7 \
 	asm\enhancedplus\PW_LevelFinished.pt3.zx7 \
 	asm\enhancedplus\PW_NewGame.pt3.zx7 \
 	asm\enhancedplus\PW_VT2.pt3.zx7 \
 	asm\enhancedplus\PW_VT2_3chan.pt3.zx7 \
 	asm\enhancedplus\PW_VT2_3chan_nointro.pt3.zx7 \
+	asm\enhancedplus\PW_VT2_3_Level2.pt3.zx7 \
 	asm\enhancedplus\PW_VT2_Sphinx.pt3.zx7 \
 
 ENHANCEDPLUS_STATIC_DATAS=\
@@ -106,6 +102,18 @@ enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS) $(ENHAN
 # GFXs targets
 #
 
+asm\enhancedplus\full_charset.pcx.chr: \
+		asm\enhancedplus\charset.pcx.chr \
+		asm\enhancedplus\title.pcx.chr \
+		asm\enhancedplus\cursor.pcx.chr
+	$(COPY) /b asm\enhancedplus\charset.pcx.chr + asm\enhancedplus\title.pcx.chr + asm\enhancedplus\cursor.pcx.chr $@
+
+asm\enhancedplus\full_charset.pcx.clr: \
+		asm\enhancedplus\charset.pcx.clr \
+		asm\enhancedplus\title.pcx.clr \
+		asm\enhancedplus\cursor.pcx.clr
+	$(COPY) /b asm\enhancedplus\charset.pcx.clr + asm\enhancedplus\title.pcx.clr + asm\enhancedplus\cursor.pcx.clr $@
+
 %.pcx.chr %.pcx.clr: %.pcx
 	$(PCX2MSX) -hl $<
 
@@ -115,6 +123,18 @@ enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS) $(ENHAN
 #
 # Packed targets
 #
+
+%.chr.zx7: %.chr
+	$(REMOVE) $@
+	$(ZX7) $<
+
+%.clr.zx7: %.clr
+	$(REMOVE) $@
+	$(ZX7) $<
+
+%.spr.zx7: %.spr
+	$(REMOVE) $@
+	$(ZX7) $<
 
 %.pt3.zx7: %.pt3
 	$(REMOVE) $@

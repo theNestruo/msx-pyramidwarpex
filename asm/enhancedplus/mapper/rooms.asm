@@ -1,55 +1,55 @@
     ; ------------------------------
     ; room 00        
     ; walls         ; XXXXXXXXXXXXX
-    DB 051h, 040h    ; XBX^X___X_X_X
-    DB 004h, 000h    ; X_____X_____X
-    DB 0B5h, 0A0h    ; XX_XX_X_XX_XX
-    DB 080h, 000h    ; XX__________X
-    DB 02Eh, 0C0h    ; X__X_HHH_XX_X
-    DB 040h, 080h    ; X_XB_____X__X
+    DB 01Dh, 000h    ; X___XXX^X___X
+    DB 040h, 040h    ; X_X___N___X_X
+    DB 05Fh, 040h    ; X_X_XXXXX_X_X
+    DB 000h, 000h    ; X_____B_____X
     DB 06Eh, 0A0h    ; X_XX_HHH_X_XX
-    DB 000h, 000h    ; X__________BX
-    DB 075h, 0A0h    ; X_XXX_X_XX_XX
-    DB 040h, 080h    ; X_X______X__X
-    DB 05Ah, 000h    ; X_X_XXvX___NX
+    DB 020h, 0A0h    ; X__X_____X_XX
+    DB 08Eh, 000h    ; XX___HHH____X
+    DB 020h, 040h    ; X__X__B___X_X
+    DB 06Eh, 0C0h    ; X_XX_XXX_XXvX
+    DB 040h, 060h    ; X_X___B___XXX
+    DB 01Fh, 000h    ; X___XXXXX___X
     ; objects       ; XXXXXXXXXXXXX
-    DB 000h, 000h    ; box1
-    DB 002h, 005h    ; box2
-    DB 00Ah, 007h    ; box3
-    DB 00Ah, 00Ah    ; nest
-    DB 082h, 000h    ; door (^)
-    DB 005h, 00Ah    ; door (v)
+    DB 005h, 003h    ; box1
+    DB 005h, 007h    ; box2
+    DB 005h, 009h    ; box3
+    DB 005h, 001h    ; nest
+    DB 086h, 000h    ; door (^)
+    DB 00Ah, 008h    ; door (v)
     ; ------------------------------
 
     ; ------------------------------
     ; room 01        
     ; walls         ; XXXXXXXXXXXXX
-    DB 02Ah, 0A0h    ; XN_X_XBX_X^XX
-    DB 008h, 000h    ; X____X______X
+    DB 0EAh, 000h    ; XXXX^X_X____X
+    DB 088h, 0C0h    ; XX___X_B_XX_X
     DB 0BAh, 0C0h    ; XX_XXX_X_XX_X
-    DB 000h, 080h    ; X________X__X
+    DB 002h, 000h    ; XB_____X____X
     DB 0EEh, 0A0h    ; XXXX_HHH_X_XX
-    DB 080h, 000h    ; XX__________X
-    DB 0AEh, 0A0h    ; XX_X_HHH_X_XX
-    DB 008h, 000h    ; XB___X_____BX
-    DB 0ABh, 0A0h    ; XX_X_X_XXX_XX
-    DB 080h, 000h    ; XX__________X
-    DB 0AEh, 0A0h    ; XXvX_XXX_X_XX
+    DB 020h, 080h    ; XN_X_____X__X
+    DB 0AEh, 0E0h    ; XX_X_HHH_XXXX
+    DB 008h, 000h    ; X____X_____BX
+    DB 06Bh, 0A0h    ; X_XX_X_XXX_XX
+    DB 062h, 020h    ; X_XX___X___XX
+    DB 00Ah, 0E0h    ; X____XvX_XXXX
     ; objects       ; XXXXXXXXXXXXX
-    DB 005h, 000h    ; box1
-    DB 000h, 007h    ; box2
+    DB 006h, 001h    ; box1
+    DB 000h, 003h    ; box2
     DB 00Ah, 007h    ; box3
-    DB 000h, 000h    ; nest
-    DB 089h, 000h    ; door (^)
-    DB 001h, 00Ah    ; door (v)
+    DB 000h, 005h    ; nest
+    DB 083h, 000h    ; door (^)
+    DB 005h, 00Ah    ; door (v)
     ; ------------------------------
 
     ; ------------------------------
     ; room 02        
     ; walls         ; XXXXXXXXXXXXX
     DB 000h, 040h    ; X_____B___X_X
-    DB 06Eh, 000h    ; X_XX_XXX____X
-    DB 000h, 0C0h    ; X________XX_X
+    DB 06Fh, 000h    ; X_XX_XXXX___X
+    DB 000h, 040h    ; X_________X_X
     DB 07Ah, 080h    ; X_XXXXvX_X__X
     DB 00Eh, 020h    ; X____HHH___XX
     DB 0A0h, 080h    ; XX_X_____X_BX
@@ -70,8 +70,8 @@
     ; ------------------------------
     ; room 03        
     ; walls         ; XXXXXXXXXXXXX
-    DB 01Fh, 000h    ; X_B_XXXXX_B_X
-    DB 04Ah, 040h    ; X_X__X^X__X_X
+    DB 05Fh, 000h    ; XBX_XXXXX_B_X
+    DB 00Ah, 040h    ; X____X^X__X_X
     DB 06Ah, 0C0h    ; X_XX_X_X_XX_X
     DB 000h, 000h    ; X___________X
     DB 05Eh, 0E0h    ; X_X_XHHH_XXXX
@@ -79,12 +79,12 @@
     DB 0BFh, 040h    ; XX_XXHHHX_X_X
     DB 000h, 000h    ; X___________X
     DB 06Ah, 0C0h    ; X_XX_X_X_XX_X
-    DB 02Ah, 080h    ; X__X_XvX_X__X
-    DB 08Eh, 020h    ; XX_N_XXX_B_XX
+    DB 02Ah, 000h    ; X__X_XvX____X
+    DB 08Eh, 0A0h    ; XX_N_XXX_XBXX
     ; objects       ; XXXXXXXXXXXXX
-    DB 001h, 000h    ; box1
+    DB 000h, 000h    ; box1
     DB 009h, 000h    ; box2
-    DB 008h, 00Ah    ; box3
+    DB 009h, 00Ah    ; box3
     DB 002h, 00Ah    ; nest
     DB 085h, 001h    ; door (^)
     DB 005h, 009h    ; door (v)

@@ -53,6 +53,7 @@
 	SPRATR:		equ $1B00 ; Sprite attributes table
 	.SIZE:		equ 4 * 32
 	SPRTBL:		equ $3800 ; Sprite pattern table
+	.SIZE:		equ 32 * 64
 
 ; VDP symbolic constants
 	SCR_WIDTH:	equ 32
@@ -242,11 +243,14 @@ ROM_START:
 	ld	a,2Fh
 	call	FILVRM
 
+	ld	b,b
+	jr	$+2
+
 ; init font
 	ld	hl,DATA_FONT
 	ld	de,CHRTBL
 	ld	bc,DATA_FONT.SIZE
-	call	LDIRVM_3_BANKS
+	call	UNPACK_AND_LDIRVM_3_BANKS
 	ld	a, 15 << 4 or 0
 	ld	hl,CLRTBL
 	ld	bc,CLRTBL.SIZE
@@ -270,22 +274,25 @@ ROM_START:
 	ld	hl, DATA_CHARSET.CHR
 	ld	de, CHRTBL + $30 * $08
 	ld	bc, DATA_CHARSET.SIZE ; - $08
-	call	LDIRVM_3_BANKS
+	call	UNPACK_AND_LDIRVM_3_BANKS
 	ld	hl, DATA_CHARSET.CLR
 	ld	de, CLRTBL + $30 * $08
-	call	LDIRVM_3_BANKS
+	call	UNPACK_AND_LDIRVM_3_BANKS
 ; Init CHRTBL/CLRTBL (last character)
-	ld	hl, DATA_CHARSET.CHR_FF
-	ld	de, CHRTBL + $FF * $08
-	ld	bc, $08
-	call	LDIRVM_3_BANKS
-	ld	hl, DATA_CHARSET.CLR_FF
-	ld	de, CLRTBL + $FF * $08
-	call	LDIRVM_3_BANKS
+	; ld	hl, DATA_CHARSET.CHR_FF
+	; ld	de, CHRTBL + $FF * $08
+	; ld	bc, $08
+	; call	UNPACK_AND_LDIRVM_3_BANKS
+	; ld	hl, DATA_CHARSET.CLR_FF
+	; ld	de, CLRTBL + $FF * $08
+	; call	UNPACK_AND_LDIRVM_3_BANKS
 ; init sprites
-	ld	hl,DATA_SPRTBL
-	ld	de,SPRTBL
-	ld	bc,DATA_SPRTBL.SIZE
+	ld	hl, DATA_SPRTBL
+	ld	de, unpack_buffer
+	call	UNPACK
+	ld	hl, unpack_buffer
+	ld	de, SPRTBL
+	ld	bc, SPRTBL.SIZE
 	call	LDIRVM
 
 ; Init on-screen texts
@@ -452,7 +459,12 @@ NEW_PYRAMID:
 		xor	a
 	ENDIF
 	ld	(pyramid.room_index),a
-	ld	(nointro_song), a
+
+; Intro version in-game music
+	ld	a, (game.pyramid_count)
+	and	$01
+	add	a
+	ld	(ingame_song_index), a
 
 ; Enemy count
 	call	INIT_ENEMY_COUNT
@@ -1491,7 +1503,7 @@ GAME_LOOP.BULLET_OK:
 .DO_EXIT:
 ; yes: increases room index (and increases the enemy count on new floor)
 	call	INCREASE_ROOM_INDEX
-	call	z, INCREASE_ENEMY_COUNT
+	call	z, ON_FLOOR_CHANGE
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a, CFG_PYRAMID.ROOM_VISITED ; $51
@@ -2443,22 +2455,31 @@ PLAY_START_GAME_MUSIC:
 
 ; -----------------------------------------------------------------------------
 PLAY_INGAME_MUSIC:
-	ld	hl, .SONG_NOINTRO
-; Is the first time?
-	ld	a, [nointro_song]
-	or	a
-	jr	nz, .HL_OK ; no: uses the "nointro" version
-; yes
-	inc	a
-	ld	[nointro_song], a ; sets the "nointro" flag
-	ld	hl, .SONG ; uses the default version
-.HL_OK:
+; Reads the song to use and skips the nointro version the next time
+	ld	hl, ingame_song_index
+	ld	a, [hl]
+	set	2, [hl] ; 00000 X 0 0
+; Gets the proper song
+	ld	hl, .TABLE
+	call	ADD_HL_A
+	ld	a, [hl] ; hl = [hl]
+	inc	hl
+	ld	h, [hl]
+	ld	l, a
+; Plays the song
 	xor	a ; (loop)
 	jp	REPLAYER.PLAY
-.SONG:
+.TABLE:
+	dw	.SONG_INTRO	; 00000 0 0 0
+	dw	.SONG_INTRO	; 00000 0 1 0
+	dw	.SONG_A		; 00000 1 0 0
+	dw	.SONG_B		; 00000 1 1 0
+.SONG_INTRO:
 	incbin "asm/enhancedplus/PW_VT2_3chan.pt3.zx7"
-.SONG_NOINTRO:
+.SONG_A:
 	incbin "asm/enhancedplus/PW_VT2_3chan_nointro.pt3.zx7"
+.SONG_B:
+	incbin "asm/enhancedplus/PW_VT2_3_Level2.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2701,6 +2722,19 @@ LDIRVM_SPRITES:
 	ld	bc, spratr_buffer.size
 	jp	LDIRVM
 ; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+UNPACK_AND_LDIRVM_3_BANKS:
+	push	de
+	push	bc
+; Unpacks
+	ld	de, unpack_buffer
+	call	UNPACK
+; Prepare for blitting
+	ld	hl, unpack_buffer
+	pop	bc
+	pop	de
+; ------VVVV----falls through--------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 LDIRVM_3_BANKS:
@@ -3204,26 +3238,31 @@ DATA_SOUND.SPHINX:
 
 ; -----------------------------------------------------------------------------
 DATA_FONT:
-	incbin	"asm/enhancedplus/font.pcx.chr"
-	.SIZE:	equ $ - DATA_FONT
+	incbin	"asm/enhancedplus/font.pcx.chr.zx7"
+	.SIZE:	equ 384
 
 DATA_SPRTBL:
-	incbin	"asm/enhancedplus/sprites.pcx.spr"
-	.SIZE:	equ $ - DATA_SPRTBL
+	incbin	"asm/enhancedplus/sprites.pcx.spr.zx7"
+	.SIZE:	equ 2048
 
 DATA_CHARSET:
 	.CHR:
-	incbin	"asm/enhancedplus/charset.pcx.chr"
-	.CHR_FF:	equ $ - 8
-	incbin	"asm/enhancedplus/title.pcx.chr"
-	incbin	"asm/enhancedplus/cursor.pcx.chr"
-	.SIZE:	equ $ - DATA_CHARSET
+	incbin	"asm/enhancedplus/full_charset.pcx.chr.zx7"
+	.CHR_FF:	equ .CHR + 720 - 8
+	.SIZE:		equ 880
+	; incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
+	; .CHR_FF:	equ $ - 8
+	; incbin	"asm/enhancedplus/title.pcx.chr.zx7"
+	; incbin	"asm/enhancedplus/cursor.pcx.chr.zx7"
+	; .SIZE:	equ $ - DATA_CHARSET
 
 	.CLR:
-	incbin	"asm/enhancedplus/charset.pcx.clr"
-	.CLR_FF:	equ $ - 8
-	incbin	"asm/enhancedplus/title.pcx.clr"
-	incbin	"asm/enhancedplus/cursor.pcx.clr"
+	incbin	"asm/enhancedplus/full_charset.pcx.clr.zx7"
+	.CLR_FF:	equ .CLR + 720 - 8
+	; incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
+	; .CLR_FF:	equ $ - 8
+	; incbin	"asm/enhancedplus/title.pcx.clr.zx7"
+	; incbin	"asm/enhancedplus/cursor.pcx.clr.zx7"
 
 DATA_WALL_ENHANCE:
 	DB	$30,	$31,	$32,	$33	; 0
@@ -3806,6 +3845,18 @@ INCREASE_ROOM_INDEX:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
+; On entering second or third floor
+ON_FLOOR_CHANGE:
+; Changes the in-game song
+	ld	hl, ingame_song_index
+	ld	a, [hl]
+	xor	$02 ; 00000 0 X 0
+	ld	[hl], a
+; Increases the enemy count
+	; jp	INCREASE_ENEMY_COUNT ; (falls through)
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
 ; Increases the enemy count
 INCREASE_ENEMY_COUNT:
 ; Checks the option value
@@ -4347,8 +4398,8 @@ room_buffer:
 ; Current enemy count
 enemy_count:		rb 1
 
-; Plays the song with intro
-nointro_song:	rb 1
+; Determines the in-game song to use
+ingame_song_index:	rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4381,7 +4432,7 @@ spratr_buffer:
 
 ; Unpack buffer
 unpack_buffer:
-	rb	2048 ; 2K should be enough for the largest PT3 song
+	rb	3042 ; (at least 2K; the size of the largest PT3 song)
 ; -----------------------------------------------------------------------------
 
 debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
