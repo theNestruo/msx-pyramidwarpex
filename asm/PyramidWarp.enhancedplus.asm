@@ -1662,14 +1662,6 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	a,60h
 	cp	(hl)
 	jr	nz,GAME_LOOP.NEXT ; no
-; yes
-	call	PLAY_SOUND_BOX
-
-
-;; screen ,3
-;	ld	c,01h
-;	ld	b,0E3h
-;	call	WRTVDP
 
 ; Prints sphinx sprites
 	ld	hl, DATA_SPHINX_SPRATR + 0 *4
@@ -1708,7 +1700,6 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	a, $64 + 4*8
 	call	PRINT_TILE
 
-
 ; Prints the sphinx room in the map
 	ld	a,$52 ; ($62 = sphinx room)
 	ld	de,121Ch	; address or value?
@@ -1716,8 +1707,6 @@ CHECK_SPHINX_ROOM_BOX:
 ; color ,,1
 	ld	bc,CFG_COLOR.BG_SPHINX << 8 + 07h
 	call	WRTVDP
-; Sphinx sound
-	call	PLAY_SOUND_SPHINX
 ; Increase score
 	ld	de,2000h ; 2000 points (BCD)
 	call	ADD_SCORE
@@ -1726,18 +1715,17 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	b,0Eh
 	ld	hl,LITERAL.CONGRATULATIONS
 	call	PRINT
+; Sphinx sound
+	call	PLAY_SOUND_SPHINX
+
+; "Hit space key"
 	ld	hl,LITERAL.TRY_THE_NEXT_PYRAMID
 	ld	de,1403h
 	ld	b,14h
 	call	PRINT
-
-; "Hit space key"
 	ld	de,1606h
 	call	HIT_SPACE_KEY
 
-; screen ,2
-.L8B4C:	ld	bc,0E2h << 8 + 01h
-	call	WRTVDP
 ; color ,,4
 	ld	bc,CFG_COLOR.BG << 8 + 07h
 	call	WRTVDP
@@ -2564,7 +2552,7 @@ PLAY_SOUND_SPHINX:
 	ld	bc, CFG_COLOR.BG << 8 + 07h
 	jp	WRTVDP
 .SONG:
-	incbin "asm/enhancedplus/PW_LevelFinished.pt3.zx7"
+	incbin "asm/enhancedplus/PW_VT2_Sphinx.pt3.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2587,11 +2575,6 @@ PLAY_SOUND_BULLET:
 	ld	a, CFG_SOUND.BULLET
 	ld	c, 9 ; default-low priority
 	jp	ayFX_INIT
-
-; PLAY_SOUND_SPHINX:
-; 	ld	a, CFG_SOUND.SPHINX
-; 	ld	c, 9 ; default-low priority
-; 	jp	ayFX_INIT
 ; -----------------------------------------------------------------------------
 
 

@@ -352,10 +352,10 @@
     DB 000h, 000h    ; X___________X
     DB 0FBh, 0E0h    ; XXXXXX_XXXXXX
     DB 01Bh, 000h    ; X___XX_XX___X
-    DB 000h, 000h    ; X___________X
-    DB 055h, 040h    ; X_X_X_X_X_X_X
-    DB 051h, 040h    ; X_X_X___X_X_X
     DB 040h, 040h    ; X_X_______X_X
+    DB 075h, 0C0h    ; X_XXX_X_XXX_X
+    DB 000h, 000h    ; X___________X
+    DB 000h, 000h    ; X___________X
     DB 000h, 000h    ; X___________X
     ; objects       ; XXXXXXXXXXXXX
     DB 00Fh, 00Fh    ; box1
