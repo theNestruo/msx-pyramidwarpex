@@ -42,10 +42,12 @@ ENHANCED_DATAS=\
 	asm\enhanced\sprites4d.pcx.spr
 
 ENHANCEDPLUS_DATAS=\
-	asm\enhancedplus\full_charset.pcx.chr.zx7 \
-	asm\enhancedplus\full_charset.pcx.clr.zx7 \
-	asm\enhancedplus\font.pcx.chr.zx7 \
+	asm\enhancedplus\charset.pcx.chr.zx7 \
+	asm\enhancedplus\charset.pcx.clr.zx7 \
 	asm\enhancedplus\sprites.pcx.spr.zx7 \
+	asm\enhancedplus\screen_title.tmx.bin.zx7 \
+	asm\enhancedplus\screen_ingame.tmx.bin.zx7 \
+	asm\enhancedplus\init.bin.zx7 \
 	asm\enhancedplus\PW_Dead2.pt3.zx7 \
 	asm\enhancedplus\PW_LevelFinished.pt3.zx7 \
 	asm\enhancedplus\PW_NewGame.pt3.zx7 \
@@ -94,31 +96,45 @@ enhanced.rom: asm\PyramidWarp.enhanced.asm $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
-enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm $(ENHANCEDPLUS_DATAS) $(ENHANCEDPLUS_STATIC_DATAS)
+enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm asm\symbols.asm $(ENHANCEDPLUS_DATAS) $(ENHANCEDPLUS_STATIC_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
+
+asm\enhancedplus\init.bin: asm\enhancedplus\init.asm
+	$(ASM) $< $@
 
 #
 # GFXs targets
 #
 
-asm\enhancedplus\full_charset.pcx.chr: \
-		asm\enhancedplus\charset.pcx.chr \
-		asm\enhancedplus\title.pcx.chr \
-		asm\enhancedplus\cursor.pcx.chr
-	$(COPY) /b asm\enhancedplus\charset.pcx.chr + asm\enhancedplus\title.pcx.chr + asm\enhancedplus\cursor.pcx.chr $@
+asm\enhancedplus\charset.pcx.chr: \
+		asm\enhancedplus\charset_font.pcx.chr \
+		asm\enhancedplus\charset_ingame.pcx.chr \
+		asm\enhancedplus\charset_extra.pcx.chr
+	$(COPY) /b \
+		asm\enhancedplus\charset_font.pcx.chr \
+		+ asm\enhancedplus\charset_ingame.pcx.chr \
+		+ asm\enhancedplus\charset_extra.pcx.chr \
+		$@
 
-asm\enhancedplus\full_charset.pcx.clr: \
-		asm\enhancedplus\charset.pcx.clr \
-		asm\enhancedplus\title.pcx.clr \
-		asm\enhancedplus\cursor.pcx.clr
-	$(COPY) /b asm\enhancedplus\charset.pcx.clr + asm\enhancedplus\title.pcx.clr + asm\enhancedplus\cursor.pcx.clr $@
+asm\enhancedplus\charset.pcx.clr: \
+		asm\enhancedplus\charset_font.pcx.clr \
+		asm\enhancedplus\charset_ingame.pcx.clr \
+		asm\enhancedplus\charset_extra.pcx.clr
+	$(COPY) /b \
+		asm\enhancedplus\charset_font.pcx.clr \
+		+ asm\enhancedplus\charset_ingame.pcx.clr \
+		+ asm\enhancedplus\charset_extra.pcx.clr \
+		$@
 
 %.pcx.chr %.pcx.clr: %.pcx
 	$(PCX2MSX) -hl $<
 
 %.pcx.spr: %.pcx
 	$(PCX2SPR) $<
+
+%.tmx.bin: %.tmx
+	$(TMX2BIN) $< $@
 
 #
 # Packed targets
@@ -137,5 +153,9 @@ asm\enhancedplus\full_charset.pcx.clr: \
 	$(ZX7) $<
 
 %.pt3.zx7: %.pt3
+	$(REMOVE) $@
+	$(ZX7) $<
+
+%.bin.zx7: %.bin
 	$(REMOVE) $@
 	$(ZX7) $<

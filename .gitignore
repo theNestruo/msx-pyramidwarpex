@@ -1,6 +1,8 @@
+**/*.bin
 **/*.chr
 **/*.clr
 **/*.spr
+**/*.zx7
 *.rom
 tniasm.sym
 tniasm.tmp

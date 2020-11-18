@@ -1,139 +1,21 @@
+
 ; -----------------------------------------------------------------------------
-; MSX BIOS
-	VDP_DW:	equ $0007 ; One byte, VDP Data Port number (write)
-	MSXID1:	equ $002b ; Frecuency (1b), date format (3b) and charset (4b)
-	DISSCR:	equ $0041 ; Disable screen
-	ENASCR:	equ $0044 ; Enable screen
-	WRTVDP:	equ $0047 ; Write to any VDP register
-	RDVRM:	equ $004a ; Read byte from VRAM
-	WRTVRM:	equ $004d ; Write byte to VRAM
-	FILVRM:	equ $0056 ; Fill block of VRAM with data byte
-	LDIRVM:	equ $005c ; Copy block to VRAM, from memory
-	CHGMOD:	equ $005f ; Change VDP mode
-	CHGCLR:	equ $0062 ; Change VDP colours
-	CLRSPR:	equ $0069 ; Clear all sprites
-	INIGRP:	equ $0072 ; Initialize VDP to Graphics Mode
-	GICINI:	equ $0090 ; Initialize PSG (GI Chip)
-	GTSTCK:	equ $00d5 ; Get joystick status
-	GTTRIG:	equ $00d8 ; Get trigger status
-	SNSMAT:	equ $0141 ; Read row of keyboard matrix
-
-; Stack pointer initialization
-	STACK_POINTER_INIT:	equ $f380 ; As suggested by the MSX2 Technical Handbook
-
-; MSX system variables
-	SCNCNT: equ $f3f6 ; Key scan timing
-	CLIKSW:	equ $f3db ; Keyboard click sound
-	RG1SAV:	equ $f3e0 ; Content of VDP(1) register (R#1)
-	STATFL: equ $f3e7 ; Content of VDP status register (S#0)
-	FORCLR:	equ $f3e9 ; Foreground colour
-	BAKCLR:	equ $f3ea ; Background colour
-	BDRCLR:	equ $f3eb ; Border colour
-	JIFFY: equ $fc9e ; Software clock; each VDP interrupt gets increased by 1
-	INTCNT:	equ $fca2 ; ON INTERVAL counter (counts backwards)
-	HKEYI:	equ $fd9a ; Interrupt handler
-	HTIMI:	equ $fd9f ; Interrupt handler
-	HOOK_SIZE:	equ HTIMI - HKEYI
-
-; VRAM addresses
-	CHRTBL:		equ $0000 ; Pattern table
-	.BANK_SIZE:	equ 256 * 8
-	.BANK_0:	equ CHRTBL + 0 * CHRTBL.BANK_SIZE
-	.BANK_1:	equ CHRTBL + 1 * CHRTBL.BANK_SIZE
-	.BANK_2:	equ CHRTBL + 2 * CHRTBL.BANK_SIZE
-	.SIZE:		equ 3 * .BANK_SIZE
-	NAMTBL:		equ $1800 ; Name table
-	.SIZE:		equ $300
-	CLRTBL:		equ $2000 ; Color table
-	.BANK_SIZE:	equ 256 * 8
-	.BANK_0:	equ CLRTBL + 0 * CLRTBL.BANK_SIZE
-	.BANK_1:	equ CLRTBL + 1 * CLRTBL.BANK_SIZE
-	.BANK_2:	equ CLRTBL + 2 * CLRTBL.BANK_SIZE
-	.SIZE:		equ 3 * .BANK_SIZE
-	SPRATR:		equ $1B00 ; Sprite attributes table
-	.SIZE:		equ 4 * 32
-	SPRTBL:		equ $3800 ; Sprite pattern table
-	.SIZE:		equ 32 * 64
-
-; VDP symbolic constants
-	SCR_WIDTH:	equ 32
-	SPAT_END:	equ $d0 ; Sprite attribute table end marker
-	SPAT_OB:	equ $d1 ; Sprite out of bounds marker (not standard)
+; MSX symbolic constants
+	include	"asm/symbols.asm"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-CFG_COLOR:
-	.SKULL:		equ 15	; 15
-	.SCORPION:	equ 9	; 9
-	.BAT_0:		equ 1	; 1
-	.BAT:		equ 5	; 1
-	.SNAKE:		equ 3
-	.PLAYER:	equ 14	; 11
-	.PLAYER_GUN:	equ 15	; 15
-	.BULLET:	equ 15	; 15
-	.EXPLOSION:	equ 6	; 6
-	.DOOR_0:	equ 15	; 3
-	.DOOR_1:	equ 7	; 7
-	.DOOR_2:	equ 15	; 8
-
-	.BG:		equ 4	; 4
-	.BG_SPHINX:	equ 1	; 1
-	.BG_DEAD_1:	equ 8	; 6
-	.BG_DEAD_2:	equ 9	; 4
-	.BG_DEAD_3:	equ 6
-	.BG_EXIT:	equ 12	; 3
-
-CFG_BASE_PATTERN:
-	.SKULL:		equ	$10
-	.SCORPION:	equ	$12
-	.BAT:		equ	$14
-	.SNAKE:		equ	$16
-
-	.SKULL4:	equ	$10
-	.SCORPION4:	equ	$28
-	.BAT4:		equ	$30
-	.SNAKE4:	equ	$38
-
-	.DOOR_0:	equ	$18
-	.DOOR_1:	equ	$19
-	.DOOR_2:	equ	$18
-	.BULLET:	equ	$1A
-	.EXPLOSION:	equ	$1C
-
-	.EXPLOSION_0:	equ $1C
-	.EXPLOSION_1:	equ $1D
-	.EXPLOSION_2:	equ $1E
-
-CFG_TILES_PATTERN:
-	.TILE_WALL:		equ $30
-	.TILE_BOX:		equ $34
-	.TILE_GUN:		equ $38
-	.TILE_DIAMOND:		equ $3C
-	.TILE_WALL_WARP:	equ $40
-	.TILE_EXIT:		equ $44
-	.TILE_NEST:		equ $48
-	.TILE_NEST1:		equ $48
-	.TILE_NEST2:		equ $4C
-	.TILE_FLOOR:		equ $58 ; $FC
-
-	.TILE_WALL_END:		equ CFG_TILES_PATTERN.TILE_WALL  + 1*4
-	.TILE_BOX_END:		equ CFG_TILES_PATTERN.TILE_BOX   + 1*4
-	.TILE_GUN_END:		equ CFG_TILES_PATTERN.TILE_GUN   + 1*4
-	.TILE_DIAMOND_END:	equ CFG_TILES_PATTERN.TILE_DIAMOND + 1*4
-	.TILE_WALL_WARP_END:	equ CFG_TILES_PATTERN.TILE_WALL_WARP + 1*4
-	.TILE_EXIT_END:		equ CFG_TILES_PATTERN.TILE_EXIT  + 1*4
-	.TILE_NEST_END:		equ CFG_TILES_PATTERN.TILE_NEST  + 2*4
-	.TILE_NEST1_END:	equ CFG_TILES_PATTERN.TILE_NEST1 + 1*4
-	.TILE_NEST2_END:	equ CFG_TILES_PATTERN.TILE_NEST2 + 1*4
-	.TILE_FLOOR_END:	equ CFG_TILES_PATTERN.TILE_FLOOR + 1*4
+CFG_BG_COLOR:
+	.INIT:		equ 1
+	.DEFAULT:	equ 4	; 4
+	.SPHINX:	equ 1	; 1
+	.DEAD_1:	equ 8	; 6
+	.DEAD_2:	equ 9	; 4
+	.DEAD_3:	equ 6
+	.EXIT:		equ 12	; 3
 
 CFG_EXIT:
 	.BLINK_FRAMES:	equ 10
-
-CFG_PYRAMID:
-	.ROOM_VISITED:		equ $51
-	.ROOM_NOT_VISITED:	equ $53
-
 
 CFG_HUD:			; $yyxx coordinates
 	.HIGH_COORDS:		equ $081A ; 0819h
@@ -142,12 +24,10 @@ CFG_HUD:			; $yyxx coordinates
 	.ROOM_COORDS:		equ $101E ; 101Dh
 	.LIVES_COORDS:		equ $171A ; 1719h
 
-
 CFG_OTHERS:
 	.OPTIONS_0:		equ ($02 << 4) + ($01 << 2) + ($01) ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
-	.NUMBERS_WITH_COLOR:	; Uncomment to paint number with color
 	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
@@ -164,9 +44,12 @@ enemy_sprite_plane:	equ 7
 
 ; -----------------------------------------------------------------------------
 
+; =============================================================================
+; 	ROM
+; =============================================================================
+
 ; -----------------------------------------------------------------------------
-; ROM header and entry point
-;	org	$8000, $9fff ; 8KB ROM
+; MSX cartridge (ROM) header, entry point and initialization
 	org	$8000, $bfff ; 16KB ROM
 ROM_START:
 	db	"AB"		; ID ("AB")
@@ -184,25 +67,10 @@ ROM_START:
 	ld	[HKEYI], a
 	ld	[HTIMI], a
 
-; Zeroes all the used RAM
-	ld	hl, $e000
-	ld	de, $e001
-	ld	bc, $f380 - $e000 -1
-	ld	[hl], l ; l = $00
-	ldir
-; Initializes the options
-	ld	a, CFG_OTHERS.OPTIONS_0
-	ld	[options], a
-
-; color 15, 0, 1
-	ld	a,0Fh
-	ld	(FORCLR),a
-	xor	a
-	ld	(BAKCLR),a
-	inc	a
-	ld	(BDRCLR),a
-
-; screen 2
+; VDP: color ,,1
+	ld	a, CFG_BG_COLOR.INIT
+	ld	[BDRCLR], a
+; VDP: screen 2
 	call	INIGRP
 ; screen ,2
 	call	DISSCR
@@ -211,6 +79,18 @@ ROM_START:
 ; screen ,,0
 	xor	a
 	ld	[CLIKSW], a
+
+; Zeroes all the used RAM
+	ld	hl, ram_start
+	ld	de, ram_start +1
+	ld	bc, ram_end - ram_start  -1
+	ld	[hl], l ; l = $00
+	ldir
+
+; PSG: silence
+	call	GICINI
+; Initializes the replayer
+	call	REPLAYER.RESET
 
 ; Frame rate related variables
 	ld	a, [MSXID1]
@@ -221,14 +101,6 @@ ROM_START:
 .HL_OK:
 	ld	[frame_rate], hl
 
-; Hides the sprites
-	call	CLEAR_SPRITES
-	call	LDIRVM_SPRITES
-
-; Initializes the replayer
-	call	GICINI
-	call	REPLAYER.RESET
-
 ; Installs the H.TIMI hook in the interruption
 	di
 	ld	a, $c3 ; opcode for "JP nn"
@@ -237,189 +109,33 @@ ROM_START:
 	ld	[HTIMI +1], hl
 	ei
 
-; CLS (with custom "blank" characteR)
-	ld	hl,NAMTBL
-	ld	bc,NAMTBL.SIZE
-	ld	a,2Fh
-	call	FILVRM
+; Performs the only-once initialization
+	call	INIT_ONCE
+; ------VVVV----falls through--------------------------------------------------
 
-	ld	b,b
-	jr	$+2
-
-; init font
-	ld	hl,DATA_FONT
-	ld	de,CHRTBL
-	ld	bc,DATA_FONT.SIZE
-	call	UNPACK_AND_LDIRVM_3_BANKS
-	ld	a, 15 << 4 or 0
-	ld	hl,CLRTBL
-	ld	bc,CLRTBL.SIZE
-	call	FILVRM
-	IFDEF CFG_OTHERS.NUMBERS_WITH_COLOR
-		ld	a, 7 << 4 or 0
-		ld	hl,CLRTBL.BANK_0
-		ld	bc,10*8
-		call	FILVRM
-		ld	a, 7 << 4 or 0
-		ld	hl,CLRTBL.BANK_1
-		ld	bc,10*8
-		call	FILVRM
-		ld	a, 7 << 4 or 0
-		ld	hl,CLRTBL.BANK_2
-		ld	bc,10*8
-		call	FILVRM
-	ENDIF
-
-; Init CHRTBL/CLRTBL
-	ld	hl, DATA_CHARSET.CHR
-	ld	de, CHRTBL + $30 * $08
-	ld	bc, DATA_CHARSET.SIZE ; - $08
-	call	UNPACK_AND_LDIRVM_3_BANKS
-	ld	hl, DATA_CHARSET.CLR
-	ld	de, CLRTBL + $30 * $08
-	call	UNPACK_AND_LDIRVM_3_BANKS
-; Init CHRTBL/CLRTBL (last character)
-	; ld	hl, DATA_CHARSET.CHR_FF
-	; ld	de, CHRTBL + $FF * $08
-	; ld	bc, $08
-	; call	UNPACK_AND_LDIRVM_3_BANKS
-	; ld	hl, DATA_CHARSET.CLR_FF
-	; ld	de, CLRTBL + $FF * $08
-	; call	UNPACK_AND_LDIRVM_3_BANKS
-; init sprites
-	ld	hl, DATA_SPRTBL
-	ld	de, unpack_buffer
-	call	UNPACK
-	ld	hl, unpack_buffer
-	ld	de, SPRTBL
-	ld	bc, SPRTBL.SIZE
-	call	LDIRVM
-
-; Init on-screen texts
-	ld	hl,LITERAL.MSX
-	ld	de,$030e ; 080Dh
-	ld	b,03h
-	call	PRINT
-	ld	hl,LITERAL.PYRAMID_WARP_TITLE
-	ld	de,$050a ; 0909h
-	ld	b,0Ch
-	call	PRINT
-	ld	hl,LITERAL.PYRAMID_WARP_TITLE + $0c
-	ld	de,$060a
-	ld	b,0Ch
-	call	PRINT
-	ld	hl,LITERAL.COPYRIGHT
-	ld	de,$0806 ; 0C05h
-	ld	b,14h
-	call	PRINT
-
-	call	ENASCR
-
-; Options menu
-	call	OPTIONS_MENU
-; "Hit space key"
-	; ld	de, $1008
-	; call	HIT_SPACE_KEY
-
-; color ,,4
-	ld	bc,CFG_COLOR.BG << 8 + 07h
+; -----------------------------------------------------------------------------
+; Game entry point
+INIT:
+; color ,,1
+	ld	bc, CFG_BG_COLOR.INIT << 8 + 07h
 	call	WRTVDP
 
-; Fills in playground
-	ld	de,0001h
-	ld	bc, $1918 ; was: 1818h, now clears spurious characters
-	xor	a ; enhancedplus
-.LOOP:
-	push	de
-	push	bc
-	ld	hl, LITERAL.WALL_x24 ; (followed by blanks!)
-	call	PRINT
-	pop	bc
-	pop	de
+; Hides the sprites
+	call	CLEAR_SPRITES
+	call	LDIRVM_SPRITES
 
-	inc	a
-	inc	d
-	dec	c
-	jr	nz, .LOOP
+; Options menu
+	call	INIT_MAIN_MENU
+	call	ENASCR
+	call	MAIN_MENU_LOOP
 
-; Prints HUD
-	ld	hl,LITERAL.DASHES
-	ld	de,0019h
-	ld	b,07h
-	call	PRINT
-	ld	hl,LITERAL.PYRAMID
-	ld	de,0119h
-	ld	b,07h
-	call	PRINT
-	ld	hl,LITERAL.DASHES
-	ld	de,0219h
-	ld	b,07h
-	call	PRINT
-	ld	hl,LITERAL.TnESOFT
-	ld	de,0419h
-	ld	b,07h
-	call	PRINT
-	ld	hl,LITERAL.Y1983
-	ld	de,051Bh
-	ld	b,04h
-	call	PRINT
-	ld	hl,LITERAL.HIGH
-	ld	de,0719h
-	ld	b,04h
-	call	PRINT
-	ld	hl,LITERAL.SCORE
-	ld	de,0A19h
-	ld	b,05h
-	call	PRINT
-	ld	hl,LITERAL.ROOM
-	ld	de,1019h
-	ld	b,04h
-	call	PRINT
-	ld	hl,LITERAL.AIR
-	ld	de,0D19h
-	ld	b,03h
-	call	PRINT
+; color ,,4
+	ld	bc,CFG_BG_COLOR.DEFAULT << 8 + 07h
+	call	WRTVDP
 
-; High score = 0
-	xor	a
-	ld	(game.high_score_bcd),a
-	ld	(game.high_score_bcd +1),a
-	ld	(game.high_score_bcd +2),a
+; Prepares the playground
+	call	INIT_INGAME
 
-; Sprite patterns, colors and planes
-	ld	a,CFG_COLOR.SCORPION ; 09h
-	ld	(scorpion1.spratr_color),a
-	ld	(scorpion2.spratr_color),a
-	ld	a, CFG_BASE_PATTERN.SCORPION4 * 4 ; 12h
-	ld	(scorpion1.base_pattern),a
-	ld	(scorpion2.base_pattern),a
-
-	ld	a,CFG_COLOR.BAT ; 01h
-	ld	(bat1.spratr_color),a
-	ld	(bat2.spratr_color),a
-	ld	a, CFG_BASE_PATTERN.BAT4 * 4 ; 14h
-	ld	(bat1.base_pattern),a
-	ld	(bat2.base_pattern),a
-
-	ld	a,CFG_COLOR.SNAKE
-	ld	(snake1.spratr_color),a
-	ld	(snake2.spratr_color),a
-	ld	a, CFG_BASE_PATTERN.SNAKE4 * 4 ; 16h
-	ld	(snake1.base_pattern),a
-	ld	(snake2.base_pattern),a
-
-	ld	a, 2
-	ld	(scorpion1.sprite_plane), a
-	inc	a
-	ld	(bat1.sprite_plane), a ; 3
-	inc	a
-	ld	(snake1.sprite_plane), a ; 4
-	inc	a
-	ld	(scorpion2.sprite_plane), a ; 5
-	inc	a
-	ld	(bat2.sprite_plane), a ; 6
-	inc	a
-	ld	(snake2.sprite_plane), a ; 7
 ; ------VVVV----falls through--------------------------------------------------
 
 	; Referenced from 8E07
@@ -642,7 +358,7 @@ PRINT_ROOM_DECORATION:
 	push	hl ; (preserve)
 ; (prints nest)
 	call	TO_VRAM_COORDINATES
-	ld	a, CFG_TILES_PATTERN.TILE_NEST  ; $48 ; 54h
+	ld	a, CHARACTER.NEST  ; $48 ; 54h
 	call	PRINT_TILE
 	pop	hl ; (restore)
 
@@ -808,7 +524,7 @@ NEW_BOX:
 	call	TO_VRAM_COORDINATES
 	ld	(ix+00h),000h ; box.is_opening
 ; Prints box
-	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
+	ld	a, CHARACTER.BOX ; 34h ; ($34 = box)
 	call	PRINT_TILE
 ; (restore data pointer and end)
 	pop	hl
@@ -846,7 +562,7 @@ NEW_DOOR:
 	add	a,a
 	ld	(ix),a ; door.spratr_pat
 ; saves door color
-	ld	(ix + 1),CFG_COLOR.DOOR_0 ; door.spratr_color
+	ld	(ix + 1),SPRITE_COLOR.DOOR_0 ; door.spratr_color
 ; Prints door sprite
 	pop	de ; (restores pointer to spratr_y)
 	ld	a, 9
@@ -861,7 +577,7 @@ NEW_DOOR:
 PRINT_SPHINX_ROOM_DECORATION:
 ; Prints single box
 	ld	de,0B0Ch	; address or value?
-	ld	a, CFG_TILES_PATTERN.TILE_BOX ; 34h ; ($34 = box)
+	ld	a, CHARACTER.BOX ; 34h ; ($34 = box)
 	call	PRINT_TILE
 
 ; Do not initialize doors
@@ -929,7 +645,7 @@ INIT_GAME_LOOP:
 	ld	(hl),a
 ; Sets player color
 	inc	hl ; player.spratr_color
-	ld	(hl),CFG_COLOR.PLAYER ; 0Bh
+	ld	(hl),SPRITE_COLOR.PLAYER ; 0Bh
 
 ; Put player sprite
 	pop	de ; player.spratr_y
@@ -988,7 +704,7 @@ GAME_LOOP:
 
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	b, CFG_PYRAMID.ROOM_NOT_VISITED ; $53 ; ($63 = non visited room)
+	ld	b, CHARACTER.ROOM_NOT_VISITED ; $53 ; ($63 = non visited room)
 	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L86AC
@@ -1129,11 +845,11 @@ GAME_LOOP.DOORS_OK:
 	add	a,a
 	ld	(player.spratr_pat),a
 ; Computes and sets the sprite color
-	ld	b,CFG_COLOR.PLAYER ; yellow (without gun)
+	ld	b,SPRITE_COLOR.PLAYER ; yellow (without gun)
 	ld	a,(player_has_gun)
 	or	a
 	jr	z,.L878B
-	ld	b,CFG_COLOR.PLAYER_GUN ; white (with gun)
+	ld	b,SPRITE_COLOR.PLAYER_GUN ; white (with gun)
 .L878B:	ld	a,b
 	ld	(player.spratr_color),a
 ; Prints the player sprite
@@ -1163,7 +879,7 @@ GAME_LOOP.DOORS_OK:
 	add	a,07h
 	ld	(iy+01h),a
 	ld	(iy+02h),70h ; bullet pattern
-	ld	(iy+03h),CFG_COLOR.BULLET; bullet color
+	ld	(iy+03h),SPRITE_COLOR.BULLET; bullet color
 	ld	a,(ix+04h) ; direction
 	ld	(iy+04h),a
 	ld	(iy+05h),0FFh ; bullet status active
@@ -1361,7 +1077,7 @@ MOVE_SKULL:
 	ld	a,b
 	add	a,a
 	add	a,a
-	add	a, CFG_BASE_PATTERN.SKULL4*4
+	add	a, SPRITE_PATTERN.SKULL4*4
 
 	ld	(skull.spratr_pat),a
 ; Puts the skull sprite
@@ -1401,7 +1117,7 @@ GAME_LOOP.SKULL_OK:
 ; Animates the bullet each eight frames
 	ld	a,(aux.frame_counter)
 	and	08h
-	ld	a, CFG_BASE_PATTERN.BULLET ; 1Ah
+	ld	a, SPRITE_PATTERN.BULLET ; 1Ah
 	jr	z,.L8934
 	inc	a
 ; (computes bullet pattern)
@@ -1426,9 +1142,9 @@ GAME_LOOP.SKULL_OK:
 	sub	07h ; (aligns the explosion sprite)
 	ld	(hl),a
 	inc	hl ; bullet.spratr_pat
-	ld	(hl),CFG_BASE_PATTERN.EXPLOSION_2*4 ; 78h
+	ld	(hl),SPRITE_PATTERN.EXPLOSION_2*4 ; 78h
 	inc	hl ; bullet.spratr_color
-	ld	(hl),CFG_COLOR.EXPLOSION
+	ld	(hl),SPRITE_COLOR.EXPLOSION
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
 	ld	(hl),06h
@@ -1485,7 +1201,7 @@ GAME_LOOP.BULLET_OK:
 	or	a
 	jr	z,.L89B1
 ; (prints the exit)
-	ld	a, CFG_TILES_PATTERN.TILE_EXIT ; $44 ; 50h
+	ld	a, CHARACTER.EXIT ; $44 ; 50h
 	call	PRINT_TILE
 	jr	.L89B4
 ; (clears the exit)
@@ -1506,7 +1222,7 @@ GAME_LOOP.BULLET_OK:
 	call	z, ON_FLOOR_CHANGE
 ; prints the room as visited
 	ld	de,(pyramid.room_namtbl_ptr)
-	ld	a, CFG_PYRAMID.ROOM_VISITED ; $51
+	ld	a, CHARACTER.ROOM_VISITED ; $51
 	call	PRINT_CHAR
 ; Plays exit sound
 	call	PLAY_SOUND_EXIT
@@ -1557,7 +1273,7 @@ GAME_LOOP.EXIT_OK:
 ; if 0, removes explosion
 	jr	z,.L8A2D
 ; if < 4, makes explosion smaller
-	ld	b, CFG_BASE_PATTERN.EXPLOSION ; $1c
+	ld	b, SPRITE_PATTERN.EXPLOSION ; $1c
 	cp	04h
 	jr	c,.L8A1B
 	inc	b
@@ -1570,7 +1286,7 @@ GAME_LOOP.EXIT_OK:
 	add	a,a
 	add	a,a
 	ld	(ix+02h),a ; bullet.spratr_pat
-	ld	(ix+03h),CFG_COLOR.EXPLOSION ; bullet.spratr_color
+	ld	(ix+03h),SPRITE_COLOR.EXPLOSION ; bullet.spratr_color
 	jr	.L8A32
 
 ; Removes bullet
@@ -1602,9 +1318,9 @@ GAME_LOOP.EVERYTHING_OK:
 ; Animates the enemies nest each four frames
 	ld	a,(aux.frame_counter)
 	and	04h
-	ld	b, CFG_TILES_PATTERN.TILE_NEST1 ; $48 ; 54h
+	ld	b, CHARACTER.NEST1 ; $48 ; 54h
 	jr	z,.L8A5D
-	ld	b, CFG_TILES_PATTERN.TILE_NEST2 ; $4c ; 58h
+	ld	b, CHARACTER.NEST2 ; $4c ; 58h
 ; Prints nest
 .L8A5D:	ld	a,(nest.spratr_y)
 	rrca
@@ -1638,9 +1354,9 @@ GAME_LOOP.EVERYTHING_OK:
 .L8A8B:	ld	a,(aux.frame_counter)
 	and	04h
 	jr	z,.L8A98
-	ld	bc,CFG_COLOR.DOOR_1 << 8 + CFG_COLOR.DOOR_2
+	ld	bc,SPRITE_COLOR.DOOR_1 << 8 + SPRITE_COLOR.DOOR_2
 	jr	.L8A9C
-.L8A98:	ld	bc,CFG_COLOR.DOOR_2 << 8 + CFG_COLOR.DOOR_1
+.L8A98:	ld	bc,SPRITE_COLOR.DOOR_2 << 8 + SPRITE_COLOR.DOOR_1
 ; Sets door colors (RAM)
 .L8A9C:	ld	a,b
 	ld	(door1.spratr_color),a
@@ -1717,7 +1433,7 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	de,121Ch	; address or value?
 	call	PRINT_CHAR
 ; color ,,1
-	ld	bc,CFG_COLOR.BG_SPHINX << 8 + 07h
+	ld	bc,CFG_BG_COLOR.SPHINX << 8 + 07h
 	call	WRTVDP
 ; Increase score
 	ld	de,2000h ; 2000 points (BCD)
@@ -1739,7 +1455,7 @@ CHECK_SPHINX_ROOM_BOX:
 	call	HIT_SPACE_KEY
 
 ; color ,,4
-	ld	bc,CFG_COLOR.BG << 8 + 07h
+	ld	bc,CFG_BG_COLOR.DEFAULT << 8 + 07h
 	call	WRTVDP
 ; Extra life
 	ld	hl, game.lives
@@ -1866,10 +1582,10 @@ CHECK_WALL:
 	ld	b,a
 
 	; Checks for floor
-		ld	a, CFG_TILES_PATTERN.TILE_FLOOR-1
+		ld	a, CHARACTER.FLOOR-1
 		cp	b
 		jr	nc, .L8BFB_ ; no
-		ld	a, CFG_TILES_PATTERN.TILE_FLOOR_END-1
+		ld	a, CHARACTER.FLOOR_END-1
 		cp	b
 		jr	c, .L8BFB_ ; no
 	; yes: wall
@@ -1882,10 +1598,10 @@ CHECK_WALL:
 	jr	z,.L8C20 ; no
 
 ; Checks for box (player only)
-	ld	a, CFG_TILES_PATTERN.TILE_BOX-1 ; $34 -1 ; >= $34?
+	ld	a, CHARACTER.BOX-1 ; $34 -1 ; >= $34?
 	cp	b
 	jr	nc,.L8C13 ; no
-	ld	a, CFG_TILES_PATTERN.TILE_BOX_END-1 ; $38 -1 ; and <= $37?
+	ld	a, CHARACTER.BOX_END-1 ; $38 -1 ; and <= $37?
 	cp	b
 	jr	c,.L8C13 ; no
 ; yes: box, not a wall
@@ -1894,10 +1610,10 @@ CHECK_WALL:
 
 ; Checks for exit (player only)
 .L8C13:
-	ld	a, CFG_TILES_PATTERN.TILE_EXIT-1 ; $44 -1 ; >= $44?
+	ld	a, CHARACTER.EXIT-1 ; $44 -1 ; >= $44?
 	cp	b
 	jr	nc,.L8C20 ; no
-	ld	a, CFG_TILES_PATTERN.TILE_EXIT_END-1 ; $48 -1 ; and <= $48?
+	ld	a, CHARACTER.EXIT_END-1 ; $48 -1 ; and <= $48?
 	cp	b
 	jr	c,.L8C20 ; no
 ; yes: exit, not a wall
@@ -2190,7 +1906,7 @@ CHECK_ENEMY_BULLET_COLLISION:
 	inc	hl ; bullet.spratr_pat
 	ld	(hl),78h
 	inc	hl ; bullet.spratr_color
-	ld	(hl),CFG_COLOR.EXPLOSION
+	ld	(hl),SPRITE_COLOR.EXPLOSION
 	inc	hl ; bullet.direction
 	inc	hl ; bullet.status
 	ld	(hl),06h
@@ -2247,7 +1963,7 @@ KILL_PLAYER:
 .L8DCA:	pop	hl
 	call	PLAY_DEAD_MUSIC
 ; color ,,4
-	ld	bc,CFG_COLOR.BG << 8 + 07h
+	ld	bc,CFG_BG_COLOR.DEFAULT << 8 + 07h
 	call	WRTVDP
 	jp	DEC_LIVES_AND_NEW_ROOM
 ; -----------------------------------------------------------------------------
@@ -2326,7 +2042,7 @@ OPEN_BOX_DIAMOND:
 	xor	a
 	ld	(exit.unused2),a
 ; Prints the diamond
-	ld	a, CFG_TILES_PATTERN.TILE_DIAMOND ; 3Ch
+	ld	a, CHARACTER.DIAMOND ; 3Ch
 	call	PRINT_TILE
 ; Prepares the mark to opening the door (2 "airs" later)
 	ld	hl,(game.air_left)
@@ -2347,7 +2063,7 @@ OPEN_BOX_GUN:
 .L8E76:	ld	a,08h
 	ld	(player_has_gun),a
 ; Prints the gun
-	ld	a, CFG_TILES_PATTERN.TILE_GUN ; 38h
+	ld	a, CHARACTER.GUN ; 38h
 	call	PRINT_TILE
 ; Scores 100 points
 	ld	de,0100h
@@ -2365,15 +2081,15 @@ OPEN_BOX_SKULL:
 	inc	hl ; skull.spratr_x
 	ld	(hl),e
 	inc	hl ; skull.spratr_pattern
-	ld	(hl),CFG_BASE_PATTERN.SKULL4*4+12 ; 40h
+	ld	(hl),SPRITE_PATTERN.SKULL4*4+12 ; 40h
 	inc	hl ; skull.spratr_color
-	ld	(hl),CFG_COLOR.SKULL
+	ld	(hl),SPRITE_COLOR.SKULL
 	inc	hl ; skull.direction
 	xor	a
 	ld	(hl),a
 	inc	hl ; skull.status
 	inc	hl ; skull.base_pattern
-	ld	(hl),CFG_BASE_PATTERN.SKULL4 ; 10h
+	ld	(hl),SPRITE_PATTERN.SKULL4 ; 10h
 	inc	hl ; skull.sprite_plane
 	ld	(hl),03h
 ; Put skull sprite
@@ -2507,7 +2223,7 @@ ENDIF
 	dec	a
 	jr	nz,.L8FBD
 ; color ,,6
-	ld	bc,CFG_COLOR.BG_DEAD_3 << 8 + 07h
+	ld	bc,CFG_BG_COLOR.DEAD_3 << 8 + 07h
 	call	WRTVDP
 ; (delay)
 	call	REPLAYER.WAIT
@@ -2518,10 +2234,10 @@ ENDIF
 	ld	a,(aux.dying_flashes)
 	cpl
 	ld	(aux.dying_flashes),a
-	ld	b,CFG_COLOR.BG_DEAD_2
+	ld	b,CFG_BG_COLOR.DEAD_2
 	or	a
 	jr	nz,.L905F
-	ld	b,CFG_COLOR.BG_DEAD_1
+	ld	b,CFG_BG_COLOR.DEAD_1
 ; color ,,b
 .L905F:	ld	c,07h
 	call	WRTVDP
@@ -2549,13 +2265,13 @@ ENDIF
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_EXIT:
 ; color ,,3
-	ld	bc, CFG_COLOR.BG_EXIT << 8 + 07h
+	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
 	call	WRTVDP
 ; Plays the jingle
 	ld	hl, .SONG
 	call	REPLAYER.PLAY_JINGLE
 ; color ,,4
-	ld	bc, CFG_COLOR.BG << 8 + 07h
+	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
 	jp	WRTVDP
 .SONG:
 	incbin "asm/enhancedplus/PW_LevelFinished.pt3.zx7"
@@ -2564,13 +2280,13 @@ PLAY_SOUND_EXIT:
 ; -----------------------------------------------------------------------------
 PLAY_SOUND_SPHINX:
 ; color ,,3
-	ld	bc, CFG_COLOR.BG_EXIT << 8 + 07h
+	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
 	call	WRTVDP
 ; Plays the jingle
 	ld	hl, .SONG
 	call	REPLAYER.PLAY_JINGLE
 ; color ,,4
-	ld	bc, CFG_COLOR.BG << 8 + 07h
+	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
 	jp	WRTVDP
 .SONG:
 	incbin "asm/enhancedplus/PW_VT2_Sphinx.pt3.zx7"
@@ -2721,41 +2437,6 @@ LDIRVM_SPRITES:
 	ld	de, SPRATR
 	ld	bc, spratr_buffer.size
 	jp	LDIRVM
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-UNPACK_AND_LDIRVM_3_BANKS:
-	push	de
-	push	bc
-; Unpacks
-	ld	de, unpack_buffer
-	call	UNPACK
-; Prepare for blitting
-	ld	hl, unpack_buffer
-	pop	bc
-	pop	de
-; ------VVVV----falls through--------------------------------------------------
-
-; -----------------------------------------------------------------------------
-LDIRVM_3_BANKS:
-	call	.BLIT
-	call	.BLIT
-.BLIT:
-; Preserves everything
-	push	hl
-	push	bc
-	push	de
-; Actual LDIRVM
-	call	LDIRVM
-; Restores dest and moves to next bank
-	pop	hl
-	ld	bc, CHRTBL.BANK_SIZE
-	add	hl, bc
-	ex	de, hl
-; Restores size and source
-	pop	bc
-	pop	hl
-	ret
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 86C2
@@ -3029,7 +2710,7 @@ PRINT:
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
 CLEAR_TILE:
-	ld a, CFG_TILES_PATTERN.TILE_FLOOR
+	ld a, CHARACTER.FLOOR
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3166,15 +2847,10 @@ LITERAL:
 	DB	$1D, $1B, $22, $FF			; TRY_
 	DB	$1D, $11, $0E, $FF			; THE_
 	DB	$17, $0E, $21, $1D, $FF			; NEXT_
-.PYRAMID_WARP:
 .PYRAMID:
 	DB	$19, $22, $1B, $0A, $16, $12, $0D	; PYRAMID
 	DB	$2F					; _
 	DB	$20, $0A, $1B, $19			; WARP
-.MSX: ; 9CAC
-	DB	$16, $1C, $21				; MSX
-.COPYRIGHT: ; 9CBB
-	DB	$28, $0C, $29, $2F			; (C)_
 .Y1983:
 	DB	$01, $09, $08, $03, $2F			; 1983_
 	DB	$0B, $22, $2F				; BY_
@@ -3183,10 +2859,6 @@ LITERAL:
 .GAME_OVER: ; 9CCF
 	DB	$10, $0A, $16, $0E, $FF			; GAME_
 	DB	$18, $1F, $0E, $1B			; OVER
-.PYRAMID_WARP_TITLE:
-	;	P__  Y__  R__  A__  M____  I_ D__    W_____  A__  R__  P__
-	DB	$8A, $8B, $8C, $8D, $8E, $8F, $90, $91, $92, $8D, $8C, $8A
-	DB	$93, $94, $95, $96, $97, $98, $99, $9A, $9B, $96, $95, $93
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3237,33 +2909,6 @@ DATA_SOUND.SPHINX:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-DATA_FONT:
-	incbin	"asm/enhancedplus/font.pcx.chr.zx7"
-	.SIZE:	equ 384
-
-DATA_SPRTBL:
-	incbin	"asm/enhancedplus/sprites.pcx.spr.zx7"
-	.SIZE:	equ 2048
-
-DATA_CHARSET:
-	.CHR:
-	incbin	"asm/enhancedplus/full_charset.pcx.chr.zx7"
-	.CHR_FF:	equ .CHR + 720 - 8
-	.SIZE:		equ 880
-	; incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
-	; .CHR_FF:	equ $ - 8
-	; incbin	"asm/enhancedplus/title.pcx.chr.zx7"
-	; incbin	"asm/enhancedplus/cursor.pcx.chr.zx7"
-	; .SIZE:	equ $ - DATA_CHARSET
-
-	.CLR:
-	incbin	"asm/enhancedplus/full_charset.pcx.clr.zx7"
-	.CLR_FF:	equ .CLR + 720 - 8
-	; incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
-	; .CLR_FF:	equ $ - 8
-	; incbin	"asm/enhancedplus/title.pcx.clr.zx7"
-	; incbin	"asm/enhancedplus/cursor.pcx.clr.zx7"
-
 DATA_WALL_ENHANCE:
 	DB	$30,	$31,	$32,	$33	; 0
 	DB	$5D,	$31,	$5C,	$33	; 1
@@ -3411,237 +3056,6 @@ REPLAYER.FRAME:
 ; "Standard" version (69 bytes only)
 UNPACK:
 	include	"asm/libext/dzx7_standard.tniasm.asm"
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-OPTIONS_MENU:
-; Print option titles
-	ld	hl, .ROOMS
-	ld	de, $0C06
-	ld	b, 8
-	call	PRINT
-
-	ld	hl, .MIRRORING
-	ld	de, $0E05
-	ld	b, 9
-	call	PRINT
-
-	ld	hl, .ENEMIES
-	ld	de, $1004
-	ld	b, 10
-	call	PRINT
-
-; Initialization
-	xor	a
-	ld	[prevstick], a
-	ld	[cursor], a
-
-.LOOP:
-; Prints cursor and current option values (1/3)
-	xor	a
-	ld	de, $0c0f
-	call	.PRINT_CURSOR
-	ld	hl, .ROOMS_VALUES
-	ld	de, $0c12
-	ld	a, [options] ; 00eemmrr
-	and	$03
-	call	.PRINT_OPTION_VALUE_x8
-
-; Prints cursor and current option values (2/3)
-	ld	a, 1
-	ld	de, $0e0f
-	call	.PRINT_CURSOR
-	ld	hl, .MIRRORING_VALUES
-	ld	de, $0e12
-	ld	a, [options] ; 00eemmrr
-	and	$04
-	call	.PRINT_OPTION_VALUE_x2
-
-; Prints cursor and current option values (3/3)
-	ld	a, 2
-	ld	de, $100f
-	call	.PRINT_CURSOR
-	ld	hl, .ENEMIES_VALUES
-	ld	de, $1012
-	ld	a, [options] ; 00eemmrr
-	and	$30
-	srl	a
-	call	.PRINT_OPTION_VALUE
-
-; Prints "Hit space key"
-	call	.PRINT_HIT_SPACE_KEY
-
-; Changes option on stick
-	call	.CHANGE_OPTION
-
-; Returns on trigger
-	call	GTTRIG_ANY
-	or	a
-	ret	nz
-	jr	.LOOP
-
-
-; param hl: .XXX_VALUES
-; param de: yyxx
-; param a: value as multiple of 8 ($00, $08, $10)
-.PRINT_OPTION_VALUE_x8:
-	add	a
-	add	a
-.PRINT_OPTION_VALUE_x2:
-	add	a
-.PRINT_OPTION_VALUE:
-	call	ADD_HL_A
-	ld	b, 8
-	jp	PRINT
-
-; param a: the option index
-; param de: yyxx
-.PRINT_CURSOR:
-	ld	hl, cursor
-	cp	[hl]
-	ld	hl, .CURSOR
-	jr	z, .PRINT_CURSOR_HL_OK
-	ld	hl, LITERAL.BLANKS
-.PRINT_CURSOR_HL_OK:
-	ld	b, 2
-	jp	PRINT
-
-; no params
-.PRINT_HIT_SPACE_KEY:
-	ld	hl, aux.frame_counter_2
-	ld	a, [hl]
-	inc	a
-	ld	[hl], a
-	ld	hl, HIT_SPACE_KEY.LITERAL
-	and	$40
-	jr	nz, .HIT_SPACE_KEY_HL_OK
-	ld	hl, LITERAL.BLANKS
-.HIT_SPACE_KEY_HL_OK:
-	ld	de, $1409 ; $1008
-	ld	b,0Dh
-	jp	PRINT
-
-
-; param a: GTSTCK_ANY return value
-.CHANGE_OPTION:
-	call	GTSTCK_ANY
-; Compares with previous value
-	ld	hl, prevstick
-	cp	[hl]
-	ret	z ; (same value)
-; Saves new value
-	ld	[hl], a
-	or	a
-	ret	z ; (no input)
-; Input: translates to direction values
-	dec	a	; 0..7
-	srl	a	; 0..3
-
-	inc	hl ; (hl = cursor, for convenience purposes)
-; Up?
-	or	a
-	jr	nz, .NO_UP
-; Moves cursor up
-	xor	[hl] ; a already 0, checks if cursor is 0
-	ret	z
-	dec	[hl]
-	ret
-.NO_UP:
-
-; Down?
-	cp	2
-	jr	nz, .NO_DOWN
-; Moves cursor down
-	xor	[hl] ; a already 2, checks if cursor is 2
-	ret	z
-	inc	[hl]
-	ret
-.NO_DOWN:
-
-	ld	b, [hl] ; b = cursor index
-	inc	hl ; hl = options
-
-; Mirroring option?
-	djnz	.NO_MIRRORING
-; Changes the mirroring option
-	dec	a ; 0 = right, 2 = left
-	add	a ; 0 = right, 4 = left
-	xor	4 ; 4 = right, 0 = left
-	ld	b, a
-	ld	a, [hl]
-	and	$f3
-	or	b
-	ld	[hl], a
-	ret
-.NO_MIRRORING:
-
-; Enemies option?
-	djnz	.NO_ENEMIES
-; Changes the enemies option
-	dec	a
-	ld	a, [hl]
-	jr	nz, .DEC_ENEMIES
-; Moves enemies option to the right
-	and	$30
-	cp	$30
-	ret	z ; (was already rightmost)
-	ld	a, [hl]
-	add	$10
-	ld	[hl], a
-	ret
-; Moves enemies option to the left
-.DEC_ENEMIES:
-	and	$30
-	ret	z ; (was already leftmost)
-	ld	a, [hl]
-	sub	$10
-	ld	[hl], a
-	ret
-.NO_ENEMIES:
-
-; Rooms option?
-; Changes the rooms option
-	dec	a
-	ld	a, [hl]
-	jr	nz, .DEC_ROOMS
-; Moves rooms option to the right
-	and	$03
-	cp	$02
-	ret	z ; (already rightmost)
-	inc	[hl]
-	ret
-; Moves rooms option to the left
-.DEC_ROOMS:
-	and	$03
-	ret	z ; (already leftmost)
-	dec	[hl]
-	ret
-
-
-.ROOMS:
-	DB	$19, $22, $1B, $0A, $16, $12, $0D, $1C	; PYRAMIDS
-.ROOMS_VALUES:
-	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-	db	$17, $0E, $20, $0E, $1B, $FF, $FF, $FF	; NEWER
-
-.MIRRORING:
-	db	$16, $12, $1B, $1B, $18, $1B, $12, $17, $10 ; MIRRORING
-.MIRRORING_VALUES:
-	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-
-.ENEMIES:
-	db	$0D, $12, $0F, $0F, $12, $0C, $1E, $15, $1D, $22 ; DIFFICULTY
-.ENEMIES_VALUES:
-	db	$0E, $0A, $1C, $12, $0E, $1B, $FF, $FF	; EASIER (3)
-	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL (4)
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-	db	$11, $0A, $1B, $0D, $0E, $1B, $FF, $FF	; HARDER (6)
-
-.CURSOR:
-	db	$9c, $9d
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4224,160 +3638,451 @@ MIRROR_NIBBLE:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
+; Performs the only-once initialization:
+; - initial option values
+; - CHRTBL/CLRTBL/SPRTBL
+INIT_ONCE:
+; Initializes the options
+	ld	a, CFG_OTHERS.OPTIONS_0
+	ld	[options], a
+
+; High score = 0
+	xor	a
+	ld	(game.high_score_bcd),a
+	ld	(game.high_score_bcd +1),a
+	ld	(game.high_score_bcd +2),a
+
+; Init CHRTBL/CLRTBL
+	ld	hl, .CHRTBL
+	ld	de, CHRTBL
+	call	.UNPACK_LDIRVM_x3
+	ld	hl, .CLRTBL
+	ld	de, CLRTBL
+	call	.UNPACK_LDIRVM_x3
+; Init SPRTBL
+	ld	hl, .SPRTBL
+	ld	de, unpack_buffer
+	call	UNPACK
+	ld	hl, unpack_buffer
+	ld	de, SPRTBL
+	ld	bc, SPRTBL_SIZE
+	jp	LDIRVM
+
+.UNPACK_LDIRVM_x3:
+	push	de ; (preserves VRAM address)
+; Unpacks
+	ld	de, unpack_buffer
+	call	UNPACK
+; Prepare for blitting
+	ld	hl, unpack_buffer
+	pop	de ; (restores VRAM address)
+; Blits to the three banks
+	call	.LDIRVM_x1
+	call	.LDIRVM_x1
+	; jr	.LDIRVM_x1 ; (falls through)
+.LDIRVM_x1:
+; Preserves everything
+	push	hl ; (preserves source)
+	push	de ; (preserves destination)
+; Actual LDIRVM
+	ld	bc, CHRTBL_SIZE
+	push	bc
+	call	LDIRVM
+; Restores dest and moves to next bank
+	pop	bc ; bc = CHRTBL_SIZE
+	pop	hl ; (restores destination)
+	add	hl, bc
+	ex	de, hl
+; Restores size and source
+	pop	hl ; (restores source)
+	ret
+
+; Data
+.CHRTBL:
+	incbin	"asm/enhancedplus/charset.pcx.chr.zx7"
+.CLRTBL:
+	incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
+.SPRTBL:
+	incbin	"asm/enhancedplus/sprites.pcx.spr.zx7"
+
+CHARACTER:
+	.WALL:			equ $30
+	.WALL_END:		equ CHARACTER.WALL + 1*4
+
+	.BOX:			equ $34
+	.BOX_END:		equ CHARACTER.BOX + 1*4
+
+	.GUN:			equ $38
+	.GUN_END:		equ CHARACTER.GUN + 1*4
+
+	.DIAMOND:		equ $3C
+	.DIAMOND_END:		equ CHARACTER.DIAMOND + 1*4
+
+	.WALL_WARP:		equ $40
+	.WALL_WARP_END:		equ CHARACTER.WALL_WARP + 1*4
+
+	.EXIT:			equ $44
+	.EXIT_END:		equ CHARACTER.EXIT + 1*4
+
+	.NEST:			equ $48
+	.NEST_END:		equ CHARACTER.NEST + 2*4
+
+	.NEST1:			equ $48
+	.NEST1_END:		equ CHARACTER.NEST1 + 1*4
+
+	.NEST2:			equ $4C
+	.NEST2_END:		equ CHARACTER.NEST2 + 1*4
+
+	.ROOM_VISITED:		equ $51
+	.ROOM_NOT_VISITED:	equ $53
+	.CURSOR:		equ $56
+
+	.FLOOR:			equ $58
+	.FLOOR_END:		equ CHARACTER.FLOOR + 1*4
+
+; Related symbolic constants
+SPRITE_PATTERN:
+	.SKULL:		equ $10
+	.SCORPION:	equ $12
+	.BAT:		equ $14
+	.SNAKE:		equ $16
+
+	.SKULL4:	equ $10
+	.SCORPION4:	equ $28
+	.BAT4:		equ $30
+	.SNAKE4:	equ $38
+
+	.DOOR_0:	equ $18
+	.DOOR_1:	equ $19
+	.DOOR_2:	equ $18
+	.BULLET:	equ $1A
+	.EXPLOSION:	equ $1C
+
+	.EXPLOSION_0:	equ $1C
+	.EXPLOSION_1:	equ $1D
+	.EXPLOSION_2:	equ $1E
+
+SPRITE_COLOR:
+	.SKULL:		equ 15
+	.SCORPION:	equ 9
+	.BAT:		equ 5
+	.SNAKE:		equ 3
+	.PLAYER:	equ 14
+	.PLAYER_GUN:	equ 15
+	.BULLET:	equ 15
+	.EXPLOSION:	equ 6
+	.DOOR_0:	equ 15
+	.DOOR_1:	equ 7
+	.DOOR_2:	equ 15
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+INIT_MAIN_MENU:
+; Initialization
+	xor	a
+	ld	[prevstick], a
+	ld	[cursor], a
+
+; Init NAMTBL
+	ld	hl, .NAMTBL
+	ld	de, namtbl_buffer
+	call	UNPACK
+	ld	hl, namtbl_buffer
+	ld	de, NAMTBL
+	ld	bc, NAMTBL_SIZE
+	jp	LDIRVM
+
+; Data
+.NAMTBL:
+	incbin	"asm/enhancedplus/screen_title.tmx.bin.zx7"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+MAIN_MENU_LOOP:
+; Prints cursor and current option values (1/3)
+	xor	a
+	ld	de, $0c0f
+	call	.PRINT_CURSOR
+	ld	hl, .ROOMS_VALUES
+	ld	de, $0c12
+	ld	a, [options] ; 00eemmrr
+	and	$03
+	call	.PRINT_OPTION_VALUE_x8
+
+; Prints cursor and current option values (2/3)
+	ld	a, 1
+	ld	de, $0e0f
+	call	.PRINT_CURSOR
+	ld	hl, .MIRRORING_VALUES
+	ld	de, $0e12
+	ld	a, [options] ; 00eemmrr
+	and	$04
+	call	.PRINT_OPTION_VALUE_x2
+
+; Prints cursor and current option values (3/3)
+	ld	a, 2
+	ld	de, $100f
+	call	.PRINT_CURSOR
+	ld	hl, .ENEMIES_VALUES
+	ld	de, $1012
+	ld	a, [options] ; 00eemmrr
+	and	$30
+	srl	a
+	call	.PRINT_OPTION_VALUE
+
+; Prints "Hit space key"
+	call	.PRINT_HIT_SPACE_KEY
+
+; Changes option on stick
+	call	.CHANGE_OPTION
+
+; Returns on trigger
+	call	GTTRIG_ANY
+	or	a
+	ret	nz
+	jr	MAIN_MENU_LOOP
+
+
+; param hl: .XXX_VALUES
+; param de: yyxx
+; param a: value as multiple of 8 ($00, $08, $10)
+.PRINT_OPTION_VALUE_x8:
+	add	a
+	add	a
+.PRINT_OPTION_VALUE_x2:
+	add	a
+.PRINT_OPTION_VALUE:
+	call	ADD_HL_A
+	ld	b, 8
+	jp	PRINT
+
+; param a: the option index
+; param de: yyxx
+.PRINT_CURSOR:
+	ld	hl, cursor
+	cp	[hl]
+	ld	hl, .CURSOR
+	jr	z, .PRINT_CURSOR_HL_OK
+	ld	hl, LITERAL.BLANKS
+.PRINT_CURSOR_HL_OK:
+	ld	b, 2
+	jp	PRINT
+
+; no params
+.PRINT_HIT_SPACE_KEY:
+	ld	hl, aux.frame_counter_2
+	ld	a, [hl]
+	inc	a
+	ld	[hl], a
+	ld	hl, HIT_SPACE_KEY.LITERAL
+	and	$40
+	jr	nz, .HIT_SPACE_KEY_HL_OK
+	ld	hl, LITERAL.BLANKS
+.HIT_SPACE_KEY_HL_OK:
+	ld	de, $1409 ; $1008
+	ld	b,0Dh
+	jp	PRINT
+
+
+; param a: GTSTCK_ANY return value
+.CHANGE_OPTION:
+	call	GTSTCK_ANY
+; Compares with previous value
+	ld	hl, prevstick
+	cp	[hl]
+	ret	z ; (same value)
+; Saves new value
+	ld	[hl], a
+	or	a
+	ret	z ; (no input)
+; Input: translates to direction values
+	dec	a	; 0..7
+	srl	a	; 0..3
+
+	inc	hl ; (hl = cursor, for convenience purposes)
+; Up?
+	or	a
+	jr	nz, .NO_UP
+; Moves cursor up
+	xor	[hl] ; a already 0, checks if cursor is 0
+	ret	z
+	dec	[hl]
+	ret
+.NO_UP:
+
+; Down?
+	cp	2
+	jr	nz, .NO_DOWN
+; Moves cursor down
+	xor	[hl] ; a already 2, checks if cursor is 2
+	ret	z
+	inc	[hl]
+	ret
+.NO_DOWN:
+
+	ld	b, [hl] ; b = cursor index
+	inc	hl ; hl = options
+
+; Mirroring option?
+	djnz	.NO_MIRRORING
+; Changes the mirroring option
+	dec	a ; 0 = right, 2 = left
+	add	a ; 0 = right, 4 = left
+	xor	4 ; 4 = right, 0 = left
+	ld	b, a
+	ld	a, [hl]
+	and	$f3
+	or	b
+	ld	[hl], a
+	ret
+.NO_MIRRORING:
+
+; Enemies option?
+	djnz	.NO_ENEMIES
+; Changes the enemies option
+	dec	a
+	ld	a, [hl]
+	jr	nz, .DEC_ENEMIES
+; Moves enemies option to the right
+	and	$30
+	cp	$30
+	ret	z ; (was already rightmost)
+	ld	a, [hl]
+	add	$10
+	ld	[hl], a
+	ret
+; Moves enemies option to the left
+.DEC_ENEMIES:
+	and	$30
+	ret	z ; (was already leftmost)
+	ld	a, [hl]
+	sub	$10
+	ld	[hl], a
+	ret
+.NO_ENEMIES:
+
+; Rooms option?
+; Changes the rooms option
+	dec	a
+	ld	a, [hl]
+	jr	nz, .DEC_ROOMS
+; Moves rooms option to the right
+	and	$03
+	cp	$02
+	ret	z ; (already rightmost)
+	inc	[hl]
+	ret
+; Moves rooms option to the left
+.DEC_ROOMS:
+	and	$03
+	ret	z ; (already leftmost)
+	dec	[hl]
+	ret
+
+
+; Data
+.ROOMS_VALUES:
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$17, $0E, $20, $0E, $1B, $FF, $FF, $FF	; NEWER
+
+.MIRRORING_VALUES:
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+
+.ENEMIES_VALUES:
+	db	$0E, $0A, $1C, $12, $0E, $1B, $FF, $FF	; EASIER (3)
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL (4)
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$11, $0A, $1B, $0D, $0E, $1B, $FF, $FF	; HARDER (6)
+
+.CURSOR:
+	db	CHARACTER.CURSOR
+	db	CHARACTER.CURSOR +1
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+INIT_INGAME:
+; Enemy sprite patterns, colors and planes
+	ld	hl, .INIT
+	ld	de, enemies
+	call	UNPACK
+
+; Init NAMTBL
+	ld	hl, .NAMTBL
+	ld	de, namtbl_buffer
+	call	UNPACK
+	ld	hl, namtbl_buffer
+	ld	de, NAMTBL
+	ld	bc, NAMTBL_SIZE
+	jp	LDIRVM
+
+; Data
+.INIT:
+	incbin "asm/enhancedplus/init.bin.zx7"
+.NAMTBL:
+	incbin	"asm/enhancedplus/screen_ingame.tmx.bin.zx7"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
 	db	" PYRAMID WARP", $a0
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
 ; -----------------------------------------------------------------------------
 
-debug_rom_end_original: equ $9f8c
-debug_rom_end_new:	equ $
-debug_rom_end_diff:	equ debug_rom_end_original - debug_rom_end_new
+debug_rom_end:	equ $
 
 ; -----------------------------------------------------------------------------
-; Padding to a 16kB boundary
-	ds	($ OR $3fff) -$ +1, $00
+; Padding to a 16kB boundary with $FF (RST $38)
+PADDING:
+	ds	($ OR $3fff) -$ +1, $ff
+	.SIZE:	equ $ - PADDING
 ; -----------------------------------------------------------------------------
 
-; -----------------------------------------------------------------------------
-; RAM
+; =============================================================================
+; 	RAM
+; =============================================================================
+
 	org	$e000, $f380 ; 8KB RAM
-
-box1: ; C000H
-	.y:		rb 1	; C000H
-	.x:		rb 1	; C001H
-	.is_opening:	rb 1	; C002H
-	.remove_delay:	rb 1	; C003H
-	.content:	rb 1	; C004H
-box2: ; C005H
-	.x:		rb 1	; C005H
-	.y:		rb 1	; C006H
-	.status:	rb 2	; C007H
-	.content:	rb 1	; C009H
-box3: ; C00AH
-	.data:		rb 4	; C00AH
-	.content:	rb 1	; C00EH
-door1: ; C00FH
-	.type:		rb 1	; C00FH ; (0 = v, 1 = ^)
-	.spratr_y:	rb 1	; C010H
-	.spratr_x:	rb 1	; C011H
-	.spratr_pat:	rb 1	; C012H
-	.spratr_color:	rb 1	; C013H
-door2: ; c014H
-	.type:		rb 1	; C014H ; (0 = v, 1 = ^)
-	.spratr_y:	rb 1	; C015H
-	.spratr_x:	rb 1	; C016H
-	.spratr_pat:	rb 1	; C017H
-	.spratr_color:	rb 1	; C018H
-player: ; C019H
-	.spratr_y:	rb 1	; C019H
-	.spratr_x:	rb 1	; C01AH
-	.spratr_pat:	rb 1	; C01BH
-	.spratr_color:	rb 1	; C01CH
-	.direction:	rb 1	; C01DH
-skull: ; C01EH
-	.spratr_y:	rb 1	; C01EH
-	.spratr_x:	rb 1	; C01FH
-	.spratr_pat:	rb 1	; C020H
-	.spratr_color:	rb 1	; C021H
-	.direction:	rb 1	; C022H
-	.status:	rb 1	; C023H
-	.base_pattern:	rb 1	; C024H (never read?)
-	.sprite_plane:	rb 1	; C025H (never read?)
-scorpion1: ; C026H
-	.spratr_y:	rb 3	; C026H
-	.spratr_color:	rb 1	; C029H
-	.direction:	rb 1	; C02AH
-	.status:	rb 1	; C02BH
-	.base_pattern:	rb 1	; C02CH ($12)
-	.sprite_plane:	rb 1	; C02DH ($04)
-bat1: ; C02EH
-	.spratr_y:	rb 3	; C02EH
-	.spratr_color:	rb 1	; C031H
-	.direction:	rb 1	; C032H
-	.status:	rb 1	; C033H
-	.base_pattern:	rb 1	; C034H ($14)
-	.sprite_plane:	rb 1	; C035H ($05)
-snake1: ; C036H
-	.spratr_y:	rb 3	; C036H
-	.spratr_color:	rb 1	; C039H
-	.direction:	rb 1	; C03AH
-	.status:	rb 1	; C03BH
-	.base_pattern:	rb 1	; C03CH ($16)
-	.sprite_plane:	rb 1	; C03DH ($06)
-scorpion2: ; C03EH
-	.spratr_y:	rb 3	; C03EH
-	.spratr_color:	rb 1	; C041H
-	.direction:	rb 1	; C042H
-	.status:	rb 1	; C043H
-	.base_pattern:	rb 1	; C044H ($12)
-	.sprite_plane:	rb 1	; C045H ($07)
-bat2: ; C046H
-	.spratr_y:	rb 3	; C046H
-	.spratr_color:	rb 1	; C049H
-	.direction:	rb 1	; C04AH
-	.status:	rb 1	; C04BH
-	.base_pattern:	rb 1	; C04CH ($14)
-	.sprite_plane:	rb 1	; C04DH ($08)
-snake2: ; C04EH
-	.spratr_y:	rb 3	; C04EH
-	.spratr_color:	rb 1	; C051H
-	.direction:	rb 1	; C052H
-	.status:	rb 1	; C053H
-	.base_pattern:	rb 1	; C054H ($16)
-	.sprite_plane:	rb 1	; C055H ($09)
-bullet: ; C056H
-	.spratr_y:	rb 1	; C056H
-	.spratr_x:	rb 1	; C057H
-	.spratr_pat:	rb 1	; C058H
-	.spratr_color:	rb 1	; C059H
-	.direction:	rb 1	; C05AH
-	.status:	rb 1	; C05BH
-nest: ; C05CH
-	.spratr_y:	rb 1	; C05CH
-	.spratr_x:	rb 1	; C05DH
-player_has_gun:		rb 1	; C05EH
-aux.frame_counter:	rb 1	; C05FH
-new_player_direction:	rb 1	; C060H
-direction_table:	rb 4	; C061H
-current_enemy_ptr:	rb 2	; C065H
-spawn_enemy_delay:	rb 1	; C069H
-check_wall_for_player:	rb 1	; C06AH
-exit:
-	.unused1:	rb 1	; C06BH ($01, never read)
-	.unused2:	rb 1	; C06CH ($00, never read)
-	.has_diamond:	rb 1	; C06DH
-	.blink_counter:	rb 1	; C06EH
-	.blink_flag:	rb 1	; C06FH
-	.is_enabled:	rb 1	; C070H
-game: ; C071H
-	.air_left_bcd:	rb 4	; C071H
-	.short_delay:	rb 1	; C075H
-	.current_room:	rb 1	; C076H
-	.air_left:	rb 2	; C077H
-	.air_left_copy:	rb 2	; C079H
-	.pyramid_count:	rb 1	; C07BH
-	.lives:		rb 1	; C07CH
-aux.how_many_bytes:	rb 2	; C07DH
-game.high_score_bcd:	rb 3	; C07FH (6 digits)
-game.score_bcd:		rb 3	; C082H (6 digits)
-pyramid: ; C085H
-	.room_index:	rb 1	; C085H
-	.room_array:	rb 16	; C087H (7+5+3+1 rooms)
-	.room_namtbl_ptr:rb 2	; C097H
-aux.frame_counter_2:	rb 1	; C0D8H
-player_entering_door:	rb 1	; C0DAH
-aux.dying_flashes:	rb 1	; C0DCH
-; -----------------------------------------------------------------------------
+ram_start:
 
 ; -----------------------------------------------------------------------------
-room_enhance_pos:	rb 1
-room_enhance_tile:	rb 1
+; Enhanced version variables
 
-; Options menu:
+; NAMTBL buffer (aligned)
+namtbl_buffer:
+	rb NAMTBL_SIZE
+
+; SPRATR buffer (+ flickering routine) (aligned)
+spratr_buffer:
+	rb	11 * 4
+.end:
+	rb	1 ; to store one SPAT_END when the buffer is full
+	.size:	equ $ - spratr_buffer
+; (extra space for the flickering routine)
+	rb	11 * 4
+; Offset used by the flickering routine
+.flicker_offset:
+	rw	1
+
+; Refresh rate in Hertzs (50Hz/60Hz) and related frames per tenth
+frame_rate:
+	rb	1
+frames_per_tenth:
+	rb	1
+; 60Hz replayer synchronization
+replayer.frameskip:
+	rb	1
+; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
+	include	"asm/libext/PT3-RAM.tniasm.ASM"
+; ayFX REPLAYER v1.31
+	include	"asm/libext/ayFX-RAM.tniasm.asm"
+
+; Options menu variables
 prevstick:		rb 1 ; previously read GTSTCK_ANY value
 cursor:			rb 1 ; cursor index: 0 = enemies, 1 = mirroring, 2 = rooms
-options:		rb 1 ; 00eemmrr: Enemies, Mirroring, Rooms
+options:		rb 1 ; option values: 00eemmrr: Enemies, Mirroring, Rooms
 
 ; The actual pyramid definition, as the old pyramid.room_array
 pyramid_definition:	rb 16 ; (7+5+3+1 rooms)
@@ -4395,48 +4100,168 @@ room_buffer:
 	.door_up:	rb 2
 	.door_down:	rb 2
 
+; Enhanced graphics variables
+room_enhance_pos:	rb 1
+room_enhance_tile:	rb 1
+
 ; Current enemy count
-enemy_count:		rb 1
-
-; Determines the in-game song to use
-ingame_song_index:	rb 1
+enemy_count:
+	rb 1
+; Current in-game song index
+ingame_song_index:
+	rb 1
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-; Refresh rate in Hertzs (50Hz/60Hz) and related frames per tenth
-frame_rate:
-	rb	1
-frames_per_tenth:
-	rb	1
+; Original variables
 
-; 60Hz replayer synchronization
-replayer.frameskip:
-	rb	1
+; Player
+player:
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
+	.direction:	rb 1
+bullet:
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
 
-spratr_buffer:
-	rb	11 * 4
-.end:
-	rb	1 ; to store one SPAT_END when the buffer is full
-	.size:	equ $ - spratr_buffer
-; (extra space for the flickering routine)
-	rb	11 * 4
+; Boxes
+box1:
+	.y:		rb 1
+	.x:		rb 1
+	.is_opening:	rb 1
+	.remove_delay:	rb 1
+	.content:	rb 1
+box2:
+	.x:		rb 1
+	.y:		rb 1
+	.status:	rb 2
+	.content:	rb 1
+box3:
+	.data:		rb 4
+	.content:	rb 1
 
-; Offset used by the flickering routine
-.flicker_offset:
-	rw	1
+; Doors
+door1:
+	.type:		rb 1 ; (0 = v, 1 = ^)
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
+door2:
+	.type:		rb 1 ; (0 = v, 1 = ^)
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
 
-; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
-	include	"asm/libext/PT3-RAM.tniasm.ASM"
-; ayFX REPLAYER v1.31
-	include	"asm/libext/ayFX-RAM.tniasm.asm"
+; Skull
+skull:
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; (never read?)
+	.sprite_plane:	rb 1 ; (never read?)
 
+; Enemies
+enemies:
+scorpion1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($12)
+	.sprite_plane:	rb 1 ; ($04)
+bat1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($14)
+	.sprite_plane:	rb 1 ; ($05)
+snake1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($16)
+	.sprite_plane:	rb 1 ; ($06)
+scorpion2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($12)
+	.sprite_plane:	rb 1 ; ($07)
+bat2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($14)
+	.sprite_plane:	rb 1 ; ($08)
+snake2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($16)
+	.sprite_plane:	rb 1 ; ($09)
+
+; etc.
+nest:
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+player_has_gun:		rb 1
+aux.frame_counter:	rb 1
+new_player_direction:	rb 1
+direction_table:	rb 4
+current_enemy_ptr:	rb 2
+spawn_enemy_delay:	rb 1
+check_wall_for_player:	rb 1
+exit:
+	.unused1:	rb 1 ; ($01, never read)
+	.unused2:	rb 1 ; ($00, never read)
+	.has_diamond:	rb 1
+	.blink_counter:	rb 1
+	.blink_flag:	rb 1
+	.is_enabled:	rb 1
+game:
+	.air_left_bcd:	rb 4
+	.short_delay:	rb 1
+	.current_room:	rb 1
+	.air_left:	rb 2
+	.air_left_copy:	rb 2
+	.pyramid_count:	rb 1
+	.lives:		rb 1
+aux.how_many_bytes:	rb 2
+game.high_score_bcd:	rb 3 ; (6 digits)
+game.score_bcd:		rb 3 ; (6 digits)
+pyramid:
+	.room_index:	rb 1
+	.room_array:	rb 16 ; (7+5+3+1 rooms)
+	.room_namtbl_ptr:rb 2
+aux.frame_counter_2:	rb 1
+player_entering_door:	rb 1
+aux.dying_flashes:	rb 1
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
 ; Unpack buffer
 unpack_buffer:
 	rb	3042 ; (at least 2K; the size of the largest PT3 song)
 ; -----------------------------------------------------------------------------
 
-debug_ram_end_original: equ $c0dc + $2000 ; (16KB RAM to 8KB RAM)
+ram_end:
+
 debug_ram_end_new:	equ $ -1
-debug_ram_end_diff:	equ debug_ram_end_original - debug_ram_end_new
 
 ; EOF
