@@ -132,35 +132,16 @@ INIT:
 ; color ,,4
 	ld	bc,CFG_BG_COLOR.DEFAULT << 8 + 07h
 	call	WRTVDP
-
-; Prepares the playground
-	call	INIT_INGAME
-
 ; ------VVVV----falls through--------------------------------------------------
-
-	; Referenced from 8E07
-	; --- START PROC L82B8 ---
 
 ; -----------------------------------------------------------------------------
 NEW_GAME:
-; Five lives
-	ld	a,05h
-	ld	(game.lives),a
-; First pyramid (extra time)
-	xor	a
-	ld	(game.pyramid_count),a
-; Score to 0 (and prints score)
-	xor	a
-	ld	bc,0000h
-	ld	(game.score_bcd),a
-	ld	(game.score_bcd +1),bc
+; Initializes the variables and prepares the playground
+	call	INIT_INGAME
 
 	ld	de,CFG_HUD.SCORE_COORDS
 	call	PRINT_SCORE
 ; ------VVVV----falls through--------------------------------------------------
-
-	; Referenced from 8B66
-	; --- START PROC L82E7 ---
 
 ; -----------------------------------------------------------------------------
 NEW_PYRAMID:
@@ -184,24 +165,6 @@ NEW_PYRAMID:
 
 ; Enemy count
 	call	INIT_ENEMY_COUNT
-
-; Prints the pyramid in the HUD
-	ld	de,1519h
-	ld	b,07h ; 7 rooms
-.L834D:	push	bc
-	ld	hl,LITERAL.ROOMS_x7
-	call	PRINT
-	inc	e ; destination += (+1, -1)
-	dec	d
-	pop	bc ; length -= 2
-	dec	b
-	dec	b
-	ld	a,01h ; if more than one room, loops
-	cp	b
-	jr	nz,.L834D
-; Prints the sphinx room
-	ld	a,$52 ; ($52 = sphinx room)
-	call	PRINT_CHAR
 
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
@@ -2810,32 +2773,10 @@ TO_NAMTBL:
 
 ; -----------------------------------------------------------------------------
 LITERAL:
-.DASHES: ; 9C04
-	DB	$27, $27, $27, $27, $27, $27, $27	; -------
-.TnESOFT: ; 9C12
-	DB	$1D, $24, $0E, $2B, $2C, $2D, $2E	; T&Esoft
-.HIGH: ; 9C1D
-	DB	$11, $12, $10, $11			; HIGH
-.SCORE: ; 9C21
-	DB	$1C, $0C, $18, $1B, $0E			; SCORE
-.ROOM: ; 9C26
-	DB	$1B, $18, $18, $16			; ROOM
-.AIR: ; 9C2A
-	DB	$0A, $12, $1B				; AIR
-
-
-
-.WALL_x24:
-	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E	; 24x wall
-	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5E
-	DB	$5E, $5E, $5E, $5E, $5E, $5E, $5E, $5F
 
 .BLANKS:
 	DB	$2F, $2F, $2F, $2F, $2F, $2F, $2F	; 15x blanks
 	DB	$2F, $2F, $2F, $2F, $2F, $2F
-
-.ROOMS_x7:
-	DB	$53, $53, $53, $53, $53, $53, $53	; 7x black room
 
 .LIVES_x6: ; 9C77
 	DB	$50, $50, $50, $50, $50, $50		; 6x life
@@ -2847,15 +2788,7 @@ LITERAL:
 	DB	$1D, $1B, $22, $FF			; TRY_
 	DB	$1D, $11, $0E, $FF			; THE_
 	DB	$17, $0E, $21, $1D, $FF			; NEXT_
-.PYRAMID:
 	DB	$19, $22, $1B, $0A, $16, $12, $0D	; PYRAMID
-	DB	$2F					; _
-	DB	$20, $0A, $1B, $19			; WARP
-.Y1983:
-	DB	$01, $09, $08, $03, $2F			; 1983_
-	DB	$0B, $22, $2F				; BY_
-	DB	$1D, $24, $0E, $2F			; T&E_
-	DB	$1C, $18, $0F, $1D			; SOFT
 .GAME_OVER: ; 9CCF
 	DB	$10, $0A, $16, $0E, $FF			; GAME_
 	DB	$18, $1F, $0E, $1B			; OVER
@@ -4007,6 +3940,19 @@ INIT_INGAME:
 	ld	hl, .INIT
 	ld	de, enemies
 	call	UNPACK
+
+	; TODO: move to "init.bin"!!!
+; Five lives
+	ld	a,05h
+	ld	(game.lives),a
+; First pyramid (extra time)
+	xor	a
+	ld	(game.pyramid_count),a
+; Score to 0 (and prints score)
+	xor	a
+	ld	bc,0000h
+	ld	(game.score_bcd),a
+	ld	(game.score_bcd +1),bc
 
 ; Init NAMTBL
 	ld	hl, .NAMTBL
