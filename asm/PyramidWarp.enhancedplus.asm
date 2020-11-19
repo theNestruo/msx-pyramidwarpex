@@ -159,8 +159,8 @@ NEW_PYRAMID:
 
 ; Intro version in-game music
 	ld	a, (game.pyramid_count)
-	and	$01
-	add	a
+	and	$01 ; a = 0 or 1
+	add	a ; a = 0 or 2
 	ld	(ingame_song_index), a
 
 ; Enemy count
@@ -168,15 +168,14 @@ NEW_PYRAMID:
 
 ; Plays "Start game" music
 	call	PLAY_START_GAME_MUSIC
-; ------VVVV----falls through--------------------------------------------------
-
-	; Referenced from 8DD5
-	; --- START PROC L836A ---
+	jr	DEC_LIVES_AND_NEW_ROOM.ON_NEW_PYRAMID
+; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 DEC_LIVES_AND_NEW_ROOM:
 ; Decreases the enemy count
 	call	DECREASE_ENEMY_COUNT
+.ON_NEW_PYRAMID:
 ; Clear lives
 	ld	hl,LITERAL.BLANKS
 	ld	de,CFG_HUD.LIVES_COORDS
