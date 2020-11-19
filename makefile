@@ -48,14 +48,15 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\screen_title.tmx.bin.zx7 \
 	asm\enhancedplus\screen_ingame.tmx.bin.zx7 \
 	asm\enhancedplus\init.bin.zx7 \
-	asm\enhancedplus\PW_Dead2.pt3.zx7 \
-	asm\enhancedplus\PW_LevelFinished.pt3.zx7 \
-	asm\enhancedplus\PW_NewGame.pt3.zx7 \
-	asm\enhancedplus\PW_VT2.pt3.zx7 \
-	asm\enhancedplus\PW_VT2_3chan.pt3.zx7 \
-	asm\enhancedplus\PW_VT2_3chan_nointro.pt3.zx7 \
-	asm\enhancedplus\PW_VT2_3_Level2.pt3.zx7 \
-	asm\enhancedplus\PW_VT2_Sphinx.pt3.zx7 \
+	asm\enhancedplus\sfx\PW_Dead2.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_NewGame.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2_3chan.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3.hl.zx7 \
 
 ENHANCEDPLUS_STATIC_DATAS=\
 	asm\enhancedplus\mapper\rooms_original.asm \
@@ -102,6 +103,27 @@ enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm asm\symbols.asm $(ENHANCEDPLU
 
 asm\enhancedplus\init.bin: asm\enhancedplus\init.asm
 	$(ASM) $< $@
+
+asm\enhancedplus\sfx\PW_Dead2.pt3.hl \
+asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl \
+asm\enhancedplus\sfx\PW_NewGame.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2_3chan.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3.hl \
+asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3.hl: \
+		asm\enhancedplus\sfx\headerless.asm \
+		asm\enhancedplus\sfx\PW_Dead2.pt3 \
+		asm\enhancedplus\sfx\PW_LevelFinished.pt3 \
+		asm\enhancedplus\sfx\PW_NewGame.pt3 \
+		asm\enhancedplus\sfx\PW_VT2.pt3 \
+		asm\enhancedplus\sfx\PW_VT2_3chan.pt3 \
+		asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3 \
+		asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3 \
+		asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3 \
+		asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3
+	$(ASM) $<
 
 #
 # GFXs targets
@@ -152,7 +174,7 @@ asm\enhancedplus\charset.pcx.clr: \
 	$(REMOVE) $@
 	$(ZX7) $<
 
-%.pt3.zx7: %.pt3
+%.hl.zx7: %.hl
 	$(REMOVE) $@
 	$(ZX7) $<
 

@@ -198,6 +198,7 @@ DEC_LIVES_AND_NEW_ROOM:
 NEW_ROOM:
 ; Plays "Ingame" music
 	call	PLAY_INGAME_MUSIC
+
 ; Print score and updates high score
 .L838C:	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
 
@@ -2129,15 +2130,22 @@ PLAY_START_GAME_MUSIC:
 	call	REPLAYER.PLAY_JINGLE
 	jp	DELAY.ONE_SECOND
 .SONG:
-	incbin "asm/enhancedplus/PW_NewGame.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_NewGame.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 PLAY_INGAME_MUSIC:
 ; Reads the song to use and skips the nointro version the next time
 	ld	hl, ingame_song_index
+; Checks sphinx room first
+	ld	a, [pyramid.room_index]
+	cp	15
+	ld	a, 8
+	jr	z, .A_OK ; yes
+; No: Reads the song to use and skips the nointro version the next time
 	ld	a, [hl]
 	set	2, [hl] ; 00000 X 0 0
+.A_OK:
 ; Gets the proper song
 	ld	hl, .TABLE
 	call	ADD_HL_A
@@ -2149,16 +2157,19 @@ PLAY_INGAME_MUSIC:
 	xor	a ; (loop)
 	jp	REPLAYER.PLAY
 .TABLE:
-	dw	.SONG_INTRO	; 00000 0 0 0
-	dw	.SONG_INTRO	; 00000 0 1 0
-	dw	.SONG_A		; 00000 1 0 0
-	dw	.SONG_B		; 00000 1 1 0
+	dw	.SONG_INTRO	; 0 = 00000 0 0 0
+	dw	.SONG_INTRO	; 2 = 00000 0 1 0
+	dw	.SONG_A		; 4 = 00000 1 0 0
+	dw	.SONG_B		; 6 = 00000 1 1 0
+	dw	.SONG_SPHINX	; 8 = 00001 0 0 0
 .SONG_INTRO:
-	incbin "asm/enhancedplus/PW_VT2_3chan.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_VT2_3chan.pt3.hl.zx7"
 .SONG_A:
-	incbin "asm/enhancedplus/PW_VT2_3chan_nointro.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_VT2_3chan_nointro.pt3.hl.zx7"
 .SONG_B:
-	incbin "asm/enhancedplus/PW_VT2_3_Level2.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_VT2_3_Level2.pt3.hl.zx7"
+.SONG_SPHINX:
+	incbin "asm/enhancedplus/sfx/PW_VT2_3_Sphinx_IN.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2222,7 +2233,7 @@ ENDIF
 	jp	DELAY.ONE_TENTH
 
 .SONG:
-	incbin "asm/enhancedplus/PW_Dead2.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Dead2.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2237,7 +2248,7 @@ PLAY_SOUND_EXIT:
 	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
 	jp	WRTVDP
 .SONG:
-	incbin "asm/enhancedplus/PW_LevelFinished.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2252,7 +2263,7 @@ PLAY_SOUND_SPHINX:
 	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
 	jp	WRTVDP
 .SONG:
-	incbin "asm/enhancedplus/PW_VT2_Sphinx.pt3.zx7"
+	incbin "asm/enhancedplus/sfx/PW_VT2_Sphinx.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2938,7 +2949,7 @@ REPLAYER.PLAY:
 	and	$01 ; (loop flag only)
 	ld	[PT3_SETUP], a
 ; Initializes song
-	ld	hl, unpack_buffer
+	ld	hl, unpack_buffer -100 ; (headerless PT3 files)
 	jp	PT3_INIT
 
 ; Starts the replayer and waits for a jingle to end

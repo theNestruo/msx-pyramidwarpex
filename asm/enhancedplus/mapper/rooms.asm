@@ -8,7 +8,7 @@
     DB 06Eh, 0A0h    ; X_XX_HHH_X_XX
     DB 020h, 0A0h    ; X__X_____X_XX
     DB 08Eh, 000h    ; XX___HHH____X
-    DB 020h, 040h    ; X__X__B___X_X
+    DB 020h, 0C0h    ; X__X__B__XX_X
     DB 06Eh, 0C0h    ; X_XX_XXX_XXvX
     DB 040h, 060h    ; X_X___B___XXX
     DB 01Fh, 000h    ; X___XXXXX___X
