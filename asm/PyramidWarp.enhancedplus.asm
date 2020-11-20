@@ -27,20 +27,12 @@ CFG_HUD:			; $yyxx coordinates
 CFG_OTHERS:
 	.OPTIONS_0:		equ ($02 << 4) + ($01 << 2) + ($01) ; 00eemmrr: Enemies, Mirroring, Rooms
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
+	.MAIN_DELAY_FACTOR:	equ $18 ; 04h ; Multiplier in main delay routine
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
 	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
-
-enemy_spratr_y:			equ 0
-enemy_spratr_x:			equ 1
-enemy_spratr_pat:		equ 2
-enemy_spratr_color:	equ 3
-enemy_direction:		equ 4
-enemy_status:			equ 5
-enemy_base_pattern:	equ 6
-enemy_sprite_plane:	equ 7
 
 ; -----------------------------------------------------------------------------
 
@@ -647,23 +639,14 @@ INIT_GAME_LOOP:
 GAME_LOOP:
 	call	LDIRVM_SPRITES
 
-; Configures game speed according air left
-.L867C:	ld	hl,(game.air_left)
-	ld	a,40h ; speed = 40
-	ld	de,03E8h ; 1000
-	sbc	hl,de
-	jr	c,.L8691 ; air left < 1000
-	add	a,60h ; speed += 60
-	or	a
-	sbc	hl,de
-	jr	c,.L8691 ; air left < 2000
-	add	a,50h ; speed += 60
-.L8691: ld	(game.short_delay),a
+; In-game loop dynamic delay
+	call	UPDATE_GAME_SPEED
+	call	GAME_LOOP_DELAY
+
 ; Next frame
 	ld	a,(aux.frame_counter)
 	inc	a
 	ld	(aux.frame_counter),a
-	call	SHORT_DELAY
 
 ; Each 4 frames, blinks the current room
 	ld	de,(pyramid.room_namtbl_ptr)
@@ -855,7 +838,8 @@ GAME_LOOP.DOORS_OK:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.GUN_OK:
-.L87E8:	call	SHORT_DELAY
+.L87E8:
+	; (original call SHORT_DELAY removed)
 
 ; Is the skull active?
 	ld	a,(skull.status)
@@ -1057,7 +1041,8 @@ MOVE_SKULL:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.SKULL_OK:
-.L8908:	call	SHORT_DELAY
+.L8908:
+	; (original call SHORT_DELAY removed)
 ; Is bullet shot?
 	ld	a,(bullet.status)
 	or	a
@@ -1123,7 +1108,8 @@ GAME_LOOP.SKULL_OK:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.BULLET_OK:
-.L8969:	call	SHORT_DELAY
+.L8969:
+	; (original call SHORT_DELAY removed)
 ; Is the sphinx room?
 	ld	a,(game.current_room)
 	cp	10h
@@ -1200,7 +1186,8 @@ GAME_LOOP.BULLET_OK:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EXIT_OK:
-.L89E1:	call	SHORT_DELAY
+.L89E1:
+	; (original call SHORT_DELAY removed)
 ; Updates box2, scorpion2, bat2 and box3
 	ld	ix,box2
 	call	UPDATE_BOX
@@ -1265,7 +1252,8 @@ GAME_LOOP.EXIT_OK:
 
 ; -----------------------------------------------------------------------------
 GAME_LOOP.EVERYTHING_OK:
-.L8A3A:	call	SHORT_DELAY
+.L8A3A:
+	; (original call SHORT_DELAY removed)
 ; Decreases air counter
 	ld	hl,(game.air_left)
 	dec	hl
@@ -1623,17 +1611,54 @@ RANDOMIZE:
 	; --- START PROC L8C3C ---
 
 ; -----------------------------------------------------------------------------
-SHORT_DELAY:
-.L8C3C:	ld	b,CFG_OTHERS.SHORT_DELAY_FACTOR
-.L8C3E:	ld	a,(game.short_delay)
-.L8C41:	dec	a
-	jr	nz,.L8C41
-	djnz	.L8C3E
+; Configures game speed according air left
+UPDATE_GAME_SPEED:
+; Original routine:
+	; - air   3000 ($0BB8) --> speed = 150
+	; - air < 2000 ($07D0) --> speed = 100
+	; - air < 1000 ($03E8) --> speed =  40
+; New routine: speed = 40 + 10 * H
+	ld	hl, (game.air_left)
+	sla	h
+	ld	a, h
+	add	a
+	add	a
+	add	h
+	add	40
+; Actual delay
+	ld	[game.short_delay], a
 	ret
 ; -----------------------------------------------------------------------------
 
-	; Referenced from 8FB0, 8676, 9088, 9109, 9064
-	; --- START PROC L8C47 ---
+; -----------------------------------------------------------------------------
+; Aplies all the original CALL SHORT_DELAYs at the same time
+GAME_LOOP_DELAY:
+; Computes the delay factor
+; b = MAIN_DELAY_FACTOR + 4 * each missing enemy
+	ld	a, 6
+	ld	hl, enemy_count
+	sub	[hl] ; a = 6 - enemy_count = 3..0
+	add	a ; a *= 4
+	add	a
+	add	CFG_OTHERS.MAIN_DELAY_FACTOR ; a += MAIN_DELAY_FACTOR
+; Delays using the computed factor
+	ld	b, a
+	jr	SHORT_DELAY.LOOP_B
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Applies a short delay (replaces the enemy processing time)
+SHORT_DELAY:
+; DO NOT OPTIMIZE THIS ROUTINE
+	ld	b, CFG_OTHERS.SHORT_DELAY_FACTOR
+.LOOP_B:
+	ld	a, [game.short_delay]
+.LOOP_A:
+	dec	a
+	jr	nz, .LOOP_A
+	djnz	.LOOP_B
+	ret
+; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; Synchronization routines (modified to use halt instead of loops)
@@ -1688,7 +1713,7 @@ SPAWN_NEW_ENEMY:
 ; 50% of the time
 .L8C67:	call	RANDOMIZE
 	cp	80h
-	jp	c,SHORT_DELAY ; waits a little longer
+	jp	c, SHORT_DELAY ; waits a little longer
 ; yes: restarts delay
 	ld	a,20h
 	ld	(spawn_enemy_delay),a
@@ -1972,7 +1997,7 @@ UPDATE_BOX:
 	ret	nz ; no collision
 ; Opens the box
 	call	PLAY_SOUND_BOX
-	call	SHORT_DELAY
+	; (original call SHORT_DELAY removed)
 	ld	(ix+02h),0FFh ; .status
 
 	ld	(ix+03h),32h		; '2'
@@ -2100,8 +2125,8 @@ REMOVE_OPEN_BOX:
 	srl	e
 	srl	e
 	srl	e
-	call	CLEAR_TILE
-	jp	SHORT_DELAY
+	jp	CLEAR_TILE
+	; (original jp SHORT_DELAY removed)
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 8ECC
@@ -3743,14 +3768,15 @@ INIT_MAIN_MENU:
 ; -----------------------------------------------------------------------------
 MAIN_MENU_LOOP:
 ; Prints cursor and current option values (1/3)
-	xor	a
-	ld	de, $0c0f
+	ld	a, 2
+	ld	de, $100f
 	call	.PRINT_CURSOR
-	ld	hl, .ROOMS_VALUES
+	ld	hl, .ENEMIES_VALUES
 	ld	de, $0c12
 	ld	a, [options] ; 00eemmrr
-	and	$03
-	call	.PRINT_OPTION_VALUE_x8
+	and	$30
+	srl	a
+	call	.PRINT_OPTION_VALUE
 
 ; Prints cursor and current option values (2/3)
 	ld	a, 1
@@ -3763,15 +3789,14 @@ MAIN_MENU_LOOP:
 	call	.PRINT_OPTION_VALUE_x2
 
 ; Prints cursor and current option values (3/3)
-	ld	a, 2
-	ld	de, $100f
+	xor	a
+	ld	de, $0c0f
 	call	.PRINT_CURSOR
-	ld	hl, .ENEMIES_VALUES
+	ld	hl, .ROOMS_VALUES
 	ld	de, $1012
 	ld	a, [options] ; 00eemmrr
-	and	$30
-	srl	a
-	call	.PRINT_OPTION_VALUE
+	and	$03
+	call	.PRINT_OPTION_VALUE_x8
 
 ; Prints "Hit space key"
 	call	.PRINT_HIT_SPACE_KEY
@@ -3880,8 +3905,27 @@ MAIN_MENU_LOOP:
 	ret
 .NO_MIRRORING:
 
+; Rooms option?
+	djnz	.NO_ROOMS
+; Changes the rooms option
+	dec	a
+	ld	a, [hl]
+	jr	nz, .DEC_ROOMS
+; Moves rooms option to the right
+	and	$03
+	cp	$02
+	ret	z ; (already rightmost)
+	inc	[hl]
+	ret
+; Moves rooms option to the left
+.DEC_ROOMS:
+	and	$03
+	ret	z ; (already leftmost)
+	dec	[hl]
+	ret
+.NO_ROOMS:
+
 ; Enemies option?
-	djnz	.NO_ENEMIES
 ; Changes the enemies option
 	dec	a
 	ld	a, [hl]
@@ -3902,28 +3946,15 @@ MAIN_MENU_LOOP:
 	sub	$10
 	ld	[hl], a
 	ret
-.NO_ENEMIES:
-
-; Rooms option?
-; Changes the rooms option
-	dec	a
-	ld	a, [hl]
-	jr	nz, .DEC_ROOMS
-; Moves rooms option to the right
-	and	$03
-	cp	$02
-	ret	z ; (already rightmost)
-	inc	[hl]
-	ret
-; Moves rooms option to the left
-.DEC_ROOMS:
-	and	$03
-	ret	z ; (already leftmost)
-	dec	[hl]
-	ret
 
 
 ; Data
+.ENEMIES_VALUES:
+	db	$0E, $0A, $1C, $12, $0E, $1B, $FF, $FF	; EASIER (3)
+	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL (4)
+	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
+	db	$11, $0A, $1B, $0D, $0E, $1B, $FF, $FF	; HARDER (6)
+
 .ROOMS_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
 	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
@@ -3932,12 +3963,6 @@ MAIN_MENU_LOOP:
 .MIRRORING_VALUES:
 	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL
 	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-
-.ENEMIES_VALUES:
-	db	$0E, $0A, $1C, $12, $0E, $1B, $FF, $FF	; EASIER (3)
-	db	$18, $1B, $12, $10, $12, $17, $0A, $15	; ORIGINAL (4)
-	db	$0E, $17, $11, $0A, $17, $0C, $0E, $0D	; ENHANCED
-	db	$11, $0A, $1B, $0D, $0E, $1B, $FF, $FF	; HARDER (6)
 
 .CURSOR:
 	db	CHARACTER.CURSOR
@@ -4126,6 +4151,14 @@ skull:
 	.status:	rb 1
 	.base_pattern:	rb 1 ; (never read?)
 	.sprite_plane:	rb 1 ; (never read?)
+	enemy_spratr_y:		equ 0
+	enemy_spratr_x:		equ 1
+	enemy_spratr_pat:	equ 2
+	enemy_spratr_color:	equ 3
+	enemy_direction:	equ 4
+	enemy_status:		equ 5
+	enemy_base_pattern:	equ 6
+	enemy_sprite_plane:	equ 7
 
 ; Enemies
 enemies:
