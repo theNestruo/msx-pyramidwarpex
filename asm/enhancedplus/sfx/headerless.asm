@@ -1,31 +1,36 @@
 
 ; Removes the first 100 bytes from the PT3 files
 
-	fname	"asm/enhancedplus/sfx/PW_Dead2.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_Dead2.pt3", 100
+; Jingles
+	fname	"asm/enhancedplus/sfx/jingle-new-game.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/jingle-new-game.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_LevelFinished.pt3", 100
+	fname	"asm/enhancedplus/sfx/jingle-death.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/jingle-death.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_NewGame.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_NewGame.pt3", 100
+	fname	"asm/enhancedplus/sfx/jingle-exit.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/jingle-exit.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2.pt3", 100
+	fname	"asm/enhancedplus/sfx/jingle-sphinx.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/jingle-sphinx.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2_3chan.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2_3chan.pt3", 100
+; In-game musics
+	fname	"asm/enhancedplus/sfx/music-1-intro.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-1-intro.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2_3chan_nointro.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2_3chan_nointro.pt3", 100
+	fname	"asm/enhancedplus/sfx/music-1.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-1.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2_3_Level2.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2_3_Level2.pt3", 100
+	fname	"asm/enhancedplus/sfx/music-2A.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-2A.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2_3_Sphinx_IN.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2_3_Sphinx_IN.pt3", 100
+	fname	"asm/enhancedplus/sfx/music-2B.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-2B.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_VT2_Sphinx.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_VT2_Sphinx.pt3", 100
+	fname	"asm/enhancedplus/sfx/music-2C.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-2C.pt3", 100
+
+	fname	"asm/enhancedplus/sfx/music-sphinx.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/music-sphinx.pt3", 100
 
 ; EOF

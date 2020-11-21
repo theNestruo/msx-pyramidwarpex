@@ -3,7 +3,8 @@
 **/*.clr
 **/*.hl
 **/*.spr
+**/*.rom
 **/*.zx7
-*.rom
+tniasm.out
 tniasm.sym
 tniasm.tmp

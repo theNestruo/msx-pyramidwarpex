@@ -48,15 +48,16 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\screen_title.tmx.bin.zx7 \
 	asm\enhancedplus\screen_ingame.tmx.bin.zx7 \
 	asm\enhancedplus\init.bin.zx7 \
-	asm\enhancedplus\sfx\PW_Dead2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_NewGame.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2_3chan.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\jingle-new-game.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\jingle-death.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\jingle-exit.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\jingle-sphinx.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-1-intro.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-1.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-2A.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-2B.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-2C.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-sphinx.pt3.hl.zx7
 
 ENHANCEDPLUS_STATIC_DATAS=\
 	asm\enhancedplus\mapper\rooms_original.asm \
@@ -104,25 +105,27 @@ enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm asm\symbols.asm $(ENHANCEDPLU
 asm\enhancedplus\init.bin: asm\enhancedplus\init.asm
 	$(ASM) $< $@
 
-asm\enhancedplus\sfx\PW_Dead2.pt3.hl \
-asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl \
-asm\enhancedplus\sfx\PW_NewGame.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2_3chan.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3.hl \
-asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3.hl: \
+asm\enhancedplus\sfx\jingle-new-game.pt3.hl \
+asm\enhancedplus\sfx\jingle-death.pt3.hl \
+asm\enhancedplus\sfx\jingle-exit.pt3.hl \
+asm\enhancedplus\sfx\jingle-sphinx.pt3.hl \
+asm\enhancedplus\sfx\music-1-intro.pt3.hl \
+asm\enhancedplus\sfx\music-1.pt3.hl \
+asm\enhancedplus\sfx\music-2A.pt3.hl \
+asm\enhancedplus\sfx\music-2B.pt3.hl \
+asm\enhancedplus\sfx\music-2C.pt3.hl \
+asm\enhancedplus\sfx\music-sphinx.pt3.hl: \
 		asm\enhancedplus\sfx\headerless.asm \
-		asm\enhancedplus\sfx\PW_Dead2.pt3 \
-		asm\enhancedplus\sfx\PW_LevelFinished.pt3 \
-		asm\enhancedplus\sfx\PW_NewGame.pt3 \
-		asm\enhancedplus\sfx\PW_VT2.pt3 \
-		asm\enhancedplus\sfx\PW_VT2_3chan.pt3 \
-		asm\enhancedplus\sfx\PW_VT2_3chan_nointro.pt3 \
-		asm\enhancedplus\sfx\PW_VT2_3_Level2.pt3 \
-		asm\enhancedplus\sfx\PW_VT2_3_Sphinx_IN.pt3 \
-		asm\enhancedplus\sfx\PW_VT2_Sphinx.pt3
+		asm\enhancedplus\sfx\jingle-new-game.pt3 \
+		asm\enhancedplus\sfx\jingle-death.pt3 \
+		asm\enhancedplus\sfx\jingle-exit.pt3 \
+		asm\enhancedplus\sfx\jingle-sphinx.pt3 \
+		asm\enhancedplus\sfx\music-1-intro.pt3 \
+		asm\enhancedplus\sfx\music-1.pt3 \
+		asm\enhancedplus\sfx\music-2A.pt3 \
+		asm\enhancedplus\sfx\music-2B.pt3 \
+		asm\enhancedplus\sfx\music-2C.pt3 \
+		asm\enhancedplus\sfx\music-sphinx.pt3
 	$(ASM) $<
 
 #

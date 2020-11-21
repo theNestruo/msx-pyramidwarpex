@@ -17,7 +17,7 @@ CFG_BG_COLOR:
 CFG_EXIT:
 	.BLINK_FRAMES:	equ 10
 
-CFG_HUD:			; $yyxx coordinates
+CFG_HUD:			;   $yyxx coordinates
 	.HIGH_COORDS:		equ $081A ; 0819h
 	.SCORE_COORDS:		equ $0B1A ; 0B19h
 	.AIR_LEFT_COORDS:	equ $0E1C ; 0E19h
@@ -42,22 +42,63 @@ CFG_OTHERS:
 
 ; -----------------------------------------------------------------------------
 ; MSX cartridge (ROM) header, entry point and initialization
-	org	$8000, $bfff ; 16KB ROM
+	org	$4000, $bfff
 ROM_START:
 	db	"AB"		; ID ("AB")
 	dw	.INIT		; INIT
-	ds	$8010 - $, $00	; STATEMENT, DEVICE, TEXT, Reserved
+	ds	$4010 - $, $00	; STATEMENT, DEVICE, TEXT, Reserved
 
 ; Entry Point
 .INIT:
 ; Ensures interrupt mode
 	di
 	im	1
+
+; Initializes stack pointer
 	ld	sp, STACK_POINTER_INIT
+
 ; Cancels the existing hooks (several BIOS routines re-enable interruptions)
 	ld	a, $c9 ; opcode for "RET"
 	ld	[HKEYI], a
 	ld	[HTIMI], a
+
+; Is the game running on RAM? (e.g.: ROM Loader)
+	ld	a, $18 ; opcode for "JR nn"
+	ld	[.JR_NC], a ; Replaces "JR NC,nn" by "JR nn" (if RAM)
+	scf
+.JR_NC:
+	jr	nc, .ROM_OK ; yes
+; No:
+
+; Reads the primary slot of the page 1
+	call	RSLREG	; a = 33221100
+	rrca
+	rrca
+	and	$03	; a = xxxxxxPP
+	ld	c, a	; c = xxxxxxPP
+; Reads the expanded slot flag
+	ld	hl, EXPTBL ; EXPTBL + a => EXPTBL for slot of page 1
+	add	a, l
+	ld	l, a
+	ld	a, [hl]
+	and	$80	; a = Exxxxxxx
+; Defines slot ID (1/2)
+	or	c	; a = ExxxxxPP
+	ld	c, a	; c = ExxxxxPP
+; Reads the secondary slot selection register
+	inc	l ; hl += 4 => = SLTTBL for slot of page 1
+	inc	l
+	inc	l
+	inc	l
+	ld	a, [hl]
+	and	$0c	; a = xxxxSSxx
+; Define slot ID (2/2)
+	or	c	; a = ExxxSSPP
+
+; Enables page 2 cartridge slot/subslot at start
+	ld	h, $80 ; Bit 6 and 7: page 2 ($8000)
+	call	ENASLT
+.ROM_OK:
 
 ; VDP: color ,,1
 	ld	a, CFG_BG_COLOR.INIT
@@ -150,16 +191,15 @@ NEW_PYRAMID:
 	ld	(pyramid.room_index),a
 
 ; Intro version in-game music
-	ld	a, (game.pyramid_count)
-	and	$01 ; a = 0 or 1
-	add	a ; a = 0 or 2
 	ld	(ingame_song_index), a
 
 ; Enemy count
 	call	INIT_ENEMY_COUNT
 
 ; Plays "Start game" music
-	call	PLAY_START_GAME_MUSIC
+	ld	hl, SONG.JINGLE_NEW_GAME
+	call	REPLAYER.PLAY_JINGLE
+	call	DELAY.ONE_SECOND
 	jr	DEC_LIVES_AND_NEW_ROOM.ON_NEW_PYRAMID
 ; -----------------------------------------------------------------------------
 
@@ -204,7 +244,7 @@ NEW_ROOM:
 	ld	[game.current_room], a
 
 ; Points to the correct map position
-	ld	de,1518h	; address or value?
+	ld	de,1518h -1
 ; a < 8?
 	cp	08h
 	jr	c,.L83C7 ; yes
@@ -252,6 +292,7 @@ NEW_ROOM:
 
 ; Draws the room
 	call	BUFFER_CURRENT_ROOM
+	halt	; (prevents tearing)
 	call	DRAW_CURRENT_ROOM
 
 ; Is the sphinx room?
@@ -260,19 +301,19 @@ NEW_ROOM:
 	jp	z,PRINT_SPHINX_ROOM_DECORATION ; yes
 ; ------VVVV----falls through--------------------------------------------------
 
-
+; -----------------------------------------------------------------------------
 ; Prints exit zone
 	push	hl
-	ld		hl, NAMTBL + 32*9+10
-	ld		b, 6
+	ld	hl, NAMTBL + 32*9 + 9
+	ld	b, 6
 .LOOPWARP0:
 	push	bc
-	ld		b, 6
+	ld	b, 6
 .LOOPWARP1:
 	call	RDVRM
 	cp	$34
 	jr	nc, .NEXTWARP1
-	; change tile
+; change tile
 	add	a, 16
 	call	WRTVRM
 	jr	.NEXTWARP2
@@ -286,12 +327,12 @@ NEW_ROOM:
 .NEXTWARP2:
 	inc	hl
 	djnz	.LOOPWARP1
-	ld		bc, 32-6
+	ld	bc, 32-6
 	add	hl, bc
 	pop	bc
 	djnz	.LOOPWARP0
 	pop	hl
-
+; ------VVVV----falls through--------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; param hl: room data pointer (after walls definition)
@@ -323,148 +364,11 @@ PRINT_ROOM_DECORATION:
 	ld	ix,door2
 	call	NEW_DOOR
 
-
 ; Initial player coordinates
 	ld	a,58h
 
 	jp	INIT_GAME_LOOP
 ; -----------------------------------------------------------------------------
-
-PRINT_WALL_3D:
-	push	hl
-	push	af
-	push	bc
-	push	de
-
-	; initialize
-	xor	a
-	ld	(room_enhance_tile), a
-
-	; LEFT TILE
-	ld	a, (room_enhance_pos)
-	ld	b, a
-	and	$0F
-	jr	z, .left_set_bit
-	; set left pos
-	dec	a
-	ld	c, a
-	ld	a, b
-	and	$F0
-	or	c		; a = new pos
-	; get map position
-	call	GET_MAP_POSITION
-	jr	z, .left_check_end
-.left_set_bit:
-	; set left bit
-	ld	hl, room_enhance_tile
-	set	0, (hl)
-.left_check_end:
-
-
-	; UP TILE
-	ld	a, (room_enhance_pos)
-	ld	b, a
-	and	$F0
-	jr	z, .up_set_bit
-	; set up pos
-	add	a, -16
-	ld	c, a
-	ld	a, b
-	and	$0F
-	or	c		; a = new pos
-	; get map position
-	call	GET_MAP_POSITION
-	jr	z, .up_check_end
-.up_set_bit:
-	; set left bit
-	ld	hl, room_enhance_tile
-	set	1, (hl)
-.up_check_end:
-
-
-	; RIGHT TILE
-	ld	a, (room_enhance_pos)
-	ld	b, a
-	and	$0F
-	cp	10 ; 11
-	jr	nc, .right_set_bit
-	; set left pos
-	inc	a
-	ld	c, a
-	ld	a, b
-	and	$F0
-	or	c		; a = new pos
-	; get map position
-	call	GET_MAP_POSITION
-	jr	z, .right_check_end
-.right_set_bit:
-	; set left bit
-	ld	hl, room_enhance_tile
-	set	2, (hl)
-.right_check_end:
-
-
-	; DOWN TILE
-	ld	a, (room_enhance_pos)
-	ld	b, a
-	and	$F0
-	cp	10 << 4 ; $B0
-	jr	nc, .down_set_bit
-	; set up pos
-	add	a, $10
-	ld	c, a
-	ld	a, b
-	and	$0F
-	or	c		; a = new pos
-	; get map position
-	call	GET_MAP_POSITION
-	jr	z, .down_check_end
-.down_set_bit:
-	; set left bit
-	ld	hl, room_enhance_tile
-	set	3, (hl)
-.down_check_end:
-
-	; calculate actual tile
-	ld	a, (room_enhance_tile)
-	add	a, a
-	add	a, a
-	ld	hl, DATA_WALL_ENHANCE
-	call	ADD_HL_A
-	call	PRINT_TILE_SEQ
-
-	pop	de
-	pop	bc
-	pop	af
-	pop	hl
-	ret
-
-
-GET_MAP_POSITION:
-	ld		b, a
-	rra
-	rra
-	rra
-	and 	$1F	; a = (posicion y en mapa)*2
-	ld		hl, room_buffer
-	call	ADD_HL_A
-	ld		a, (hl)	; a = byte con 8 pixeles
-	ld		c, a	; c = byte con 8 pixeles
-
-	ld		a, b	; b = posicion
-	and		$07	; a = posicion x (0..7)
-	cpl
-	add		a, 7 +1
-	ld		b, a	; b = numero de bits a rotar
-	ld		a, c	; a = byte con 8 pixeles
-	jr		z, @@norotar
-@@rotar:
-	rra
-	djnz	@@rotar
-@@norotar:
-	and		$01
-	ret
-
 
 ; -----------------------------------------------------------------------------
 ; param ix:
@@ -540,13 +444,8 @@ PRINT_SPHINX_ROOM_DECORATION:
 	ld	(door1.spratr_y),a
 	ld	(door2.spratr_y),a
 
-; ; Prints "6" (for "ROOM 16")
-	; ld	a,06h
-	; ld	de,CFG_HUD.ROOM_COORDS + 1
-	; call	PRINT_CHAR
-
 ; Player initial position
-	ld	a,98h
+	ld	a,98h ; y
 ; ------VVVV----falls through--------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -557,7 +456,7 @@ INIT_GAME_LOOP:
 	push	hl
 	ld	(hl),a
 	inc	hl
-	ld	(hl),60h
+	ld	(hl),60h -8 ; x
 	inc	hl
 	push	hl
 
@@ -644,18 +543,16 @@ GAME_LOOP:
 	call	GAME_LOOP_DELAY
 
 ; Next frame
-	ld	a,(aux.frame_counter)
-	inc	a
-	ld	(aux.frame_counter),a
+	ld	hl, aux.frame_counter
+	inc	[hl]
 
 ; Each 4 frames, blinks the current room
-	ld	de,(pyramid.room_namtbl_ptr)
-	ld	b, CHARACTER.ROOM_NOT_VISITED ; $53 ; ($63 = non visited room)
-	ld	a,(aux.frame_counter)
+	ld	a, [hl]
 	and	04h
-	jr	z,.L86AC
-	inc	b ; ($64 = current room)
-.L86AC:	ld	a,b
+	ld	a, CHARACTER.ROOM_NOT_VISITED
+	jr	z, .A_OK
+	inc	a ; (a = CHARACTER.ROOM_CURRENT)
+.A_OK:	ld	de, (pyramid.room_namtbl_ptr)
 	call	PRINT_CHAR
 
 ; Sets flag to check wall for player
@@ -1029,7 +926,7 @@ MOVE_SKULL:
 	ld	(skull.spratr_pat),a
 ; Puts the skull sprite
 	ld	de, skull
-	ld	a, 1
+	ld	a, (skull.sprite_plane)
 	call	PUT_SPRITE
 ; Checks collision between the skull and the player
 	ld	ix,skull
@@ -1162,7 +1059,7 @@ GAME_LOOP.BULLET_OK:
 	cp	(hl)
 	jr	nz,GAME_LOOP.EXIT_OK ; no
 	inc	hl
-	ld	a,60h
+	ld	a,60h -8 ; (adjusts to the new playground position)
 	cp	(hl)
 	jr	nz,GAME_LOOP.EXIT_OK ; no
 .DO_EXIT:
@@ -1173,8 +1070,17 @@ GAME_LOOP.BULLET_OK:
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a, CHARACTER.ROOM_VISITED ; $51
 	call	PRINT_CHAR
-; Plays exit sound
-	call	PLAY_SOUND_EXIT
+
+; color ,,3
+	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
+	call	WRTVDP
+; Plays the exit jingle
+	ld	hl, SONG.JINGLE_EXIT
+	call	REPLAYER.PLAY_JINGLE
+; color ,,4
+	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
+	call	WRTVDP
+
 ; Scores 500 points
 	ld	de,0500h
 	call	ADD_SCORE
@@ -1286,6 +1192,7 @@ GAME_LOOP.EVERYTHING_OK:
 	and	$1f
 	ld	e,a
 	ld	a,b
+	inc	e ; (adjusts from the new playground position)
 	call	PRINT_TILE
 
 ; Does the player has the diamond?
@@ -1394,8 +1301,16 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	b,0Eh
 	ld	hl,LITERAL.CONGRATULATIONS
 	call	PRINT
-; Sphinx sound
-	call	PLAY_SOUND_SPHINX
+
+; color ,,3
+	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
+	call	WRTVDP
+; Plays the sphinx jingle
+	ld	hl, SONG.JINGLE_SPHINX
+	call	REPLAYER.PLAY_JINGLE
+; color ,,4
+	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
+	call	WRTVDP
 
 ; "Hit space key"
 	ld	hl,LITERAL.TRY_THE_NEXT_PYRAMID
@@ -2031,6 +1946,7 @@ OPEN_BOX_DIAMOND:
 	ld	(exit.unused2),a
 ; Prints the diamond
 	ld	a, CHARACTER.DIAMOND ; 3Ch
+	inc	e ; (adjusts from the new playground position)
 	call	PRINT_TILE
 ; Prepares the mark to opening the door (2 "airs" later)
 	ld	hl,(game.air_left)
@@ -2052,6 +1968,7 @@ OPEN_BOX_GUN:
 	ld	(player_has_gun),a
 ; Prints the gun
 	ld	a, CHARACTER.GUN ; 38h
+	inc	e ; (adjusts from the new playground position)
 	call	PRINT_TILE
 ; Scores 100 points
 	ld	de,0100h
@@ -2068,18 +1985,18 @@ OPEN_BOX_SKULL:
 	ld	(hl),d
 	inc	hl ; skull.spratr_x
 	ld	(hl),e
-	inc	hl ; skull.spratr_pattern
-	ld	(hl),SPRITE_PATTERN.SKULL4*4+12 ; 40h
-	inc	hl ; skull.spratr_color
-	ld	(hl),SPRITE_COLOR.SKULL
-	inc	hl ; skull.direction
-	xor	a
-	ld	(hl),a
-	inc	hl ; skull.status
-	inc	hl ; skull.base_pattern
-	ld	(hl),SPRITE_PATTERN.SKULL4 ; 10h
-	inc	hl ; skull.sprite_plane
-	ld	(hl),03h
+	; inc	hl ; skull.spratr_pattern
+	; ld	(hl),SPRITE_PATTERN.SKULL4*4+12 ; 40h
+	; inc	hl ; skull.spratr_color
+	; ld	(hl),SPRITE_COLOR.SKULL
+	; inc	hl ; skull.direction
+	; xor	a
+	; ld	(hl),a
+	; inc	hl ; skull.status
+	; inc	hl ; skull.base_pattern
+	; ld	(hl),SPRITE_PATTERN.SKULL4 ; 10h
+	; inc	hl ; skull.sprite_plane
+	; ld	(hl),03h
 ; Put skull sprite
 	ld	de, skull
 	ld	a, 1
@@ -2125,6 +2042,7 @@ REMOVE_OPEN_BOX:
 	srl	e
 	srl	e
 	srl	e
+	inc	e ; (adjusts from the new playground position)
 	jp	CLEAR_TILE
 	; (original jp SHORT_DELAY removed)
 ; -----------------------------------------------------------------------------
@@ -2148,52 +2066,50 @@ DATA_RANDOMIZE_BOX_CONTENTS:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-PLAY_START_GAME_MUSIC:
-; Plays the jingle
-	ld	hl, .SONG
-	call	REPLAYER.PLAY_JINGLE
-	jp	DELAY.ONE_SECOND
-.SONG:
-	incbin "asm/enhancedplus/sfx/PW_NewGame.pt3.hl.zx7"
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
 PLAY_INGAME_MUSIC:
-; Reads the song to use and skips the nointro version the next time
-	ld	hl, ingame_song_index
-; Checks sphinx room first
+; Checks first room and sphinx room first
 	ld	a, [pyramid.room_index]
+; 0 = MUSIC_1_INTRO
+	ld	hl, SONG.MUSIC_1_INTRO
+	or	a
+	jp	z, REPLAYER.PLAY_LOOPED
+; 15 = MUSIC_SPHINX
+	ld	hl, SONG.MUSIC_SPHINX
 	cp	15
-	ld	a, 8
-	jr	z, .A_OK ; yes
-; No: Reads the song to use and skips the nointro version the next time
-	ld	a, [hl]
-	set	2, [hl] ; 00000 X 0 0
+	jp	z, REPLAYER.PLAY_LOOPED
+
+; Reads the song to use
+; Checks the floor first
+	ld	hl, .TABLE_FIRST_FLOOR
+	cp	7
+	jp	c, .TABLE_OK ; first floor
+	ld	hl, .TABLE_SECOND_FLOOR
+.TABLE_OK:
+	ld	a, [ingame_song_index]
+	add	$02
+	cp	$06
+	jr	nz, .A_OK
+	xor	a
 .A_OK:
+	ld	[ingame_song_index], a ; a = 0, 2, 4
 ; Gets the proper song
-	ld	hl, .TABLE
 	call	ADD_HL_A
 	ld	a, [hl] ; hl = [hl]
 	inc	hl
 	ld	h, [hl]
 	ld	l, a
 ; Plays the song
-	xor	a ; (loop)
-	jp	REPLAYER.PLAY
-.TABLE:
-	dw	.SONG_INTRO	; 0 = 00000 0 0 0
-	dw	.SONG_INTRO	; 2 = 00000 0 1 0
-	dw	.SONG_A		; 4 = 00000 1 0 0
-	dw	.SONG_B		; 6 = 00000 1 1 0
-	dw	.SONG_SPHINX	; 8 = 00001 0 0 0
-.SONG_INTRO:
-	incbin "asm/enhancedplus/sfx/PW_VT2_3chan.pt3.hl.zx7"
-.SONG_A:
-	incbin "asm/enhancedplus/sfx/PW_VT2_3chan_nointro.pt3.hl.zx7"
-.SONG_B:
-	incbin "asm/enhancedplus/sfx/PW_VT2_3_Level2.pt3.hl.zx7"
-.SONG_SPHINX:
-	incbin "asm/enhancedplus/sfx/PW_VT2_3_Sphinx_IN.pt3.hl.zx7"
+	jp	REPLAYER.PLAY_LOOPED
+
+.TABLE_FIRST_FLOOR:
+	dw	SONG.MUSIC_1
+	dw	SONG.MUSIC_1
+	dw	SONG.MUSIC_1
+
+.TABLE_SECOND_FLOOR:
+	dw	SONG.MUSIC_2A
+	dw	SONG.MUSIC_2B
+	dw	SONG.MUSIC_2C
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2206,7 +2122,7 @@ IFDEF CFG_OTHERS.DEAD_PLAYER_COLOR
 ENDIF
 
 ; Plays the jingle
-	ld	hl, .SONG
+	ld	hl, SONG.JINGLE_DEATH
 	inc	a ; (not a loop)
 	call	REPLAYER.PLAY
 
@@ -2255,39 +2171,6 @@ IFDEF CFG_OTHERS.DEAD_PLAYER_DIZZY
 ENDIF
 
 	jp	DELAY.ONE_TENTH
-
-.SONG:
-	incbin "asm/enhancedplus/sfx/PW_Dead2.pt3.hl.zx7"
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-PLAY_SOUND_EXIT:
-; color ,,3
-	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
-	call	WRTVDP
-; Plays the jingle
-	ld	hl, .SONG
-	call	REPLAYER.PLAY_JINGLE
-; color ,,4
-	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
-	jp	WRTVDP
-.SONG:
-	incbin "asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl.zx7"
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-PLAY_SOUND_SPHINX:
-; color ,,3
-	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
-	call	WRTVDP
-; Plays the jingle
-	ld	hl, .SONG
-	call	REPLAYER.PLAY_JINGLE
-; color ,,4
-	ld	bc, CFG_BG_COLOR.DEFAULT << 8 + 07h
-	jp	WRTVDP
-.SONG:
-	incbin "asm/enhancedplus/sfx/PW_VT2_Sphinx.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2634,8 +2517,9 @@ TO_VRAM_COORDINATES:
 	ld	d,a
 ; [ix++] = 16e+16
 	ld	a,e
-	inc	a
+	; inc	a ; (moved below, adjusts to new playground position)
 	add	a,a
+	inc	a ; (comes from above, adjusts to new playground position)
 	add	a,a
 	add	a,a
 	add	a,a
@@ -2694,10 +2578,8 @@ PRINT:
 ; (preserves de and length)
 	push	de
 	ld	a, b
-	ex	af, af'
 	call	TO_NAMTBL
 ; (restores length in c; actually, in bc)
-	ex	af,af'
 	ld	c, a
 	call	LDIRVM
 ; (restores de)
@@ -2707,90 +2589,59 @@ PRINT:
 
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
+; touches a, bc, de, hl
 CLEAR_TILE:
 	ld a, CHARACTER.FLOOR
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
-; param a: character to put
+; param a: first character to put (a, a+1, a+2, a+3)
+; touches a, bc, de, hl
 PRINT_TILE:
-	ex	af, af'
 	call	TO_NAMTBL
+	dec	e ; (adjusts to new playground position)
 	ex	de,hl
-	ex	af,af'
 ; First row, first char
 	call	.CHAR
 ; Second char
-	ld	a, c
-	inc	hl
+	inc	l
 	call	.CHAR
 ; Second row, first char
-	ld	a, c
 	ld	bc, SCR_WIDTH -1
 	add	hl, bc
 	call	.CHAR
 ; Second char
-	ld	a, c
 	inc	l
 	jp	WRTVRM
 
 ; param hl: VRAM destination
 ; param a: character to print
 ; ret hl: VRAM destination
-; ret c: a + 1
+; ret a: a + 1
 .CHAR:
 	ld	c, a
 	push	hl
 	call	WRTVRM
 	pop	hl
-	inc	c
+	ld	a, c
+	inc	a
 	ret
 ; -----------------------------------------------------------------------------
-
-; param hl: tile address
-; param de: VRAM destination ($yyxx)
-; param a: character to put
-PRINT_TILE_SEQ:
-	ex	af, af'
-	call	TO_NAMTBL
-	;ex	de,hl
-	ex	af,af'
-
-	push	hl
-	push	de
-	ld		bc, 2
-	call	LDIRVM
-	pop	de
-	ld		hl, 32
-	add	hl, de
-	ex		de, hl
-	pop	hl
-	inc	hl
-	inc	hl
-	ld		bc, 2
-	jp		LDIRVM
-
 
 ; -----------------------------------------------------------------------------
 ; param de: VRAM destination ($yyxx)
 ; param a: character to put
 PRINT_CHAR:
-; (preserves char)
-	ex	af, af'
 	call	TO_NAMTBL
 	ex	de,hl
-; (restores char)
-	ex	af,af'
 	jp	WRTVRM
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 ; param de: coordinates $yyxx
-; ret b: 0
-; ret c: 32
+; ret bc: 32 ($0020)
 ; ret de: NAMTBL coordinates
-; destroys: a, bc
 TO_NAMTBL:
 	push	hl
 	ld	hl, NAMTBL
@@ -2876,26 +2727,6 @@ DATA_SOUND.SPHINX:
 	DB	0Dh, 00h
 ; -----------------------------------------------------------------------------
 
-; -----------------------------------------------------------------------------
-DATA_WALL_ENHANCE:
-	DB	$30,	$31,	$32,	$33	; 0
-	DB	$5D,	$31,	$5C,	$33	; 1
-	DB	$5E,	$5F,	$32,	$33	; 2
-	DB	$5E,	$5F,	$5C,	$33	; 3
-	DB	$30,	$5D,	$32,	$5C	; 4
-	DB	$5D,	$5D,	$5C,	$5C	; 5
-	DB	$5E,	$5E,	$32,	$5C	; 6
-	DB	$5E,	$5E,	$5C,	$5C	; 7
-	DB	$30,	$31,	$5E,	$5F	; 8
-	DB	$5D,	$31,	$5E,	$5F	; 9
-	DB	$5E,	$5F,	$5E,	$5F	; 10
-	DB	$5E,	$5F,	$5E,	$5F	; 11
-	DB	$30,	$5D,	$5E,	$5E	; 12
-	DB	$5D,	$5D,	$5E,	$5E	; 13
-	DB	$5E,	$5E,	$5E,	$5E	; 14
-	DB	$5E,	$5E,	$5E,	$5E	; 15
-; -----------------------------------------------------------------------------
-
 
 ; -----------------------------------------------------------------------------
 ; H.TIMI hook
@@ -2955,6 +2786,10 @@ REPLAYER.STOP:
 ; Prepares next frame with silence
 	jp	PT3_MUTE
 
+; Starts the replayer with background music (looped)
+; param hl: pointer to the packed song
+REPLAYER.PLAY_LOOPED:
+	xor	a
 
 ; Starts the replayer
 ; param hl: pointer to the packed song
@@ -2976,6 +2811,29 @@ REPLAYER.PLAY:
 	ld	hl, unpack_buffer -100 ; (headerless PT3 files)
 	jp	PT3_INIT
 
+
+; Processes a frame in the replayer
+REPLAYER.FRAME:
+; Plays the actual frame
+	call	PT3_ROUT
+
+; Prepares PT3 next frame
+; Checks if the end of the song has been reached
+	ld	a, [PT3_SETUP]
+	bit	7, a ; "bit7 is set each time, when loop point is passed"
+	jp	z, .FRAME_PLAY ; no: prepares next frame
+; yes: Checks if loop is enabled
+	bit	0, a ; "set bit0 to 1, if you want to play without looping"
+	ret	nz ; no: does nothing
+; yes: reactivates the player and prepares next frame
+	res	7, a
+	ld	[PT3_SETUP], a
+.FRAME_PLAY:
+; Prepares both PT3 and ayFX next frame
+	call	PT3_PLAY
+	jp	ayFX_PLAY
+
+
 ; Starts the replayer and waits for a jingle to end
 ; param hl: pointer to the song
 REPLAYER.PLAY_JINGLE:
@@ -2990,33 +2848,35 @@ REPLAYER.WAIT:
 	ret	nz
 	jr	REPLAYER.WAIT
 
-
-; Processes a frame in the replayer
-REPLAYER.FRAME:
-; Plays the actual frame
-	call	PT3_ROUT
-
-; Prepares PT3 next frame
-; Checks if the end of the song has been reached
-	ld	a, [PT3_SETUP]
-	bit	7, a ; "bit7 is set each time, when loop point is passed"
-	jp	z, .PLAY ; no: prepares next frame
-; yes: Checks if loop is enabled
-	bit	0, a ; "set bit0 to 1, if you want to play without looping"
-	ret	nz ; no: does nothing
-; yes: reactivates the player and prepares next frame
-	res	7, a
-	ld	[PT3_SETUP], a
-.PLAY:
-; Prepares both PT3 and ayFX next frame
-	call	PT3_PLAY
-	jp	ayFX_PLAY
-
-
 ; PT3 replayer by Dioniso/MSX-KUN/SapphiRe
 	include	"asm/libext/PT3-ROM.tniasm.ASM"
 ; ayFX REPLAYER v1.31
 	include	"asm/libext/ayFX-ROM.tniasm.asm"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+SONG:
+.JINGLE_NEW_GAME:
+	incbin "asm/enhancedplus/sfx/jingle-new-game.pt3.hl.zx7"
+.JINGLE_DEATH:
+	incbin "asm/enhancedplus/sfx/jingle-death.pt3.hl.zx7"
+.JINGLE_EXIT:
+	incbin "asm/enhancedplus/sfx/jingle-exit.pt3.hl.zx7"
+.JINGLE_SPHINX:
+	incbin "asm/enhancedplus/sfx/jingle-sphinx.pt3.hl.zx7"
+
+.MUSIC_1_INTRO:
+	incbin "asm/enhancedplus/sfx/music-1-intro.pt3.hl.zx7"
+.MUSIC_1:
+	incbin "asm/enhancedplus/sfx/music-1.pt3.hl.zx7"
+.MUSIC_2A:
+	incbin "asm/enhancedplus/sfx/music-2A.pt3.hl.zx7"
+.MUSIC_2B:
+	incbin "asm/enhancedplus/sfx/music-2B.pt3.hl.zx7"
+.MUSIC_2C:
+	incbin "asm/enhancedplus/sfx/music-2C.pt3.hl.zx7"
+.MUSIC_SPHINX:
+	incbin "asm/enhancedplus/sfx/music-sphinx.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3229,11 +3089,6 @@ INCREASE_ROOM_INDEX:
 ; -----------------------------------------------------------------------------
 ; On entering second or third floor
 ON_FLOOR_CHANGE:
-; Changes the in-game song
-	ld	hl, ingame_song_index
-	ld	a, [hl]
-	xor	$02 ; 00000 0 X 0
-	ld	[hl], a
 ; Increases the enemy count
 	; jp	INCREASE_ENEMY_COUNT ; (falls through)
 ; ------VVVV----falls through--------------------------------------------------
@@ -3417,176 +3272,6 @@ BUFFER_CURRENT_ROOM:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-DRAW_CURRENT_ROOM:
-
-; Prints the room
-	xor	a
-	ld	(room_enhance_pos), a
-
-; For each row
-	ld	hl, room_buffer
-	ld	d, $01
-.ROW:
-; Reads two bytes from the data
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
-; (preserves data pointer)
-	push	hl
-; For each column
-	ld	e, $02
-.COLUMN:
-; (preserves data bytes and target pointer)
-	push	de
-; Is the first bit set?
-	sla	b
-	rl	c
-	push	bc
-
-	jr	nc,.EMPTY ; no
-; (wall)
-	call	PRINT_WALL_3D
-	jr	.BIT_OK
-
-.EMPTY:
-	call	CLEAR_TILE
-
-.BIT_OK:
-
-; (restores data bytes and target pointer)
-	pop	bc
-	pop	de
-; x++
-	inc	e
-	inc	e
-; x==24?
-
-	ld a, (room_enhance_pos)
-	inc a
-	ld (room_enhance_pos), a
-
-	ld	a, 24
-	cp	e
-	jr	nz, .COLUMN
-
-.END_ROW:
-; (restores data pointer)
-	pop	hl
-; y++
-	inc	d
-	inc	d
-; y==23?
-
-	ld	a, (room_enhance_pos)
-	and $F0
-	add a, $10
-	ld (room_enhance_pos), a
-
-	ld	a, 23
-	cp	d
-	jr	nz, .ROW
-
-DRAW_ROOM_ENHANCE:
-
-
-	push	hl
-
-	; restore FIRST & LAST ROW and FIRST COLUMN
-	ld		hl, NAMTBL + 2
-	ld		a, $5E
-	ld		bc, 22
-	call	FILVRM
-
-	ld		hl, NAMTBL + 23*32 + 2
-	ld		a, $5E
-	ld		bc, 22
-	call	FILVRM
-
-	ld		hl, NAMTBL + 32 + 1
-	ld		b, 22
-.LOOP0:
-	push	bc
-	ld		a, $5E
-	call	WRTVRM
-	ld		bc, 32
-	add	hl, bc
-	pop	bc
-	djnz	.LOOP0
-
-
-	; check FIRST ROW
-	ld		hl, NAMTBL + 32 + 2
-	ld		b, 11
-.LOOP1:
-	push	hl
-	push	bc
-	call	RDVRM
-	cp		$58
-	jr		nz, .LOOP1_NEXT
-	ld		bc, -32
-	add	hl, bc
-	ld		a, $5C
-	call	WRTVRM
-	inc	hl
-	call	WRTVRM
-.LOOP1_NEXT:
-	pop	bc
-	pop	hl
-	inc	hl
-	inc	hl
-	djnz	.LOOP1
-
-	; check LAST ROW
-	ld		hl, NAMTBL + 32*22 + 2
-	ld		b, 11
-.LOOP2:
-	push	hl
-	push	bc
-	call	RDVRM
-	cp		$5A
-	jr		nz, .LOOP2_NEXT
-	ld		bc, 32
-	add	hl, bc
-	ld		a, $5D
-	call	WRTVRM
-	inc	hl
-	call	WRTVRM
-.LOOP2_NEXT:
-	pop	bc
-	pop	hl
-	inc	hl
-	inc	hl
-	djnz	.LOOP2
-
-	; check FIRST COLUMN
-	ld		hl, NAMTBL + 32 + 2
-	ld		b, 11
-.LOOP3:
-	push	bc
-	push	hl
-	call	RDVRM
-	cp		$58
-	jr		nz, .LOOP3_NEXT
-	dec	hl
-	ld		a, $5F
-	call	WRTVRM
-	ld		bc, 32
-	add	hl, bc
-	call	WRTVRM
-.LOOP3_NEXT:
-	pop	hl
-	ld		bc, 32*2
-	add	hl, bc
-	pop	bc
-	djnz	.LOOP3
-
-	pop	hl
-
-	ret
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
 ; param a: the nibble to mirror
 ; ret a: the mirrored nibble
 ; touches de
@@ -3606,6 +3291,343 @@ MIRROR_NIBBLE:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
+; Prints the room
+DRAW_CURRENT_ROOM:
+
+	xor	a
+	ld	(room_enhance_pos), a
+
+; For each row
+	ld	hl, room_buffer
+	ld	d, $01
+.ROW:
+; Reads two bytes from the data
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+; (preserves data pointer)
+	push	hl
+; For each column
+	ld	e, $02
+.COLUMN:
+; (preserves data bytes and target pointer)
+	push	de
+; Checks first bit
+	sla	b
+	rl	c
+	push	bc
+; (prints wall or clear)
+	call	PRINT_WALL_3D_OR_CLEAR_TILE
+
+; (restores data bytes and target pointer)
+	pop	bc
+	pop	de
+; x++
+	inc	e
+	inc	e
+	ld	hl, room_enhance_pos
+	inc	[hl]
+; x==24?
+	ld	a, e
+	cp	24
+	jr	nz, .COLUMN
+
+.END_ROW:
+; y++
+	inc	d
+	inc	d
+	ld	a, (hl) ; (ld a, (room_enhance_pos))
+	and	$F0
+	add	a, $10
+	ld	(hl), a
+; (restores data pointer)
+	pop	hl
+; y==23?
+	ld	a, d
+	cp	23
+	jr	nz, .ROW
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; Enhances the room
+DRAW_ROOM_ENHANCE:
+	push	hl
+
+; restore FIRST & LAST ROW and FIRST COLUMN
+	ld	hl, NAMTBL + 1
+	ld	a, $5E
+	ld	bc, 22
+	call	FILVRM
+	ld	hl, NAMTBL + 23*32 + 1
+	ld	a, $5E
+	ld	bc, 22
+	call	FILVRM
+	ld	hl, NAMTBL + 32
+	ld	b, 22
+.LOOP0:
+	push	bc
+	ld	a, $5E
+	call	WRTVRM
+	ld	bc, 32
+	add	hl, bc
+	pop	bc
+	djnz	.LOOP0
+
+; check FIRST ROW
+	ld	hl, NAMTBL + 32 + 1
+	ld	b, 11
+.LOOP1:
+	push	hl
+	push	bc
+	call	RDVRM
+	cp	$58
+	jr	nz, .LOOP1_NEXT
+	ld	bc, -32
+	add	hl, bc
+	ld	a, $5C
+	call	WRTVRM
+	inc	hl
+	call	WRTVRM
+.LOOP1_NEXT:
+	pop	bc
+	pop	hl
+	inc	hl
+	inc	hl
+	djnz	.LOOP1
+
+; check LAST ROW
+	ld	hl, NAMTBL + 32*22 + 1
+	ld	b, 11
+.LOOP2:
+	push	hl
+	push	bc
+	call	RDVRM
+	cp	$5A
+	jr	nz, .LOOP2_NEXT
+	ld	bc, 32
+	add	hl, bc
+	ld	a, $5D
+	call	WRTVRM
+	inc	hl
+	call	WRTVRM
+.LOOP2_NEXT:
+	pop	bc
+	pop	hl
+	inc	hl
+	inc	hl
+	djnz	.LOOP2
+
+; check FIRST COLUMN
+	ld	hl, NAMTBL + 32 + 1
+	ld	b, 11
+.LOOP3:
+	push	bc
+	push	hl
+	call	RDVRM
+	cp	$58
+	jr	nz, .LOOP3_NEXT
+	dec	hl
+	ld	a, $5F
+	call	WRTVRM
+	ld	bc, 32
+	add	hl, bc
+	call	WRTVRM
+.LOOP3_NEXT:
+	pop	hl
+	ld	bc, 32*2
+	add	hl, bc
+	pop	bc
+	djnz	.LOOP3
+
+	pop	hl
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; param c (flag): 1 to PRINT_WALL_3D, 0 to CLEAR_TILE
+PRINT_WALL_3D_OR_CLEAR_TILE:
+	jp	nc, CLEAR_TILE
+; ------VVVV----falls through--------------------------------------------------
+
+; -----------------------------------------------------------------------------
+PRINT_WALL_3D:
+	push	hl
+	push	af
+	push	bc
+	push	de
+
+	; initialize
+	xor	a
+	ld	(room_enhance_tile), a
+
+	; LEFT TILE
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$0F
+	jr	z, .left_set_bit
+	; set left pos
+	dec	a
+	ld	c, a
+	ld	a, b
+	and	$F0
+	or	c		; a = new pos
+	; get map position
+	call	GET_MAP_POSITION
+	jr	z, .left_check_end
+.left_set_bit:
+	; set left bit
+	ld	hl, room_enhance_tile
+	set	0, (hl)
+.left_check_end:
+
+
+	; UP TILE
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$F0
+	jr	z, .up_set_bit
+	; set up pos
+	add	a, -16
+	ld	c, a
+	ld	a, b
+	and	$0F
+	or	c		; a = new pos
+	; get map position
+	call	GET_MAP_POSITION
+	jr	z, .up_check_end
+.up_set_bit:
+	; set left bit
+	ld	hl, room_enhance_tile
+	set	1, (hl)
+.up_check_end:
+
+
+	; RIGHT TILE
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$0F
+	cp	10 ; 11
+	jr	nc, .right_set_bit
+	; set left pos
+	inc	a
+	ld	c, a
+	ld	a, b
+	and	$F0
+	or	c		; a = new pos
+	; get map position
+	call	GET_MAP_POSITION
+	jr	z, .right_check_end
+.right_set_bit:
+	; set left bit
+	ld	hl, room_enhance_tile
+	set	2, (hl)
+.right_check_end:
+
+
+	; DOWN TILE
+	ld	a, (room_enhance_pos)
+	ld	b, a
+	and	$F0
+	cp	10 << 4 ; $B0
+	jr	nc, .down_set_bit
+	; set up pos
+	add	a, $10
+	ld	c, a
+	ld	a, b
+	and	$0F
+	or	c		; a = new pos
+	; get map position
+	call	GET_MAP_POSITION
+	jr	z, .down_check_end
+.down_set_bit:
+	; set left bit
+	ld	hl, room_enhance_tile
+	set	3, (hl)
+.down_check_end:
+
+	; calculate actual tile
+	ld	a, (room_enhance_tile)
+	call	PRINT_TILE_SEQ
+
+	pop	de
+	pop	bc
+	pop	af
+	pop	hl
+	ret
+
+GET_MAP_POSITION:
+	ld		b, a
+	rra
+	rra
+	rra
+	and 	$1F	; a = (posicion y en mapa)*2
+	ld	hl, room_buffer
+	call	ADD_HL_A
+	ld	a, (hl)	; a = byte con 8 pixeles
+	ld	c, a	; c = byte con 8 pixeles
+
+	ld	a, b	; b = posicion
+	and	$07	; a = posicion x (0..7)
+	cpl
+	add	a, 7 +1
+	ld	b, a	; b = numero de bits a rotar
+	ld	a, c	; a = byte con 8 pixeles
+	jr	z, @@norotar
+@@rotar:
+	rra
+	djnz	@@rotar
+@@norotar:
+	and	$01
+	ret
+
+; param a: tile index
+; param de: VRAM destination ($yyxx)
+PRINT_TILE_SEQ:
+; Retrieves the tile definition
+	ld	hl, .DATA
+	add	a, a
+	add	a, a
+	call	ADD_HL_A
+; Computes NATMBL address
+	call	TO_NAMTBL
+	dec	e ; (adjusts to new playground position)
+; Top row
+	push	hl
+	push	de
+	ld	c, 2 ; (b already 0 because of TO_NAMTBL)
+	call	LDIRVM
+; Bottom row
+	pop	hl ; de += 32
+	ld	c, 32
+	add	hl, bc
+	ex	de, hl
+	pop	hl
+	inc	hl ; hl += 2
+	inc	hl
+	ld	c, 2
+	jp	LDIRVM
+
+.DATA:
+	DB	$30,	$31,	$32,	$33	; 0
+	DB	$5D,	$31,	$5C,	$33	; 1
+	DB	$5E,	$5F,	$32,	$33	; 2
+	DB	$5E,	$5F,	$5C,	$33	; 3
+	DB	$30,	$5D,	$32,	$5C	; 4
+	DB	$5D,	$5D,	$5C,	$5C	; 5
+	DB	$5E,	$5E,	$32,	$5C	; 6
+	DB	$5E,	$5E,	$5C,	$5C	; 7
+	DB	$30,	$31,	$5E,	$5F	; 8
+	DB	$5D,	$31,	$5E,	$5F	; 9
+	DB	$5E,	$5F,	$5E,	$5F	; 10
+	DB	$5E,	$5F,	$5E,	$5F	; 11
+	DB	$30,	$5D,	$5E,	$5E	; 12
+	DB	$5D,	$5D,	$5E,	$5E	; 13
+	DB	$5E,	$5E,	$5E,	$5E	; 14
+	DB	$5E,	$5E,	$5E,	$5E	; 15
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
 ; Performs the only-once initialization:
 ; - initial option values
 ; - CHRTBL/CLRTBL/SPRTBL
@@ -3614,11 +3636,11 @@ INIT_ONCE:
 	ld	a, CFG_OTHERS.OPTIONS_0
 	ld	[options], a
 
-; High score = 0
-	xor	a
-	ld	(game.high_score_bcd),a
-	ld	(game.high_score_bcd +1),a
-	ld	(game.high_score_bcd +2),a
+; ; High score = 0
+; 	xor	a
+; 	ld	(game.high_score_bcd),a
+; 	ld	(game.high_score_bcd +1),a
+; 	ld	(game.high_score_bcd +2),a
 
 ; Init CHRTBL/CLRTBL
 	ld	hl, .CHRTBL
@@ -3703,6 +3725,7 @@ CHARACTER:
 
 	.ROOM_VISITED:		equ $51
 	.ROOM_NOT_VISITED:	equ $53
+	.ROOM_CURRENT:		equ $54
 	.CURSOR:		equ $56
 
 	.FLOOR:			equ $58
@@ -3973,21 +3996,8 @@ MAIN_MENU_LOOP:
 INIT_INGAME:
 ; Enemy sprite patterns, colors and planes
 	ld	hl, .INIT
-	ld	de, enemies
+	ld	de, init_bin_target
 	call	UNPACK
-
-	; TODO: move to "init.bin"!!!
-; Five lives
-	ld	a,05h
-	ld	(game.lives),a
-; First pyramid (extra time)
-	xor	a
-	ld	(game.pyramid_count),a
-; Score to 0 (and prints score)
-	xor	a
-	ld	bc,0000h
-	ld	(game.score_bcd),a
-	ld	(game.score_bcd +1),bc
 
 ; Init NAMTBL
 	ld	hl, .NAMTBL
@@ -4096,6 +4106,78 @@ ingame_song_index:
 ; -----------------------------------------------------------------------------
 ; Original variables
 
+; Variables initialized only once
+game.high_score_bcd:	rb 3 ; (6 digits)
+
+; Variables initialized once per game
+init_bin_target:
+game.score_bcd:		rb 3 ; (6 digits)
+game.lives:		rb 1
+game.pyramid_count:	rb 1
+
+; Enemies
+init_bin_target.reset_enemies:
+skull:
+	.spratr_y:	rb 1
+	.spratr_x:	rb 1
+	.spratr_pat:	rb 1
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1
+	.sprite_plane:	rb 1
+	enemy_spratr_y:		equ 0 ; (for IX/IY offsets)
+	enemy_spratr_x:		equ 1 ; (for IX/IY offsets)
+	enemy_spratr_pat:	equ 2 ; (for IX/IY offsets)
+	enemy_spratr_color:	equ 3 ; (for IX/IY offsets)
+	enemy_direction:	equ 4 ; (for IX/IY offsets)
+	enemy_status:		equ 5 ; (for IX/IY offsets)
+	enemy_base_pattern:	equ 6 ; (for IX/IY offsets)
+	enemy_sprite_plane:	equ 7 ; (for IX/IY offsets)
+scorpion1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($12)
+	.sprite_plane:	rb 1 ; ($04)
+bat1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($14)
+	.sprite_plane:	rb 1 ; ($05)
+snake1:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($16)
+	.sprite_plane:	rb 1 ; ($06)
+scorpion2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($12)
+	.sprite_plane:	rb 1 ; ($07)
+bat2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($14)
+	.sprite_plane:	rb 1 ; ($08)
+snake2:
+	.spratr_y:	rb 3
+	.spratr_color:	rb 1
+	.direction:	rb 1
+	.status:	rb 1
+	.base_pattern:	rb 1 ; ($16)
+	.sprite_plane:	rb 1 ; ($09)
+
+
 ; Player
 player:
 	.spratr_y:	rb 1
@@ -4141,69 +4223,7 @@ door2:
 	.spratr_pat:	rb 1
 	.spratr_color:	rb 1
 
-; Skull
-skull:
-	.spratr_y:	rb 1
-	.spratr_x:	rb 1
-	.spratr_pat:	rb 1
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; (never read?)
-	.sprite_plane:	rb 1 ; (never read?)
-	enemy_spratr_y:		equ 0
-	enemy_spratr_x:		equ 1
-	enemy_spratr_pat:	equ 2
-	enemy_spratr_color:	equ 3
-	enemy_direction:	equ 4
-	enemy_status:		equ 5
-	enemy_base_pattern:	equ 6
-	enemy_sprite_plane:	equ 7
 
-; Enemies
-enemies:
-scorpion1:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($12)
-	.sprite_plane:	rb 1 ; ($04)
-bat1:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($14)
-	.sprite_plane:	rb 1 ; ($05)
-snake1:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($16)
-	.sprite_plane:	rb 1 ; ($06)
-scorpion2:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($12)
-	.sprite_plane:	rb 1 ; ($07)
-bat2:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($14)
-	.sprite_plane:	rb 1 ; ($08)
-snake2:
-	.spratr_y:	rb 3
-	.spratr_color:	rb 1
-	.direction:	rb 1
-	.status:	rb 1
-	.base_pattern:	rb 1 ; ($16)
-	.sprite_plane:	rb 1 ; ($09)
 
 ; etc.
 nest:
@@ -4229,11 +4249,7 @@ game:
 	.current_room:	rb 1
 	.air_left:	rb 2
 	.air_left_copy:	rb 2
-	.pyramid_count:	rb 1
-	.lives:		rb 1
 aux.how_many_bytes:	rb 2
-game.high_score_bcd:	rb 3 ; (6 digits)
-game.score_bcd:		rb 3 ; (6 digits)
 pyramid:
 	.room_index:	rb 1
 	.room_array:	rb 16 ; (7+5+3+1 rooms)
