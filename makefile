@@ -54,9 +54,11 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\sfx\jingle-sphinx.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-1-intro.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-1.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-2.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-2A.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-2B.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-2C.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\music-3.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\music-sphinx.pt3.hl.zx7
 
 ENHANCEDPLUS_STATIC_DATAS=\
@@ -111,9 +113,11 @@ asm\enhancedplus\sfx\jingle-exit.pt3.hl \
 asm\enhancedplus\sfx\jingle-sphinx.pt3.hl \
 asm\enhancedplus\sfx\music-1-intro.pt3.hl \
 asm\enhancedplus\sfx\music-1.pt3.hl \
+asm\enhancedplus\sfx\music-2.pt3.hl \
 asm\enhancedplus\sfx\music-2A.pt3.hl \
 asm\enhancedplus\sfx\music-2B.pt3.hl \
 asm\enhancedplus\sfx\music-2C.pt3.hl \
+asm\enhancedplus\sfx\music-3.pt3.hl \
 asm\enhancedplus\sfx\music-sphinx.pt3.hl: \
 		asm\enhancedplus\sfx\headerless.asm \
 		asm\enhancedplus\sfx\jingle-new-game.pt3 \
@@ -122,9 +126,11 @@ asm\enhancedplus\sfx\music-sphinx.pt3.hl: \
 		asm\enhancedplus\sfx\jingle-sphinx.pt3 \
 		asm\enhancedplus\sfx\music-1-intro.pt3 \
 		asm\enhancedplus\sfx\music-1.pt3 \
+		asm\enhancedplus\sfx\music-2.pt3 \
 		asm\enhancedplus\sfx\music-2A.pt3 \
 		asm\enhancedplus\sfx\music-2B.pt3 \
 		asm\enhancedplus\sfx\music-2C.pt3 \
+		asm\enhancedplus\sfx\music-3.pt3 \
 		asm\enhancedplus\sfx\music-sphinx.pt3
 	$(ASM) $<
 

@@ -29,7 +29,7 @@ CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.MAIN_DELAY_FACTOR:	equ $18 ; 04h ; Multiplier in main delay routine
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
-	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
+	; .CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
@@ -148,7 +148,7 @@ ROM_START:
 
 ; -----------------------------------------------------------------------------
 ; Game entry point
-INIT:
+MAIN_INIT:
 ; color ,,1
 	ld	bc, CFG_BG_COLOR.INIT << 8 + 07h
 	call	WRTVDP
@@ -1245,7 +1245,7 @@ CHECK_SPHINX_ROOM_BOX:
 	cp	(hl)
 	jr	nz,GAME_LOOP.NEXT ; no
 	inc	hl ; player.spratr_x
-	ld	a,60h
+	ld	a,60h -8 ; (adjusts to the new playground position))
 	cp	(hl)
 	jr	nz,GAME_LOOP.NEXT ; no
 
@@ -1255,7 +1255,7 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	bc, 9 * 4
 	ldir
 
-	; Prints sphinx tiles
+; Prints sphinx tiles
 	ld	de, 030Ah
 	ld	a, $64 + 4*0
 	call	PRINT_TILE
@@ -1288,7 +1288,7 @@ CHECK_SPHINX_ROOM_BOX:
 
 ; Prints the sphinx room in the map
 	ld	a,$52 ; ($62 = sphinx room)
-	ld	de,121Ch	; address or value?
+	ld	de,121Bh
 	call	PRINT_CHAR
 ; color ,,1
 	ld	bc,CFG_BG_COLOR.SPHINX << 8 + 07h
@@ -1297,7 +1297,7 @@ CHECK_SPHINX_ROOM_BOX:
 	ld	de,2000h ; 2000 points (BCD)
 	call	ADD_SCORE
 ; Prints literal
-	ld	de,1206h
+	ld	de,1206h -1 ; (adjusts to the new playground position)
 	ld	b,0Eh
 	ld	hl,LITERAL.CONGRATULATIONS
 	call	PRINT
@@ -1314,10 +1314,10 @@ CHECK_SPHINX_ROOM_BOX:
 
 ; "Hit space key"
 	ld	hl,LITERAL.TRY_THE_NEXT_PYRAMID
-	ld	de,1403h
+	ld	de,1403h -1 ; (adjusts to the new playground position)
 	ld	b,14h
 	call	PRINT
-	ld	de,1606h
+	ld	de,1606h -1 ; (adjusts to the new playground position)
 	call	HIT_SPACE_KEY
 
 ; color ,,4
@@ -1876,18 +1876,29 @@ KILL_PLAYER:
 
 ; -----------------------------------------------------------------------------
 GAME_OVER:
-.L8DD8:	call	REPLAYER.STOP ; was: call RESET_SOUND
+.L8DD8:
+	call	REPLAYER.STOP ; was: call RESET_SOUND
+
+; Hides the sprites
+	call	CLEAR_SPRITES
+	call	LDIRVM_SPRITES
+
 ; Prints GAME OVER message
 	ld	hl,LITERAL.GAME_OVER
-	ld	de,0808h
+	ld	de,0808h -1 ; (adjusts to the new playground position)
 	ld	b,09h
 	call	PRINT
 
 ; "Hit space key"
-	ld	de,0C06h
+	ld	de,0C06h -1 ; (adjusts to the new playground position)
 	call	HIT_SPACE_KEY
 
-	jp	NEW_GAME
+; (ensures the trigger will not bypass the main menu)
+.LOOP:
+	call	GTTRIG_ANY
+	jr	nz, .LOOP
+
+	jp	MAIN_INIT
 ; -----------------------------------------------------------------------------
 
 	; Referenced from 897F, 89E8, 89FD
@@ -1985,13 +1996,13 @@ OPEN_BOX_SKULL:
 	ld	(hl),d
 	inc	hl ; skull.spratr_x
 	ld	(hl),e
-	; inc	hl ; skull.spratr_pattern
-	; ld	(hl),SPRITE_PATTERN.SKULL4*4+12 ; 40h
-	; inc	hl ; skull.spratr_color
+	inc	hl ; skull.spratr_pattern
+	ld	(hl),SPRITE_PATTERN.SKULL4*4+12 ; 40h
+	inc	hl ; skull.spratr_color
 	; ld	(hl),SPRITE_COLOR.SKULL
-	; inc	hl ; skull.direction
-	; xor	a
-	; ld	(hl),a
+	inc	hl ; skull.direction
+	xor	a
+	ld	(hl),a
 	; inc	hl ; skull.status
 	; inc	hl ; skull.base_pattern
 	; ld	(hl),SPRITE_PATTERN.SKULL4 ; 10h
@@ -2079,11 +2090,15 @@ PLAY_INGAME_MUSIC:
 	jp	z, REPLAYER.PLAY_LOOPED
 
 ; Reads the song to use
-; Checks the floor first
+; Checks the first floor
 	ld	hl, .TABLE_FIRST_FLOOR
 	cp	7
 	jp	c, .TABLE_OK ; first floor
+; Checks the second floor
 	ld	hl, .TABLE_SECOND_FLOOR
+	cp	12
+	jp	c, .TABLE_OK ; second floor
+	ld	hl, .TABLE_THIRD_FLOOR
 .TABLE_OK:
 	ld	a, [ingame_song_index]
 	add	$02
@@ -2110,6 +2125,11 @@ PLAY_INGAME_MUSIC:
 	dw	SONG.MUSIC_2A
 	dw	SONG.MUSIC_2B
 	dw	SONG.MUSIC_2C
+
+.TABLE_THIRD_FLOOR:
+	dw	SONG.MUSIC_3
+	dw	SONG.MUSIC_3
+	dw	SONG.MUSIC_3
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2546,8 +2566,8 @@ HIT_SPACE_KEY:
 	call	GTTRIG_ANY
 	pop	de
 	or	a
-	ret	nz
-	jr	.LOOP
+	jr	z, .LOOP
+	ret
 
 .LITERAL:
 	DB	$11, $12, $1D, $FF		; HIT_
@@ -2683,19 +2703,19 @@ LITERAL:
 ; -----------------------------------------------------------------------------
 DATA_SPHINX_SPRATR:
 .L9F28:
-	DB	23,  80, $7C, $04
-	DB	23,  96, $80, $04
-	DB	23, 112, $84, $04
+	DB	23,  80 -8, $7C, $04
+	DB	23,  96 -8, $80, $04
+	DB	23, 112 -8, $84, $04
 
-	DB	39,  80, $88, $04
-	DB	39,  96, $8C, $04
-	DB	39, 112, $90, $04
+	DB	39,  80 -8, $88, $04
+	DB	39,  96 -8, $8C, $04
+	DB	39, 112 -8, $90, $04
 
-	DB	55,  80, $94, $04
-	DB	55,  96, $98, $04
-	DB	55, 112, $9C, $04
+	DB	55,  80 -8, $94, $04
+	DB	55,  96 -8, $98, $04
+	DB	55, 112 -8, $9C, $04
 
-	DB	63,  96, 12, $0E
+	DB	63,  96 -8, 12, $0E
 
 
 ;	DB	07h, 50h, $7c, $04 ; ..., 84h, 04h
@@ -2869,12 +2889,16 @@ SONG:
 	incbin "asm/enhancedplus/sfx/music-1-intro.pt3.hl.zx7"
 .MUSIC_1:
 	incbin "asm/enhancedplus/sfx/music-1.pt3.hl.zx7"
+.MUSIC_2:
+	incbin "asm/enhancedplus/sfx/music-2.pt3.hl.zx7"
 .MUSIC_2A:
 	incbin "asm/enhancedplus/sfx/music-2A.pt3.hl.zx7"
 .MUSIC_2B:
 	incbin "asm/enhancedplus/sfx/music-2B.pt3.hl.zx7"
 .MUSIC_2C:
 	incbin "asm/enhancedplus/sfx/music-2C.pt3.hl.zx7"
+.MUSIC_3:
+	incbin "asm/enhancedplus/sfx/music-3.pt3.hl.zx7"
 .MUSIC_SPHINX:
 	incbin "asm/enhancedplus/sfx/music-sphinx.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
