@@ -44,10 +44,7 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 
 * Sprite flickering routine
 * Proper title charset
+* Proper music and sounds!
 * More randomness! Rooms can be mirrored and flipped
-* More room definitions! _(WIP: new rooms are supported but not defined yet)_
-* Proper music and sounds _(WIP: PT3+ayFX integrated, but not all music and effects are ready yet)_
-
-### Future enhancements
-
-* Options for original (4), all (6), progressive and adaptative number of enemies
+* More room definitions!
+* Difficulty option! Choose between: easier (3 enemies), original (4 enemies), enhanced (progressive and adaptative number of enemies), and harder (6 enemies).
