@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="32" height="24" tilewidth="8" tileheight="8" infinite="0" nextlayerid="2" nextobjectid="1">
  <tileset firstgid="1" name="charset" tilewidth="8" tileheight="8" tilecount="768" columns="32">
-  <image source="charset.png" width="256" height="64"/>
+  <image source="screen_charset.png" width="256" height="64"/>
  </tileset>
  <layer id="1" name="namtbl" width="32" height="24">
   <data encoding="csv">

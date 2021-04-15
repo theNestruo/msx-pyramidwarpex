@@ -29,7 +29,7 @@ CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.MAIN_DELAY_FACTOR:	equ $18 ; 04h ; Multiplier in main delay routine
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
-	; .CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
+	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
@@ -2117,9 +2117,9 @@ PLAY_INGAME_MUSIC:
 	jp	REPLAYER.PLAY_LOOPED
 
 .TABLE_FIRST_FLOOR:
-	dw	SONG.MUSIC_1
-	dw	SONG.MUSIC_1
-	dw	SONG.MUSIC_1
+	dw	SONG.MUSIC_1A
+	dw	SONG.MUSIC_1B
+	dw	SONG.MUSIC_1C
 
 .TABLE_SECOND_FLOOR:
 	dw	SONG.MUSIC_2A
@@ -2127,9 +2127,9 @@ PLAY_INGAME_MUSIC:
 	dw	SONG.MUSIC_2C
 
 .TABLE_THIRD_FLOOR:
-	dw	SONG.MUSIC_3
-	dw	SONG.MUSIC_3
-	dw	SONG.MUSIC_3
+	dw	SONG.MUSIC_3A
+	dw	SONG.MUSIC_3B
+	dw	SONG.MUSIC_3C
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2877,30 +2877,47 @@ REPLAYER.WAIT:
 ; -----------------------------------------------------------------------------
 SONG:
 .JINGLE_NEW_GAME:
-	incbin "asm/enhancedplus/sfx/jingle-new-game.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_NewGame.pt3.hl.zx7"
 .JINGLE_DEATH:
-	incbin "asm/enhancedplus/sfx/jingle-death.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Dead2.pt3.hl.zx7"
 .JINGLE_EXIT:
-	incbin "asm/enhancedplus/sfx/jingle-exit.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl.zx7"
 .JINGLE_SPHINX:
-	incbin "asm/enhancedplus/sfx/jingle-sphinx.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_OUT.pt3.hl.zx7"
 
 .MUSIC_1_INTRO:
-	incbin "asm/enhancedplus/sfx/music-1-intro.pt3.hl.zx7"
-.MUSIC_1:
-	incbin "asm/enhancedplus/sfx/music-1.pt3.hl.zx7"
-.MUSIC_2:
-	incbin "asm/enhancedplus/sfx/music-2.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level1_ONLY_FIRST_TIME.pt3.hl.zx7"
+
+; .MUSIC_1:
+; 	incbin "asm/enhancedplus/sfx/PW_level1.pt3.hl.zx7"
+.MUSIC_1A:
+	incbin "asm/enhancedplus/sfx/PW_level1_A.pt3.hl.zx7"
+.MUSIC_1B:
+	incbin "asm/enhancedplus/sfx/PW_level1_B.pt3.hl.zx7"
+.MUSIC_1C:
+	incbin "asm/enhancedplus/sfx/PW_level1_C.pt3.hl.zx7"
+
+; .MUSIC_2:
+; 	incbin "asm/enhancedplus/sfx/PW_level2.pt3.hl.zx7"
 .MUSIC_2A:
-	incbin "asm/enhancedplus/sfx/music-2A.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_A.pt3.hl.zx7"
 .MUSIC_2B:
-	incbin "asm/enhancedplus/sfx/music-2B.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_B.pt3.hl.zx7"
 .MUSIC_2C:
-	incbin "asm/enhancedplus/sfx/music-2C.pt3.hl.zx7"
-.MUSIC_3:
-	incbin "asm/enhancedplus/sfx/music-3.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_C.pt3.hl.zx7"
+
+; .MUSIC_3:
+; 	incbin "asm/enhancedplus/sfx/PW_level3.pt3.hl.zx7"
+; 	incbin "asm/enhancedplus/sfx/PW_level3_all.pt3.hl.zx7"
+.MUSIC_3A:
+	incbin "asm/enhancedplus/sfx/PW_level3_A.pt3.hl.zx7"
+.MUSIC_3B:
+	incbin "asm/enhancedplus/sfx/PW_level3_B.pt3.hl.zx7"
+.MUSIC_3C:
+	incbin "asm/enhancedplus/sfx/PW_level3_C.pt3.hl.zx7"
+
 .MUSIC_SPHINX:
-	incbin "asm/enhancedplus/sfx/music-sphinx.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3713,9 +3730,9 @@ INIT_ONCE:
 
 ; Data
 .CHRTBL:
-	incbin	"asm/enhancedplus/charset.pcx.chr.zx7"
+	incbin	"asm/enhancedplus/charset.png.chr.zx7"
 .CLRTBL:
-	incbin	"asm/enhancedplus/charset.pcx.clr.zx7"
+	incbin	"asm/enhancedplus/charset.png.clr.zx7"
 .SPRTBL:
 	incbin	"asm/enhancedplus/sprites.pcx.spr.zx7"
 
