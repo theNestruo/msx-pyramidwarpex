@@ -29,7 +29,7 @@ CFG_OTHERS:
 	.PLAYER_INITIAL_DIR:	equ $03 ; 01h ; Initial player direction (down)
 	.MAIN_DELAY_FACTOR:	equ $18 ; 04h ; Multiplier in main delay routine
 	.SHORT_DELAY_FACTOR:	equ $03 ; 04h ; Multiplier in short delay routine
-	.CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
+	; .CHEAT_TAB_FAST_FORWARD:	; Uncomment to use TAB key to advance
 	; .CHEAT_WIN_GAME:	; Uncomment to start game in sphinx room!!
 	; .DEAD_PLAYER_COLOR:	equ 13 ; Uncomment to change player color when dead
 	.DEAD_PLAYER_DIZZY:	equ 1 ; Uncomment to make the player dizzy when dead
