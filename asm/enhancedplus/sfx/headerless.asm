@@ -52,6 +52,9 @@
 	fname	"asm/enhancedplus/sfx/PW_Sphinx_IN.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_Sphinx_IN.pt3", 100
 
+	fname	"asm/enhancedplus/sfx/PW_Sphinx_IN2.pt3.hl"
+	incbin	"asm/enhancedplus/sfx/PW_Sphinx_IN2.pt3", 100
+
 	fname	"asm/enhancedplus/sfx/PW_Sphinx_OUT.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_Sphinx_OUT.pt3", 100
 

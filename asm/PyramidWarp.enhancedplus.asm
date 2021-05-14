@@ -170,21 +170,27 @@ MAIN_INIT:
 ; -----------------------------------------------------------------------------
 NEW_GAME:
 ; Initializes the variables and prepares the playground
-	call	INIT_INGAME
-
-	ld	de,CFG_HUD.SCORE_COORDS
-	call	PRINT_SCORE
+	call	INIT_INGAME_VARS
 ; ------VVVV----falls through--------------------------------------------------
 
 ; -----------------------------------------------------------------------------
 NEW_PYRAMID:
+	call	CLEAR_SPRITES
+	call	INIT_INGAME_NAMTBL
+	ld	de,CFG_HUD.SCORE_COORDS
+	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+
 ; Builds the pyramid
 	call	BUILD_PYRAMID
 	call	BUILD_PYRAMID_DEFINITION
 
 ; Room 0
 	IFDEF  CFG_OTHERS.CHEAT_WIN_GAME
+		ld	a, [game.pyramid_count]
+		or	a
 		ld	a, 15 ; (starts in the sphinx room)
+		jr	z, $+3
+		xor	a
 	ELSE
 		xor	a
 	ENDIF
@@ -1070,6 +1076,10 @@ GAME_LOOP.BULLET_OK:
 	ld	de,(pyramid.room_namtbl_ptr)
 	ld	a, CHARACTER.ROOM_VISITED ; $51
 	call	PRINT_CHAR
+
+; (clears the exit)
+	ld	de,0B0Ch
+	call	CLEAR_TILE
 
 ; color ,,3
 	ld	bc, CFG_BG_COLOR.EXIT << 8 + 07h
@@ -2085,9 +2095,8 @@ PLAY_INGAME_MUSIC:
 	or	a
 	jp	z, REPLAYER.PLAY_LOOPED
 ; 15 = MUSIC_SPHINX
-	ld	hl, SONG.MUSIC_SPHINX
 	cp	15
-	jp	z, REPLAYER.PLAY_LOOPED
+	jr	z, .PLAY_SPHINX
 
 ; Reads the song to use
 ; Checks the first floor
@@ -2130,6 +2139,19 @@ PLAY_INGAME_MUSIC:
 	dw	SONG.MUSIC_3A
 	dw	SONG.MUSIC_3B
 	dw	SONG.MUSIC_3C
+
+; Reads the song to use
+.PLAY_SPHINX:
+	ld	a, [game.pyramid_count]
+	and	$01
+	ld	hl, SONG.MUSIC_SPHINX_A ; 0, 2, 4, ...
+	jp	z, REPLAYER.PLAY_LOOPED
+	ld	hl, SONG.MUSIC_SPHINX_B ; 1, 3, 5, ...
+	jp	REPLAYER.PLAY_LOOPED
+
+.TABLE_SPHINX:
+	dw	SONG.MUSIC_SPHINX_A
+	dw	SONG.MUSIC_SPHINX_B
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -2716,37 +2738,7 @@ DATA_SPHINX_SPRATR:
 	DB	55, 112 -8, $9C, $04
 
 	DB	63,  96 -8, 12, $0E
-
-
-;	DB	07h, 50h, $7c, $04 ; ..., 84h, 04h
-;	DB	07h, 70h, $80, $04 ; ..., 88h, 04h
-;	DB	27h, 50h, $84, $04 ; ..., 8Ch, 04h
-;	DB	27h, 70h, $88, $04 ; ..., 90h, 04h
-
 ; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-DATA_SOUND.MUTE_CHANNELS:
-.L9F38:	DB	01h ; length
-	DB	07h, 0BFh
-
-DATA_SOUND.SPHINX:
-.L9F3B:	DB	0Dh ; length
-	DB	00h, 01h
-	DB	01h, 01h
-	DB	02h, 05h
-	DB	03h, 02h
-	DB	04h, 0Fh
-	DB	05h, 03h
-	DB	06h, 05h
-	DB	07h, 0B0h
-	DB	08h, 10h
-	DB	09h, 10h
-	DB	0Ah, 10h
-	DB	0Ch, 0FFh
-	DB	0Dh, 00h
-; -----------------------------------------------------------------------------
-
 
 ; -----------------------------------------------------------------------------
 ; H.TIMI hook
@@ -2916,8 +2908,10 @@ SONG:
 .MUSIC_3C:
 	incbin "asm/enhancedplus/sfx/PW_level3_C.pt3.hl.zx7"
 
-.MUSIC_SPHINX:
+.MUSIC_SPHINX_A:
 	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN.pt3.hl.zx7"
+.MUSIC_SPHINX_B:
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN2.pt3.hl.zx7"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4034,12 +4028,19 @@ MAIN_MENU_LOOP:
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-INIT_INGAME:
+INIT_INGAME_VARS:
 ; Enemy sprite patterns, colors and planes
 	ld	hl, .INIT
 	ld	de, init_bin_target
-	call	UNPACK
+	jp	UNPACK
 
+; Data
+.INIT:
+	incbin "asm/enhancedplus/init.bin.zx7"
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+INIT_INGAME_NAMTBL:
 ; Init NAMTBL
 	ld	hl, .NAMTBL
 	ld	de, namtbl_buffer
@@ -4050,8 +4051,6 @@ INIT_INGAME:
 	jp	LDIRVM
 
 ; Data
-.INIT:
-	incbin "asm/enhancedplus/init.bin.zx7"
 .NAMTBL:
 	incbin	"asm/enhancedplus/screen_ingame.tmx.bin.zx7"
 ; -----------------------------------------------------------------------------

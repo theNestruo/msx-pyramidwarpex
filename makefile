@@ -78,6 +78,7 @@ ENHANCEDPLUS_DATAS=\
 	asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\PW_NewGame.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\PW_Sphinx_IN.pt3.hl.zx7 \
+	asm\enhancedplus\sfx\PW_Sphinx_IN2.pt3.hl.zx7 \
 	asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl.zx7
 
 ENHANCEDPLUS_STATIC_DATAS=\
@@ -143,6 +144,7 @@ asm\enhancedplus\sfx\PW_level3_C.pt3.hl \
 asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl \
 asm\enhancedplus\sfx\PW_NewGame.pt3.hl \
 asm\enhancedplus\sfx\PW_Sphinx_IN.pt3.hl \
+asm\enhancedplus\sfx\PW_Sphinx_IN2.pt3.hl \
 asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl: \
 		asm\enhancedplus\sfx\headerless.asm \
 		asm\enhancedplus\sfx\PW_Dead2.pt3 \
@@ -162,6 +164,7 @@ asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl: \
 		asm\enhancedplus\sfx\PW_LevelFinished.pt3 \
 		asm\enhancedplus\sfx\PW_NewGame.pt3 \
 		asm\enhancedplus\sfx\PW_Sphinx_IN.pt3 \
+		asm\enhancedplus\sfx\PW_Sphinx_IN2.pt3 \
 		asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3
 	$(ASM) $<
 
