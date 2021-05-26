@@ -1,10 +1,4 @@
-**/*.bin
-**/*.chr
-**/*.clr
-**/*.hl
-**/*.spr
-**/*.rom
-**/*.zx0
 tniasm.out
 tniasm.sym
 tniasm.tmp
+rom/PyramidWarp.original.rom
