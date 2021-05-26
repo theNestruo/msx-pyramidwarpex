@@ -5,11 +5,10 @@
 
 ASM=tniasm
 EMULATOR=cmd /c start
-PCX2MSX=pcx2msx+
 PNG2MSX=png2msx
-PCX2SPR=pcx2spr
+PNG2SPR=png2spr
 TMX2BIN=tmx2bin
-ZX7=zx7.exe
+ZX0=zx0.exe
 
 #
 # commands
@@ -26,60 +25,45 @@ RENAME=cmd /c ren
 #
 
 ORIGINAL_DATAS=\
-	asm\original\charset.pcx.chr \
-	asm\original\charset.pcx.clr \
-	asm\original\font.pcx.chr \
-	asm\original\font.pcx.clr \
 	asm\original\charset.png.chr \
 	asm\original\charset.png.clr \
 	asm\original\font.png.chr \
 	asm\original\font.png.clr \
-	asm\original\sprites.pcx.spr
+	asm\original\sprites.png.spr
 
 ENHANCED_DATAS=\
-	asm\enhanced\charset.pcx.chr \
-	asm\enhanced\charset.pcx.clr \
-	asm\enhanced\charset_0.pcx.chr \
-	asm\enhanced\charset_0.pcx.clr \
-	asm\enhanced\font.pcx.chr \
-	asm\enhanced\font.pcx.clr \
 	asm\enhanced\charset.png.chr \
 	asm\enhanced\charset.png.clr \
 	asm\enhanced\charset_0.png.chr \
 	asm\enhanced\charset_0.png.clr \
 	asm\enhanced\font.png.chr \
 	asm\enhanced\font.png.clr \
-	asm\enhanced\sprites.pcx.spr \
-	asm\enhanced\sprites4d.pcx.spr
+	asm\enhanced\sprites.png.spr \
+	asm\enhanced\sprites4d.png.spr
 
 ENHANCEDPLUS_DATAS=\
-	asm\enhancedplus\charset.pcx.chr.zx7 \
-	asm\enhancedplus\charset.pcx.clr.zx7 \
-	asm\enhancedplus\charset.png.chr.zx7 \
-	asm\enhancedplus\charset.png.clr.zx7 \
-	asm\enhancedplus\sprites.pcx.spr.zx7 \
-	asm\enhancedplus\screen_title.tmx.bin.zx7 \
-	asm\enhancedplus\screen_ingame.tmx.bin.zx7 \
-	asm\enhancedplus\init.bin.zx7 \
-	asm\enhancedplus\sfx\PW_Dead2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level1_A.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level1_B.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level1_C.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level1_ONLY_FIRST_TIME.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level2_A.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level2_B.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level2_C.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level3.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level3_A.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level3_all.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level3_B.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_level3_C.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_NewGame.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_Sphinx_IN.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_Sphinx_IN2.pt3.hl.zx7 \
-	asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl.zx7
+	asm\enhancedplus\charset.png.chr.zx0 \
+	asm\enhancedplus\charset.png.clr.zx0 \
+	asm\enhancedplus\sprites.png.spr.zx0 \
+	asm\enhancedplus\screen_title.tmx.bin.zx0 \
+	asm\enhancedplus\screen_ingame.tmx.bin.zx0 \
+	asm\enhancedplus\init.bin.zx0 \
+	asm\enhancedplus\sfx\PW_Dead2.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level1_A.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level1_B.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level1_C.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level1_ONLY_FIRST_TIME.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level2_A.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level2_B.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level2_C.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level3_A.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level3_B.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_level3_C.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_NewGame.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_Sphinx_IN.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_Sphinx_IN2.pt3.hl.zx0 \
+	asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl.zx0
 
 ENHANCEDPLUS_STATIC_DATAS=\
 	asm\enhancedplus\mapper\rooms_original.asm \
@@ -90,37 +74,37 @@ ENHANCEDPLUS_STATIC_DATAS=\
 # phony targets
 #
 
-# default target
-default: enhancedplus.rom
+# default target (just the enhancedplus version)
+default: rom\PyramidWarp.enhancedplus.rom
 
 clean:
-	$(REMOVE) enhancedplus.rom $(ENHANCEDPLUS_DATAS)
+	$(REMOVE) rom\PyramidWarp.enhancedplus.rom $(ENHANCEDPLUS_DATAS)
 	$(REMOVE) $(SYMS) tniasm.sym tniasm.tmp
 
 cleanall:
-	$(REMOVE) original.rom
-	$(REMOVE) enhanced.rom $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
-	$(REMOVE) enhancedplus.rom $(ENHANCEDPLUS_DATAS)
+	$(REMOVE) rom\PyramidWarp.original.rom
+	$(REMOVE) rom\PyramidWarp.enhanced.rom $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
+	$(REMOVE) rom\PyramidWarp.enhancedplus.rom $(ENHANCEDPLUS_DATAS)
 	$(REMOVE) $(SYMS) tniasm.sym tniasm.tmp
 
-compileall: original.rom enhanced.rom enhancedplus.rom
+compileall: rom\PyramidWarp.original.rom rom\PyramidWarp.enhanced.rom rom\PyramidWarp.enhancedplus.rom
 
-test: enhancedplus.rom
+test: rom\PyramidWarp.enhancedplus.rom
 	$(EMULATOR) $<
 
 #
 # main targets
 #
 
-original.rom: asm\PyramidWarp.annotated.asm
+rom\PyramidWarp.original.rom: asm\PyramidWarp.annotated.asm
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
-enhanced.rom: asm\PyramidWarp.enhanced.asm $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
+rom\PyramidWarp.enhanced.rom: asm\PyramidWarp.enhanced.asm $(ORIGINAL_DATAS) $(ENHANCED_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
-enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm asm\symbols.asm $(ENHANCEDPLUS_DATAS) $(ENHANCEDPLUS_STATIC_DATAS)
+rom\PyramidWarp.enhancedplus.rom: asm\PyramidWarp.enhancedplus.asm asm\symbols.asm $(ENHANCEDPLUS_DATAS) $(ENHANCEDPLUS_STATIC_DATAS)
 	$(ASM) $< $@
 	cmd /c findstr /b /i "debug_" tniasm.sym | sort
 
@@ -132,13 +116,10 @@ asm\enhancedplus\sfx\PW_level1_A.pt3.hl \
 asm\enhancedplus\sfx\PW_level1_B.pt3.hl \
 asm\enhancedplus\sfx\PW_level1_C.pt3.hl \
 asm\enhancedplus\sfx\PW_level1_ONLY_FIRST_TIME.pt3.hl \
-asm\enhancedplus\sfx\PW_level2.pt3.hl \
 asm\enhancedplus\sfx\PW_level2_A.pt3.hl \
 asm\enhancedplus\sfx\PW_level2_B.pt3.hl \
 asm\enhancedplus\sfx\PW_level2_C.pt3.hl \
-asm\enhancedplus\sfx\PW_level3.pt3.hl \
 asm\enhancedplus\sfx\PW_level3_A.pt3.hl \
-asm\enhancedplus\sfx\PW_level3_all.pt3.hl \
 asm\enhancedplus\sfx\PW_level3_B.pt3.hl \
 asm\enhancedplus\sfx\PW_level3_C.pt3.hl \
 asm\enhancedplus\sfx\PW_LevelFinished.pt3.hl \
@@ -152,13 +133,10 @@ asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl: \
 		asm\enhancedplus\sfx\PW_level1_B.pt3 \
 		asm\enhancedplus\sfx\PW_level1_C.pt3 \
 		asm\enhancedplus\sfx\PW_level1_ONLY_FIRST_TIME.pt3 \
-		asm\enhancedplus\sfx\PW_level2.pt3 \
 		asm\enhancedplus\sfx\PW_level2_A.pt3 \
 		asm\enhancedplus\sfx\PW_level2_B.pt3 \
 		asm\enhancedplus\sfx\PW_level2_C.pt3 \
-		asm\enhancedplus\sfx\PW_level3.pt3 \
 		asm\enhancedplus\sfx\PW_level3_A.pt3 \
-		asm\enhancedplus\sfx\PW_level3_all.pt3 \
 		asm\enhancedplus\sfx\PW_level3_B.pt3 \
 		asm\enhancedplus\sfx\PW_level3_C.pt3 \
 		asm\enhancedplus\sfx\PW_LevelFinished.pt3 \
@@ -172,16 +150,6 @@ asm\enhancedplus\sfx\PW_Sphinx_OUT.pt3.hl: \
 # GFXs targets
 #
 
-asm\enhancedplus\charset.pcx.chr: \
-		asm\enhancedplus\charset_font.pcx.chr \
-		asm\enhancedplus\charset_ingame.pcx.chr \
-		asm\enhancedplus\charset_extra.pcx.chr
-	$(COPY) /b \
-		asm\enhancedplus\charset_font.pcx.chr \
-		+ asm\enhancedplus\charset_ingame.pcx.chr \
-		+ asm\enhancedplus\charset_extra.pcx.chr \
-		$@
-
 asm\enhancedplus\charset.png.chr: \
 		asm\enhancedplus\charset_font.png.chr \
 		asm\enhancedplus\charset_ingame.png.chr \
@@ -190,16 +158,6 @@ asm\enhancedplus\charset.png.chr: \
 		asm\enhancedplus\charset_font.png.chr \
 		+ asm\enhancedplus\charset_ingame.png.chr \
 		+ asm\enhancedplus\charset_extra.png.chr \
-		$@
-
-asm\enhancedplus\charset.pcx.clr: \
-		asm\enhancedplus\charset_font.pcx.clr \
-		asm\enhancedplus\charset_ingame.pcx.clr \
-		asm\enhancedplus\charset_extra.pcx.clr
-	$(COPY) /b \
-		asm\enhancedplus\charset_font.pcx.clr \
-		+ asm\enhancedplus\charset_ingame.pcx.clr \
-		+ asm\enhancedplus\charset_extra.pcx.clr \
 		$@
 
 asm\enhancedplus\charset.png.clr: \
@@ -212,14 +170,11 @@ asm\enhancedplus\charset.png.clr: \
 		+ asm\enhancedplus\charset_extra.png.clr \
 		$@
 
-%.pcx.chr %.pcx.clr: %.pcx
-	$(PCX2MSX) -hl $<
-
 %.png.chr %.png.clr: %.png
 	$(PNG2MSX) -hl $<
 
-%.pcx.spr: %.pcx
-	$(PCX2SPR) $<
+%.png.spr: %.png
+	$(PNG2SPR) $<
 
 %.tmx.bin: %.tmx
 	$(TMX2BIN) $< $@
@@ -228,22 +183,22 @@ asm\enhancedplus\charset.png.clr: \
 # Packed targets
 #
 
-%.chr.zx7: %.chr
+%.chr.zx0: %.chr
 	$(REMOVE) $@
-	$(ZX7) $<
+	$(ZX0) $<
 
-%.clr.zx7: %.clr
+%.clr.zx0: %.clr
 	$(REMOVE) $@
-	$(ZX7) $<
+	$(ZX0) $<
 
-%.spr.zx7: %.spr
+%.spr.zx0: %.spr
 	$(REMOVE) $@
-	$(ZX7) $<
+	$(ZX0) $<
 
-%.hl.zx7: %.hl
+%.hl.zx0: %.hl
 	$(REMOVE) $@
-	$(ZX7) $<
+	$(ZX0) $<
 
-%.bin.zx7: %.bin
+%.bin.zx0: %.bin
 	$(REMOVE) $@
-	$(ZX7) $<
+	$(ZX0) $<

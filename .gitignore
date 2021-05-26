@@ -4,7 +4,7 @@
 **/*.hl
 **/*.spr
 **/*.rom
-**/*.zx7
+**/*.zx0
 tniasm.out
 tniasm.sym
 tniasm.tmp
