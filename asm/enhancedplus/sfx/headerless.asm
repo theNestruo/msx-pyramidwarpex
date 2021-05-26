@@ -16,8 +16,8 @@
 	fname	"asm/enhancedplus/sfx/PW_level1_ONLY_FIRST_TIME.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_level1_ONLY_FIRST_TIME.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_level2.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_level2.pt3", 100
+	; fname	"asm/enhancedplus/sfx/PW_level2.pt3.hl"
+	; incbin	"asm/enhancedplus/sfx/PW_level2.pt3", 100
 
 	fname	"asm/enhancedplus/sfx/PW_level2_A.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_level2_A.pt3", 100
@@ -28,14 +28,14 @@
 	fname	"asm/enhancedplus/sfx/PW_level2_C.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_level2_C.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_level3.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_level3.pt3", 100
+	; fname	"asm/enhancedplus/sfx/PW_level3.pt3.hl"
+	; incbin	"asm/enhancedplus/sfx/PW_level3.pt3", 100
 
 	fname	"asm/enhancedplus/sfx/PW_level3_A.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_level3_A.pt3", 100
 
-	fname	"asm/enhancedplus/sfx/PW_level3_all.pt3.hl"
-	incbin	"asm/enhancedplus/sfx/PW_level3_all.pt3", 100
+	; fname	"asm/enhancedplus/sfx/PW_level3_all.pt3.hl"
+	; incbin	"asm/enhancedplus/sfx/PW_level3_all.pt3", 100
 
 	fname	"asm/enhancedplus/sfx/PW_level3_B.pt3.hl"
 	incbin	"asm/enhancedplus/sfx/PW_level3_B.pt3", 100
