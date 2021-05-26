@@ -279,20 +279,17 @@ NEW_ROOM:
 
 ; Prints the room number
 	ld	a,(game.current_room)
-	add	a,00h
-	daa
-	rra
-	rra
-	rra
-	rra
-	and	0Fh
+	cp	10 ; C = current_room < 10
+	ccf	; C = current_room > 10
+	ld	a, 0
+	adc	0
 	ld	de,CFG_HUD.ROOM_COORDS
 	call	PRINT_CHAR
 ; Prints the room number (units)
 	ld	a,(game.current_room)
-	add	a,00h
-	daa
-	and	0Fh
+	sub	10 ; C = current_room < 10
+	jr	nc, $ + 4
+	add	10 ; (restores value)
 	ld	de,CFG_HUD.ROOM_COORDS +1
 	call	PRINT_CHAR
 
@@ -2869,56 +2866,56 @@ REPLAYER.WAIT:
 ; -----------------------------------------------------------------------------
 SONG:
 .JINGLE_NEW_GAME:
-	incbin "asm/enhancedplus/sfx/PW_NewGame.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_NewGame.pt3.hl.zx0"
 .JINGLE_DEATH:
-	incbin "asm/enhancedplus/sfx/PW_Dead2.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Dead2.pt3.hl.zx0"
 .JINGLE_EXIT:
-	incbin "asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_LevelFinished.pt3.hl.zx0"
 .JINGLE_SPHINX:
-	incbin "asm/enhancedplus/sfx/PW_Sphinx_OUT.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_OUT.pt3.hl.zx0"
 
 .MUSIC_1_INTRO:
-	incbin "asm/enhancedplus/sfx/PW_level1_ONLY_FIRST_TIME.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level1_ONLY_FIRST_TIME.pt3.hl.zx0"
 
 ; .MUSIC_1:
-; 	incbin "asm/enhancedplus/sfx/PW_level1.pt3.hl.zx7"
+; 	incbin "asm/enhancedplus/sfx/PW_level1.pt3.hl.zx0"
 .MUSIC_1A:
-	incbin "asm/enhancedplus/sfx/PW_level1_A.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level1_A.pt3.hl.zx0"
 .MUSIC_1B:
-	incbin "asm/enhancedplus/sfx/PW_level1_B.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level1_B.pt3.hl.zx0"
 .MUSIC_1C:
-	incbin "asm/enhancedplus/sfx/PW_level1_C.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level1_C.pt3.hl.zx0"
 
 ; .MUSIC_2:
-; 	incbin "asm/enhancedplus/sfx/PW_level2.pt3.hl.zx7"
+; 	incbin "asm/enhancedplus/sfx/PW_level2.pt3.hl.zx0"
 .MUSIC_2A:
-	incbin "asm/enhancedplus/sfx/PW_level2_A.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_A.pt3.hl.zx0"
 .MUSIC_2B:
-	incbin "asm/enhancedplus/sfx/PW_level2_B.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_B.pt3.hl.zx0"
 .MUSIC_2C:
-	incbin "asm/enhancedplus/sfx/PW_level2_C.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level2_C.pt3.hl.zx0"
 
 ; .MUSIC_3:
-; 	incbin "asm/enhancedplus/sfx/PW_level3.pt3.hl.zx7"
-; 	incbin "asm/enhancedplus/sfx/PW_level3_all.pt3.hl.zx7"
+; 	incbin "asm/enhancedplus/sfx/PW_level3.pt3.hl.zx0"
+; 	incbin "asm/enhancedplus/sfx/PW_level3_all.pt3.hl.zx0"
 .MUSIC_3A:
-	incbin "asm/enhancedplus/sfx/PW_level3_A.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level3_A.pt3.hl.zx0"
 .MUSIC_3B:
-	incbin "asm/enhancedplus/sfx/PW_level3_B.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level3_B.pt3.hl.zx0"
 .MUSIC_3C:
-	incbin "asm/enhancedplus/sfx/PW_level3_C.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_level3_C.pt3.hl.zx0"
 
 .MUSIC_SPHINX_A:
-	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN.pt3.hl.zx0"
 .MUSIC_SPHINX_B:
-	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN2.pt3.hl.zx7"
+	incbin "asm/enhancedplus/sfx/PW_Sphinx_IN2.pt3.hl.zx0"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
-; ZX7 decoder by Einar Saukas, Antonio Villena & Metalbrain
+; ZX0 decoder by Einar Saukas
 ; "Standard" version (69 bytes only)
 UNPACK:
-	include	"asm/libext/dzx7_standard.tniasm.asm"
+	include	"asm/libext/dzx0_standard.asm"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -3724,11 +3721,11 @@ INIT_ONCE:
 
 ; Data
 .CHRTBL:
-	incbin	"asm/enhancedplus/charset.png.chr.zx7"
+	incbin	"asm/enhancedplus/charset.png.chr.zx0"
 .CLRTBL:
-	incbin	"asm/enhancedplus/charset.png.clr.zx7"
+	incbin	"asm/enhancedplus/charset.png.clr.zx0"
 .SPRTBL:
-	incbin	"asm/enhancedplus/sprites.pcx.spr.zx7"
+	incbin	"asm/enhancedplus/sprites.png.spr.zx0"
 
 CHARACTER:
 	.WALL:			equ $30
@@ -3820,7 +3817,7 @@ INIT_MAIN_MENU:
 
 ; Data
 .NAMTBL:
-	incbin	"asm/enhancedplus/screen_title.tmx.bin.zx7"
+	incbin	"asm/enhancedplus/screen_title.tmx.bin.zx0"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4036,7 +4033,7 @@ INIT_INGAME_VARS:
 
 ; Data
 .INIT:
-	incbin "asm/enhancedplus/init.bin.zx7"
+	incbin "asm/enhancedplus/init.bin.zx0"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4052,7 +4049,7 @@ INIT_INGAME_NAMTBL:
 
 ; Data
 .NAMTBL:
-	incbin	"asm/enhancedplus/screen_ingame.tmx.bin.zx7"
+	incbin	"asm/enhancedplus/screen_ingame.tmx.bin.zx0"
 ; -----------------------------------------------------------------------------
 
 ; -----------------------------------------------------------------------------
@@ -4060,6 +4057,14 @@ INIT_INGAME_NAMTBL:
 	db	" 1983. 9. 15", $a0
 	db	" by T&E SOFT", $a0
 	db	" EIZI KATO !!", $a0
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+	db	" ENHANCED PLUS VERSION", $a0
+	db	" 2021. 5. 26", $a0
+	db	" by BITCAFFE !!", $a0
+	db	" by NENEFRANZ !!", $a0
+	db	" by THENESTRUO !!", $a0
 ; -----------------------------------------------------------------------------
 
 debug_rom_end:	equ $
@@ -4302,7 +4307,7 @@ aux.dying_flashes:	rb 1
 ; -----------------------------------------------------------------------------
 ; Unpack buffer
 unpack_buffer:
-	rb	3042 ; (at least 2K; the size of the largest PT3 song)
+	rb	3*1024 ; (at least 2K; the size of the largest PT3 song)
 ; -----------------------------------------------------------------------------
 
 ram_end:

@@ -3396,33 +3396,33 @@ DATA_SOUND.SPHYNX:
 ; -----------------------------------------------------------------------------
 DATA_FONT:
 	IFDEF CFG_ENHANCEMENTS.FONT
-		incbin	"asm/enhanced/font.pcx.chr"
+		incbin	"asm/enhanced/font.png.chr"
 	ELSE
-		incbin	"asm/original/font.pcx.chr"
+		incbin	"asm/original/font.png.chr"
 	ENDIF
 	.SIZE:	equ $ - DATA_FONT
 
 DATA_SPRTBL:
 	IFDEF CFG_ENHANCEMENTS.SPRITES
 		IFDEF CFG_OTHERS.ENEMIES_WITH_4_DIRECTION
-			incbin	"asm/enhanced/sprites4d.pcx.spr"
+			incbin	"asm/enhanced/sprites4d.png.spr"
 		ELSE
-			incbin	"asm/enhanced/sprites.pcx.spr"
+			incbin	"asm/enhanced/sprites.png.spr"
 		ENDIF
 	ELSE
-		incbin	"asm/original/sprites.pcx.spr"
+		incbin	"asm/original/sprites.png.spr"
 	ENDIF
 	.SIZE:	equ $ - DATA_SPRTBL
 
 DATA_CHARSET:
 	.CHR:
 	IFDEF CFG_ENHANCEMENTS.CHARSET0
-		incbin	"asm/enhanced/charset_0.pcx.chr"
+		incbin	"asm/enhanced/charset_0.png.chr"
 	ELSE
 		IFDEF CFG_ENHANCEMENTS.CHARSET
-			incbin	"asm/enhanced/charset.pcx.chr"
+			incbin	"asm/enhanced/charset.png.chr"
 		ELSE
-			incbin	"asm/original/charset.pcx.chr"
+			incbin	"asm/original/charset.png.chr"
 		ENDIF
 	ENDIF
 	.CHR_FF:	equ $ - 8
@@ -3430,12 +3430,12 @@ DATA_CHARSET:
 
 	.CLR:
 	IFDEF CFG_ENHANCEMENTS.CHARSET0
-		incbin	"asm/enhanced/charset_0.pcx.clr"
+		incbin	"asm/enhanced/charset_0.png.clr"
 	ELSE
 		IFDEF CFG_ENHANCEMENTS.CHARSET
-			incbin	"asm/enhanced/charset.pcx.clr"
+			incbin	"asm/enhanced/charset.png.clr"
 		ELSE
-			incbin	"asm/original/charset.pcx.clr"
+			incbin	"asm/original/charset.png.clr"
 		ENDIF
 	ENDIF
 	.CLR_FF:	equ $ - 8
