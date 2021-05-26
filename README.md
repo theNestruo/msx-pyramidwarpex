@@ -2,6 +2,7 @@
 
 Disassembly, reverse engineering, and possible enhancement of the MSX game cartridge "Pyramid Warp (1983)"
 
+
 ## Versions:
 
 * `PyramidWarp.annotated.asm`:
@@ -15,6 +16,7 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 
 * `PyramidWarp.enhanced+.asm`:
 	* This version break ties with the original source code wherever necessary to accomodate not-so-easy-to-fit enhancements (such as a proper music replayer or a sprite flickering routine)
+
 
 ## Enhancements
 
@@ -48,10 +50,24 @@ Disassembly, reverse engineering, and possible enhancement of the MSX game cartr
 * More room definitions! (room editor by Nenefranz)
 * Difficulty option! Choose between: easier (3 enemies), original (4 enemies), enhanced (progressive and adaptative number of enemies), and harder (6 enemies).
 
+
 ## Credits
 
-* Original game &copy; 1983 by T&E SOFT
-* Enhanced versions by Bitcaffe, Nenefranz, and theNestruo
+### Original game
+
+* **Pyramid Warp** &copy; 1983 by T&E SOFT
+
+### Enhanced versions
+
+Enhanced versions by Bitcaffe (music), Nenefranz (code & graphics), and theNestruo (code)
+
+* **Pyramid Warp Enhanced/Enhanced+ code** &copy; 2021 by Nenefranz & theNestruo is licensed under [CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+* **Pyramid Warp Enhanced/Enhanced+ graphics** &copy; 2021 by Nenefranz is licensed under [CC BY-NC-ND 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/)
+
+* **Pyramid Warp Enhanced+ music** &copy; 2021 by Bitcaffe is licensed under [CC BY-NC-ND 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/)
+
+* **Pyramid Warp EX map editor** &copy; 2021 by Nenefranz is licensed under [CC BY-NC-ND 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/)
 
 ### External libraries
 
