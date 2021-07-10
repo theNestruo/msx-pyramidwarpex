@@ -179,6 +179,10 @@ NEW_PYRAMID:
 	call	INIT_INGAME_NAMTBL
 	ld	de,CFG_HUD.SCORE_COORDS
 	call	PRINT_SCORE_AND_UPDATE_HIGH_SCORE
+; Ensures the high score is updated even if it hasn't been updated
+	ld	hl,game.high_score_bcd
+	ld	de,CFG_HUD.HIGH_COORDS
+	call	WRTVRM_6x_BCD
 
 ; Builds the pyramid
 	call	BUILD_PYRAMID
